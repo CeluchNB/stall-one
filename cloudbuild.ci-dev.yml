@@ -1,0 +1,7 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'us-central1-docker.pkg.dev/dev-ultmt-app/cloud-run-source-deploy/stall-one', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'us-central1-docker.pkg.dev/dev-ultmt-app/cloud-run-source-deploy/stall-one']
+options:
+  logging: CLOUD_LOGGING_ONLY
