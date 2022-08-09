@@ -1,4 +1,4 @@
-import { Types, Document } from 'mongoose'
+import { Document } from 'mongoose'
 import { Player, Team } from './ultmt'
 
 export interface CreateGame {
@@ -21,7 +21,6 @@ interface IGame extends Document {
     teamTwoResolved: boolean
     creator: Player
     token: string
-    points: Types.ObjectId[] // Need this? Just query points by game Id?
     scoreLimit: number
     teamOneScore: number
     teamTwoScore: number
@@ -32,7 +31,7 @@ interface IGame extends Document {
     completeGame: boolean
     playersPerPoint: number
     teamOnePlayers: Player[]
-    teamTwoPlayers?: Player[]
+    teamTwoPlayers: Player[]
     joinOtp: string[] // ensure this cannot be set from post/put call, delete once used
     timeoutPerHalf: number
     floaterTimeout: boolean

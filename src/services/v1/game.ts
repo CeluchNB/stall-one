@@ -1,3 +1,4 @@
+import * as Constants from '../../utils/constants'
 import { IGameModel } from '../../models/game'
 import Game, { CreateGame } from '../../types/game'
 import { ApiError } from '../../types/errors'
@@ -25,9 +26,10 @@ export default class GameServices {
         })
 
         if (response.status === 401) {
-            throw new ApiError('Unable to authenticate user', 401)
+            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
         }
 
+        const creator = await response.json()
         const safeData: CreateGame = {
             teamOne: gameData.teamOne,
             teamTwo: gameData.teamTwo,
@@ -42,9 +44,28 @@ export default class GameServices {
             floaterTimeout: gameData.floaterTimeout,
         }
 
-        const creator = await response.json()
+        const teamOneResponse = await fetch(`${this.ultmtUrl}/api/v1/team/${safeData.teamOne._id}`)
+        if (!teamOneResponse.ok) {
+            throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
+        }
+        const teamOneData = await teamOneResponse.json()
+
+        let teamTwoData
+        if (safeData.teamTwoResolved) {
+            const teamTwoResponse = await fetch(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo._id}`)
+            if (!teamTwoResponse.ok) {
+                throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
+            }
+            teamTwoData = await teamTwoResponse.json()
+        }
 
         const game = await this.gameModel.create({ ...safeData, creator: creator.user })
+
+        game.teamOnePlayers = teamOneData.team.players
+        if (safeData.teamTwoResolved) {
+            game.teamTwoPlayers = teamTwoData.team.players
+        }
+        await game.save()
         return game
     }
 }
