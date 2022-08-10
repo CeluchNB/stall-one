@@ -11,8 +11,8 @@ gameRouter.post('/game', body('createGameData').isObject(), async (req: Request,
         const jwt = req.headers.authorization?.replace('Bearer ', '')
         const data = req.body.createGameData
         const gameService = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
-        const game = await gameService.createGame(data, jwt || '')
-        return res.json({ game })
+        const { game, token } = await gameService.createGame(data, jwt as string)
+        return res.status(201).json({ game, token })
     } catch (error) {
         next(error)
     }

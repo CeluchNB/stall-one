@@ -10,6 +10,10 @@ export const resetDatabase = async () => {
     await Game.deleteMany({})
 }
 
+export const tearDownDatabase = () => {
+    connection.close()
+}
+
 export const createData: CreateGame = {
     teamOne: {
         _id: new Types.ObjectId(),
@@ -33,6 +37,45 @@ export const createData: CreateGame = {
     floaterTimeout: true,
 }
 
-export const tearDownDatabase = () => {
-    connection.close()
-}
+export const fetchMock = jest.fn((url) => {
+    if (url.includes('manager/authenticate')) {
+        return Promise.resolve({
+            json: () =>
+                Promise.resolve({
+                    user: {
+                        _id: new Types.ObjectId(),
+                        firstName: 'first',
+                        lastName: 'last',
+                        username: 'firstlast',
+                    },
+                }),
+            ok: true,
+            status: 200,
+        })
+    } else if (url.includes('v1/team')) {
+        return Promise.resolve({
+            json: () =>
+                Promise.resolve({
+                    team: {
+                        _id: new Types.ObjectId(),
+                        players: [
+                            {
+                                _id: new Types.ObjectId(),
+                                firstName: 'player 1',
+                                lastName: 'last 1',
+                                username: 'player1',
+                            },
+                            {
+                                _id: new Types.ObjectId(),
+                                firstName: 'player 2',
+                                lastName: 'last 2',
+                                username: 'player2',
+                            },
+                        ],
+                    },
+                }),
+            ok: true,
+            status: 200,
+        })
+    }
+}) as jest.Mock
