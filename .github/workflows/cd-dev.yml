@@ -25,6 +25,9 @@ jobs:
           touch .env
           echo PORT=${{ secrets.PORT }} >> .env
           echo MONGOOSE_URL=${{ secrets.DOCKER_MONGOOSE_URL }} >> .env
+          echo JWT_SECRET=${{ secrets.JWT_SECRET }} >> .env
+          echo ULTMT_API_URL=${{ secrets.ULTMT_API_URL }} >> .env
+          echo API_KEY=${{ secrets.API_KEY }}
           cd ..
       
       - name: Run Docker CI container
