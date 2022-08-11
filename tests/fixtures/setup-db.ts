@@ -37,43 +37,41 @@ export const createData: CreateGame = {
     floaterTimeout: true,
 }
 
-export const fetchMock = jest.fn((url) => {
+export const getMock = jest.fn((url) => {
     if (url.includes('manager/authenticate')) {
         return Promise.resolve({
-            json: () =>
-                Promise.resolve({
-                    user: {
-                        _id: new Types.ObjectId(),
-                        firstName: 'first',
-                        lastName: 'last',
-                        username: 'firstlast',
-                    },
-                }),
+            data: {
+                user: {
+                    _id: new Types.ObjectId(),
+                    firstName: 'first',
+                    lastName: 'last',
+                    username: 'firstlast',
+                },
+            },
             ok: true,
             status: 200,
         })
     } else if (url.includes('v1/team')) {
         return Promise.resolve({
-            json: () =>
-                Promise.resolve({
-                    team: {
-                        _id: new Types.ObjectId(),
-                        players: [
-                            {
-                                _id: new Types.ObjectId(),
-                                firstName: 'player 1',
-                                lastName: 'last 1',
-                                username: 'player1',
-                            },
-                            {
-                                _id: new Types.ObjectId(),
-                                firstName: 'player 2',
-                                lastName: 'last 2',
-                                username: 'player2',
-                            },
-                        ],
-                    },
-                }),
+            data: {
+                team: {
+                    _id: new Types.ObjectId(),
+                    players: [
+                        {
+                            _id: new Types.ObjectId(),
+                            firstName: 'player 1',
+                            lastName: 'last 1',
+                            username: 'player1',
+                        },
+                        {
+                            _id: new Types.ObjectId(),
+                            firstName: 'player 2',
+                            lastName: 'last 2',
+                            username: 'player2',
+                        },
+                    ],
+                },
+            },
             ok: true,
             status: 200,
         })

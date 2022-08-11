@@ -2,7 +2,8 @@ import * as Constants from '../../../src/utils/constants'
 import app from '../../../src/app'
 import request from 'supertest'
 import Game from '../../../src/models/game'
-import { setUpDatabase, tearDownDatabase, createData, fetchMock, resetDatabase } from '../../fixtures/setup-db'
+import { setUpDatabase, tearDownDatabase, createData, getMock, resetDatabase } from '../../fixtures/setup-db'
+import axios from 'axios'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -16,13 +17,10 @@ afterEach(async () => {
     await resetDatabase()
 })
 
-describe('test /POST game', () => {
-    afterEach(() => {
-        fetchMock.mockClear()
-    })
+jest.spyOn(axios, 'get').mockImplementation(getMock)
 
+describe('test /POST game', () => {
     it('with valid data', async () => {
-        global.fetch = fetchMock
         const response = await request(app)
             .post('/api/v1/game')
             .set('Authorization', 'Bearer jwt')
@@ -44,7 +42,6 @@ describe('test /POST game', () => {
     })
 
     it('with invalid data', async () => {
-        global.fetch = fetchMock
         const response = await request(app)
             .post('/api/v1/game')
             .set('Authorization', 'Bearer jwt')

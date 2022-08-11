@@ -1,11 +1,12 @@
 import * as Constants from '../../../src/utils/constants'
-import { setUpDatabase, tearDownDatabase, createData, fetchMock, resetDatabase } from '../../fixtures/setup-db'
+import { setUpDatabase, tearDownDatabase, createData, getMock, resetDatabase } from '../../fixtures/setup-db'
 import GameServices from '../../../src/services/v1/game'
 import Game from '../../../src/models/game'
 import { ApiError } from '../../../src/types/errors'
 import { CreateGame } from '../../../src/types/game'
 import { Types } from 'mongoose'
 import jwt from 'jsonwebtoken'
+import axios from 'axios'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -21,13 +22,10 @@ afterEach(async () => {
 
 const services = new GameServices(Game, '', '')
 
-describe('test create game', () => {
-    afterEach(() => {
-        fetchMock.mockClear()
-    })
+jest.spyOn(axios, 'get').mockImplementation(getMock)
 
+describe('test create game', () => {
     it('with valid data and team two not resolved', async () => {
-        global.fetch = fetchMock
         const { game, token } = await services.createGame(createData, '')
 
         const gameRecord = await Game.findById(game._id)
@@ -43,7 +41,6 @@ describe('test create game', () => {
     })
 
     it('with valid data and team two resolved', async () => {
-        global.fetch = fetchMock
         const { game, token } = await services.createGame({ ...createData, teamTwoResolved: true }, '')
 
         const gameRecord = await Game.findById(game._id)
@@ -59,8 +56,7 @@ describe('test create game', () => {
     })
 
     it('with fetch error', async () => {
-        fetchMock.mockImplementationOnce(() => Promise.resolve({ status: 401 }))
-        global.fetch = fetchMock
+        getMock.mockImplementationOnce(() => Promise.resolve({ status: 401 }))
         expect(services.createGame(createData, '')).rejects.toThrowError(
             new ApiError(Constants.UNAUTHENTICATED_USER, 401),
         )
@@ -70,7 +66,7 @@ describe('test create game', () => {
     })
 
     it('with unfound team one', async () => {
-        fetchMock.mockImplementationOnce(() => {
+        getMock.mockImplementationOnce(() => {
             return Promise.resolve({
                 json: () =>
                     Promise.resolve({
@@ -85,10 +81,9 @@ describe('test create game', () => {
                 status: 200,
             })
         })
-        fetchMock.mockImplementationOnce(() => {
+        getMock.mockImplementationOnce(() => {
             return Promise.resolve({ ok: false })
         })
-        global.fetch = fetchMock
 
         expect(services.createGame(createData, '')).rejects.toThrowError(
             new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404),
@@ -98,7 +93,7 @@ describe('test create game', () => {
     })
 
     it('with unfound team two', async () => {
-        fetchMock.mockImplementationOnce(() => {
+        getMock.mockImplementationOnce(() => {
             return Promise.resolve({
                 json: () =>
                     Promise.resolve({
@@ -113,7 +108,7 @@ describe('test create game', () => {
                 status: 200,
             })
         })
-        fetchMock.mockImplementationOnce(() => {
+        getMock.mockImplementationOnce(() => {
             return Promise.resolve({
                 json: () =>
                     Promise.resolve({
@@ -139,10 +134,9 @@ describe('test create game', () => {
                 status: 200,
             })
         })
-        fetchMock.mockImplementationOnce(() => {
+        getMock.mockImplementationOnce(() => {
             return Promise.resolve({ ok: false })
         })
-        global.fetch = fetchMock
 
         expect(services.createGame({ ...createData, teamTwoResolved: true }, '')).rejects.toThrowError(
             new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404),
@@ -152,7 +146,6 @@ describe('test create game', () => {
     })
 
     it('with unsafe data', async () => {
-        global.fetch = fetchMock
         const { game, token } = await services.createGame(
             {
                 ...createData,
@@ -182,7 +175,6 @@ describe('test create game', () => {
     })
 
     it('with jwt error', async () => {
-        global.fetch = fetchMock
         jest.spyOn(jwt, 'sign').mockImplementationOnce(() => {
             throw new Error('bad message')
         })
