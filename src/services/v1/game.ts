@@ -47,14 +47,18 @@ export default class GameServices {
             floaterTimeout: gameData.floaterTimeout,
         }
 
-        const teamOneResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamOne._id}`)
+        const teamOneResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamOne._id}`, {
+            headers: { 'X-API-Key': this.apiKey },
+        })
         if (teamOneResponse.status !== 200) {
             throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
         }
 
         let teamTwoResponse
         if (safeData.teamTwoResolved) {
-            teamTwoResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo._id}`)
+            teamTwoResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo._id}`, {
+                headers: { 'X-API-Key': this.apiKey },
+            })
             if (teamTwoResponse.status !== 200) {
                 throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
             }
