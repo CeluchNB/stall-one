@@ -25,7 +25,8 @@ jobs:
           echo PORT=${{ secrets.PORT }} >> .env
           echo MONGOOSE_URL=${{ secrets.MONGOOSE_URL }} >> .env
           echo JWT_SECRET=${{ secrets.JWT_SECRET }} >> .env
-          echo SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }} >> .env
+          echo ULTMT_API_URL=${{ secrets.ULTMT_API_URL }} >> .env
+          echo API_KEY=${{ secrets.API_KEY }}
           cd ..
       
       - name: Login to Docker Hub
