@@ -1,4 +1,4 @@
-import { Document } from 'mongoose'
+import { Types } from 'mongoose'
 import { Player, Team } from './ultmt'
 
 export interface CreateGame {
@@ -15,7 +15,8 @@ export interface CreateGame {
     floaterTimeout: boolean
 }
 
-interface IGame extends Document {
+interface IGame {
+    _id: Types.ObjectId
     teamOne: Team
     teamTwo: Team
     teamTwoResolved: boolean

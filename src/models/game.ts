@@ -1,5 +1,5 @@
 import * as Constants from '../utils/constants'
-import { Schema, Types, model } from 'mongoose'
+import { Schema, SchemaTypes, model } from 'mongoose'
 import IGame from '../types/game'
 import jwt from 'jsonwebtoken'
 import { ApiError } from '../types/errors'
@@ -7,7 +7,7 @@ import { ApiError } from '../types/errors'
 const schema = new Schema<IGame>({
     teamOne: {
         type: {
-            _id: Types.ObjectId,
+            _id: SchemaTypes.ObjectId,
             place: String,
             name: String,
             teamname: String,
@@ -18,7 +18,7 @@ const schema = new Schema<IGame>({
     },
     teamTwo: {
         type: {
-            _id: Types.ObjectId,
+            _id: SchemaTypes.ObjectId,
             place: String,
             name: String,
             teamname: String,
@@ -30,7 +30,7 @@ const schema = new Schema<IGame>({
     teamTwoResolved: Boolean,
     creator: {
         type: {
-            _id: Types.ObjectId,
+            _id: SchemaTypes.ObjectId,
             firstName: String,
             lastName: String,
             username: String,
@@ -48,7 +48,7 @@ const schema = new Schema<IGame>({
     playersPerPoint: { type: Number, default: 7 },
     teamOnePlayers: [
         {
-            _id: Types.ObjectId,
+            _id: SchemaTypes.ObjectId,
             firstName: String,
             lastName: String,
             username: String,
@@ -56,7 +56,7 @@ const schema = new Schema<IGame>({
     ],
     teamTwoPlayers: [
         {
-            _id: Types.ObjectId,
+            _id: SchemaTypes.ObjectId,
             firstName: String,
             lastName: String,
             username: String,
