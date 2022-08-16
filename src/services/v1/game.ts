@@ -1,8 +1,9 @@
 import * as Constants from '../../utils/constants'
-import { IGameModel } from '../../models/game'
-import Game, { CreateGame } from '../../types/game'
+import Game, { IGameModel } from '../../models/game'
+import IGame, { CreateGame, UpdateGame } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import axios from 'axios'
+import randomstring from 'randomstring'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -21,7 +22,7 @@ export default class GameServices {
      * @param jwt user's jwt
      * @returns new game value
      */
-    createGame = async (gameData: CreateGame, jwt: string): Promise<{ game: Game; token: string }> => {
+    createGame = async (gameData: CreateGame, jwt: string): Promise<{ game: IGame; token: string }> => {
         const response = await axios.get(
             `${this.ultmtUrl}/api/v1/user/manager/authenticate?team=${gameData.teamOne._id}`,
             {
@@ -69,8 +70,67 @@ export default class GameServices {
             creator: response.data.user,
             teamOnePlayers: teamOneResponse.data.team.players,
             teamTwoPlayers: safeData.teamTwoResolved ? teamTwoResponse?.data?.team.players : [],
+            resolveCode: randomstring.generate({ length: 6, charset: 'numeric' }),
         })
 
         return { game, token: game.token }
+    }
+
+    /**
+     * Method to update a game
+     * @param gameId id of game
+     * @param data edited data
+     * @returns updated game
+     */
+    updateGame = async (gameId: string, gameData: UpdateGame): Promise<IGame> => {
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
+        }
+
+        // This does not actually work b/c of 0's
+        const safeData: UpdateGame = {
+            teamTwo: gameData.teamTwo || game.teamTwo,
+            teamTwoResolved: gameData.teamTwoResolved || game.teamTwoResolved,
+            scoreLimit: gameData.scoreLimit || game.scoreLimit,
+            startTime: gameData.startTime ? new Date(gameData.startTime) : game.startTime,
+            softcapMins: gameData.softcapMins || game.softcapMins,
+            hardcapMins: gameData.hardcapMins || game.hardcapMins,
+            liveGame: gameData.liveGame || game.liveGame,
+            playersPerPoint: gameData.playersPerPoint || game.playersPerPoint,
+            timeoutPerHalf: gameData.timeoutPerHalf || game.timeoutPerHalf,
+            floaterTimeout: gameData.floaterTimeout || game.floaterTimeout,
+        }
+
+        if (gameData.teamTwoResolved === false) {
+            safeData.teamTwoResolved = false
+        }
+
+        if (gameData.liveGame === false) {
+            safeData.liveGame = false
+        }
+
+        if (gameData.floaterTimeout === false) {
+            safeData.floaterTimeout = false
+        }
+
+        let teamTwoResponse
+        if (safeData.teamTwoResolved && game.teamTwoPlayers.length === 0) {
+            teamTwoResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo._id}`, {
+                headers: { 'X-API-Key': this.apiKey },
+            })
+            if (teamTwoResponse.status !== 200) {
+                throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
+            }
+        }
+
+        await game.updateOne(
+            { ...safeData, teamTwoPlayers: teamTwoResponse?.data.team.players },
+            { omitUndefined: true },
+        )
+        const updatedGame = await Game.findById(game._id)
+
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        return updatedGame!
     }
 }

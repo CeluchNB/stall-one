@@ -1,8 +1,7 @@
 import { Types } from 'mongoose'
 import { Player, Team } from './ultmt'
 
-export interface CreateGame {
-    teamOne: Team
+export interface UpdateGame {
     teamTwo: Team
     teamTwoResolved: boolean
     scoreLimit: number
@@ -14,28 +13,20 @@ export interface CreateGame {
     timeoutPerHalf: number
     floaterTimeout: boolean
 }
-
-interface IGame {
-    _id: Types.ObjectId
+export interface CreateGame extends UpdateGame {
     teamOne: Team
-    teamTwo: Team
-    teamTwoResolved: boolean
+}
+
+interface IGame extends CreateGame {
+    _id: Types.ObjectId
     creator: Player
     token: string
-    scoreLimit: number
     teamOneScore: number
     teamTwoScore: number
-    startTime: Date
-    softcapMins: number
-    hardcapMins: number
-    liveGame: boolean
     completeGame: boolean
-    playersPerPoint: number
     teamOnePlayers: Player[]
     teamTwoPlayers: Player[]
-    joinOtp: string[] // ensure this cannot be set from post/put call, delete once used
-    timeoutPerHalf: number
-    floaterTimeout: boolean
+    resolveCode: string // ensure this cannot be set from post/put call, delete once used
 }
 
 export default IGame

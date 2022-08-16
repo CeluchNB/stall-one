@@ -1,5 +1,5 @@
 import * as Constants from '../../../src/utils/constants'
-import { setUpDatabase, tearDownDatabase, createData, getMock, resetDatabase } from '../../fixtures/setup-db'
+import { setUpDatabase, tearDownDatabase, createData, gameData, getMock, resetDatabase } from '../../fixtures/setup-db'
 import GameServices from '../../../src/services/v1/game'
 import Game from '../../../src/models/game'
 import { ApiError } from '../../../src/types/errors'
@@ -154,7 +154,6 @@ describe('test create game', () => {
                 token: 'token1',
                 teamOneScore: 21,
                 teamTwoScore: -99,
-                joinOtp: ['123456'],
             } as CreateGame,
             '',
         )
@@ -171,7 +170,7 @@ describe('test create game', () => {
         expect(gameRecord?.teamTwoPlayers.length).toBe(0)
         expect(gameRecord?.teamOneScore).toBe(0)
         expect(gameRecord?.teamTwoScore).toBe(0)
-        expect(gameRecord?.joinOtp.length).toBe(0)
+        expect(gameRecord?.resolveCode.length).toBe(6)
     })
 
     it('with jwt error', async () => {
@@ -179,5 +178,74 @@ describe('test create game', () => {
             throw new Error('bad message')
         })
         expect(services.createGame(createData, '')).rejects.toThrowError(Constants.GENERIC_ERROR)
+    })
+})
+
+describe('test edit game', () => {
+    it('should update with valid data and no team 2', async () => {
+        const game = await Game.create(gameData)
+
+        const updatedGame = await services.updateGame(game._id.toString(), {
+            ...createData,
+            timeoutPerHalf: 10,
+            liveGame: false,
+            floaterTimeout: false,
+        })
+
+        expect(updatedGame.liveGame).toBe(false)
+        expect(updatedGame.floaterTimeout).toBe(false)
+        expect(updatedGame.teamTwoResolved).toBe(false)
+
+        const gameRecord = await Game.findById(game._id)
+        expect(gameRecord?.liveGame).toBe(false)
+        expect(gameRecord?.floaterTimeout).toBe(false)
+        expect(gameRecord?.teamTwoResolved).toBe(false)
+    })
+
+    it('should update with valid data and team 2', async () => {
+        const game = await Game.create(gameData)
+
+        const updatedGame = await services.updateGame(game._id.toString(), {
+            ...createData,
+            timeoutPerHalf: 0,
+            teamTwo: { _id: new Types.ObjectId(), place: 'Place 2', name: 'Name 2', teamname: 'place2name2' },
+            teamTwoResolved: true,
+        })
+
+        expect(updatedGame.teamTwoResolved).toBe(true)
+        expect(updatedGame.teamTwo.place).toBe('Place 2')
+        expect(updatedGame.teamTwoPlayers.length).toBe(2)
+        expect(updatedGame.liveGame).toBe(true)
+
+        const gameRecord = await Game.findById(updatedGame._id)
+        expect(gameRecord?.teamTwoResolved).toBe(true)
+        expect(gameRecord?.teamTwoPlayers.length).toBe(2)
+        expect(gameRecord?.liveGame).toBe(true)
+    })
+
+    it('with unfound team', async () => {
+        await Game.create(gameData)
+
+        expect(
+            services.updateGame(new Types.ObjectId().toString(), {
+                ...createData,
+                teamTwo: { _id: new Types.ObjectId(), place: 'Place 2', name: 'Name 2', teamname: 'place2name2' },
+                teamTwoResolved: true,
+            }),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404))
+    })
+
+    it('with bad team response', async () => {
+        const game = await Game.create(gameData)
+        getMock.mockImplementationOnce(() => {
+            return Promise.resolve({ ok: false, status: 404 })
+        })
+        expect(
+            services.updateGame(game._id.toString(), {
+                ...createData,
+                teamTwo: { _id: new Types.ObjectId(), place: 'Place 2', name: 'Name 2', teamname: 'place2name2' },
+                teamTwoResolved: true,
+            }),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404))
     })
 })

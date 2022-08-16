@@ -1,6 +1,7 @@
 import { connect, connection, Types } from 'mongoose'
-import { CreateGame } from '../../src/types/game'
+import IGame, { CreateGame } from '../../src/types/game'
 import Game from '../../src/models/game'
+import jwt from 'jsonwebtoken'
 
 export const setUpDatabase = async () => {
     await connect(process.env.MONGOOSE_URL as string)
@@ -35,6 +36,21 @@ export const createData: CreateGame = {
     playersPerPoint: 7,
     timeoutPerHalf: 1,
     floaterTimeout: true,
+}
+
+const gameId = new Types.ObjectId()
+export const gameData: IGame = {
+    _id: gameId,
+    ...createData,
+    teamOnePlayers: [],
+    teamTwoPlayers: [],
+    creator: { firstName: 'first', lastName: 'last', _id: new Types.ObjectId(), username: 'firstlast' },
+    token: jwt.sign({ sub: gameId, iat: 657483 }, process.env.JWT_SECRET as string),
+    teamOneScore: 0,
+    teamTwoScore: 0,
+    teamTwoResolved: false,
+    resolveCode: '123456',
+    completeGame: false,
 }
 
 export const getMock = jest.fn((url) => {

@@ -62,7 +62,7 @@ const schema = new Schema<IGame>({
             username: String,
         },
     ],
-    joinOtp: [String],
+    resolveCode: String,
     timeoutPerHalf: Number,
     floaterTimeout: Boolean,
 })
