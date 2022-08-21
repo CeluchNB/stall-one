@@ -85,7 +85,7 @@ export default class GameServices {
     updateGame = async (gameId: string, gameData: UpdateGame): Promise<IGame> => {
         const game = await this.gameModel.findById(gameId)
         if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
         }
 
         // This does not actually work b/c of 0's
@@ -126,5 +126,39 @@ export default class GameServices {
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         return updatedGame!
+    }
+
+    /**
+     * Method to allow teamTwo to join game
+     * @param gameId id of game
+     * @param teamId id of team two
+     * @param userJwt jwt of team two's manager
+     * @param otp code to compare to resolveCode
+     * @returns game token to team 2 manager
+     */
+    teamTwoJoinGame = async (
+        gameId: string,
+        teamId: string,
+        userJwt: string,
+        otp: string,
+    ): Promise<{ game: IGame; token: string }> => {
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        const response = await axios.get(`${this.ultmtUrl}/api/v1/user/manager/authenticate?team=${teamId}`, {
+            headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
+        })
+
+        if (response.status === 401 || game?.teamTwo._id?.toString() !== teamId) {
+            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
+        }
+
+        if (otp !== game.resolveCode) {
+            throw new ApiError(Constants.WRONG_RESOLVE_CODE, 401)
+        }
+
+        return { game, token: game.token }
     }
 }

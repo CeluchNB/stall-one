@@ -7,6 +7,7 @@ import { CreateGame } from '../../../src/types/game'
 import { Types } from 'mongoose'
 import jwt from 'jsonwebtoken'
 import axios from 'axios'
+import randomstring from 'randomstring'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -223,7 +224,7 @@ describe('test edit game', () => {
         expect(gameRecord?.liveGame).toBe(true)
     })
 
-    it('with unfound team', async () => {
+    it('with unfound game', async () => {
         await Game.create(gameData)
 
         expect(
@@ -232,7 +233,7 @@ describe('test edit game', () => {
                 teamTwo: { _id: new Types.ObjectId(), place: 'Place 2', name: 'Name 2', teamname: 'place2name2' },
                 teamTwoResolved: true,
             }),
-        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404))
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
     })
 
     it('with bad team response', async () => {
@@ -247,5 +248,122 @@ describe('test edit game', () => {
                 teamTwoResolved: true,
             }),
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404))
+    })
+})
+
+describe('test team two join', () => {
+    it('with valid data', async () => {
+        const initialGame = await Game.create(gameData)
+        initialGame.teamTwo = {
+            _id: new Types.ObjectId(),
+            place: 'Place 2',
+            name: 'Name 2',
+            teamname: 'place2name2',
+        }
+        await initialGame.save()
+
+        const { game, token } = await services.teamTwoJoinGame(
+            initialGame._id.toString(),
+            initialGame.teamTwo._id?.toString() || '',
+            'asdf1234.asdf145radsf.ad43grad',
+            initialGame.resolveCode,
+        )
+
+        expect(token).toBe(initialGame.token)
+        expect(game._id).toEqual(initialGame._id)
+    })
+
+    it('with unfound game', async () => {
+        const initialGame = await Game.create(gameData)
+        initialGame.teamTwo = {
+            _id: new Types.ObjectId(),
+            place: 'Place 2',
+            name: 'Name 2',
+            teamname: 'place2name2',
+        }
+        await initialGame.save()
+
+        expect(
+            services.teamTwoJoinGame(
+                new Types.ObjectId().toString(),
+                initialGame.teamTwo._id?.toString() || '',
+                'asdf1234.asdf145radsf.ad43grad',
+                initialGame.resolveCode,
+            ),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
+    })
+
+    it('with unfound user', async () => {
+        getMock.mockImplementationOnce(() => {
+            return Promise.resolve({
+                status: 401,
+            })
+        })
+        const initialGame = await Game.create(gameData)
+        initialGame.teamTwo = {
+            _id: new Types.ObjectId(),
+            place: 'Place 2',
+            name: 'Name 2',
+            teamname: 'place2name2',
+        }
+        await initialGame.save()
+
+        expect(
+            services.teamTwoJoinGame(
+                initialGame._id.toString(),
+                initialGame.teamTwo._id?.toString() || '',
+                'asdf1234.asdf145radsf.ad43grad',
+                initialGame.resolveCode,
+            ),
+        ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
+    })
+
+    it('with user from wrong team', async () => {
+        getMock.mockImplementationOnce(() => {
+            return Promise.resolve({
+                status: 401,
+            })
+        })
+        const initialGame = await Game.create(gameData)
+        initialGame.teamTwo = {
+            _id: new Types.ObjectId(),
+            place: 'Place 2',
+            name: 'Name 2',
+            teamname: 'place2name2',
+        }
+        await initialGame.save()
+
+        expect(
+            services.teamTwoJoinGame(
+                initialGame._id.toString(),
+                initialGame.teamTwo._id?.toString() || '',
+                'asdf1234.asdf145radsf.ad43grad',
+                initialGame.resolveCode,
+            ),
+        ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
+    })
+
+    it('with wrong resolve code', async () => {
+        jest.spyOn(randomstring, 'generate').mockImplementationOnce(() => {
+            return '123456'
+        })
+
+        const initialGame = await Game.create(gameData)
+        initialGame.teamTwo = {
+            _id: new Types.ObjectId(),
+            place: 'Place 2',
+            name: 'Name 2',
+            teamname: 'place2name2',
+        }
+        await initialGame.save()
+
+        expect(
+            services.teamTwoJoinGame(
+                initialGame._id.toString(),
+                initialGame.teamTwo._id?.toString() || '',
+                'asdf1234.asdf145radsf.ad43grad',
+                '654321',
+            ),
+        ).rejects.toThrowError(new ApiError(Constants.WRONG_RESOLVE_CODE, 401))
     })
 })

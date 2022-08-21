@@ -15,7 +15,7 @@ passport.use(
     new JwtStrategy(opts, async (jwtPayload, done) => {
         const game = await Game.findById(jwtPayload.sub)
         if (!game) {
-            return done(null, false, { message: Constants.UNABLE_TO_FETCH_TEAM })
+            return done(null, false, { message: Constants.UNABLE_TO_FIND_GAME })
         }
 
         return done(null, game)
