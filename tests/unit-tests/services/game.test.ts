@@ -213,7 +213,7 @@ describe('test edit game', () => {
         })
 
         expect(updatedGame.teamTwoResolved).toBe(true)
-        expect(updatedGame.teamTwo.place).toBe('Place 2')
+        expect(updatedGame.teamTwo?.place).toBe('Place 2')
         expect(updatedGame.teamTwoPlayers.length).toBe(2)
         expect(updatedGame.liveGame).toBe(true)
 

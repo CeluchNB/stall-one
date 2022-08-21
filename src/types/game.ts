@@ -2,6 +2,34 @@ import { Types } from 'mongoose'
 import { Player, Team } from './ultmt'
 
 export interface UpdateGame {
+    teamTwo?: Team
+    teamTwoResolved?: boolean
+    scoreLimit?: number
+    startTime?: Date
+    softcapMins?: number
+    hardcapMins?: number
+    liveGame?: boolean
+    playersPerPoint?: number
+    timeoutPerHalf?: number
+    floaterTimeout?: boolean
+}
+
+type UpdateGameKey = keyof UpdateGame
+export const updateGameKeys: UpdateGameKey[] = [
+    'teamTwo',
+    'teamTwoResolved',
+    'scoreLimit',
+    'startTime',
+    'softcapMins',
+    'hardcapMins',
+    'liveGame',
+    'playersPerPoint',
+    'timeoutPerHalf',
+    'floaterTimeout',
+]
+
+export interface CreateGame extends UpdateGame {
+    teamOne: Team
     teamTwo: Team
     teamTwoResolved: boolean
     scoreLimit: number
@@ -12,9 +40,6 @@ export interface UpdateGame {
     playersPerPoint: number
     timeoutPerHalf: number
     floaterTimeout: boolean
-}
-export interface CreateGame extends UpdateGame {
-    teamOne: Team
 }
 
 interface IGame extends CreateGame {

@@ -1,6 +1,6 @@
 import * as Constants from '../../utils/constants'
 import Game, { IGameModel } from '../../models/game'
-import IGame, { CreateGame, UpdateGame } from '../../types/game'
+import IGame, { CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import axios from 'axios'
 import randomstring from 'randomstring'
@@ -90,33 +90,27 @@ export default class GameServices {
 
         // This does not actually work b/c of 0's
         const safeData: UpdateGame = {
-            teamTwo: gameData.teamTwo || game.teamTwo,
-            teamTwoResolved: gameData.teamTwoResolved || game.teamTwoResolved,
-            scoreLimit: gameData.scoreLimit || game.scoreLimit,
-            startTime: gameData.startTime ? new Date(gameData.startTime) : game.startTime,
-            softcapMins: gameData.softcapMins || game.softcapMins,
-            hardcapMins: gameData.hardcapMins || game.hardcapMins,
-            liveGame: gameData.liveGame || game.liveGame,
-            playersPerPoint: gameData.playersPerPoint || game.playersPerPoint,
-            timeoutPerHalf: gameData.timeoutPerHalf || game.timeoutPerHalf,
-            floaterTimeout: gameData.floaterTimeout || game.floaterTimeout,
+            teamTwo: gameData.teamTwo,
+            teamTwoResolved: gameData.teamTwoResolved,
+            scoreLimit: gameData.scoreLimit,
+            startTime: gameData.startTime,
+            softcapMins: gameData.softcapMins,
+            hardcapMins: gameData.hardcapMins,
+            liveGame: gameData.liveGame,
+            playersPerPoint: gameData.playersPerPoint,
+            timeoutPerHalf: gameData.timeoutPerHalf,
+            floaterTimeout: gameData.floaterTimeout,
         }
 
-        if (gameData.teamTwoResolved === false) {
-            safeData.teamTwoResolved = false
-        }
-
-        if (gameData.liveGame === false) {
-            safeData.liveGame = false
-        }
-
-        if (gameData.floaterTimeout === false) {
-            safeData.floaterTimeout = false
+        for (const key of updateGameKeys) {
+            if (safeData[key] === undefined) {
+                delete safeData[key]
+            }
         }
 
         let teamTwoResponse
         if (safeData.teamTwoResolved && game.teamTwoPlayers.length === 0) {
-            teamTwoResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo._id}`, {
+            teamTwoResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo?._id}`, {
                 headers: { 'X-API-Key': this.apiKey },
             })
             if (teamTwoResponse.status !== 200) {
