@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express'
 import GameServices from '../../services/v1/game'
-import { body } from 'express-validator'
+import { body, param, query } from 'express-validator'
 import Game from '../../models/game'
 import { errorMiddleware } from '../../middlware/errors'
 import passport from 'passport'
@@ -12,8 +12,8 @@ gameRouter.post('/game', body('createGameData').isObject(), async (req: Request,
     try {
         const jwt = req.headers.authorization?.replace('Bearer ', '')
         const data = req.body.createGameData
-        const gameService = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
-        const { game, token } = await gameService.createGame(data, jwt as string)
+        const services = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
+        const { game, token } = await services.createGame(data, jwt as string)
         return res.status(201).json({ game, token })
     } catch (error) {
         next(error)
@@ -27,9 +27,29 @@ gameRouter.put(
     async (req: Request, res: Response, next) => {
         try {
             const data = req.body.gameData
-            const gameService = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
-            const game = await gameService.updateGame((req.user as IGame)._id.toString(), data)
+            const services = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
+            const game = await services.updateGame((req.user as IGame)._id.toString(), data)
             return res.json({ game })
+        } catch (error) {
+            next(error)
+        }
+    },
+)
+
+gameRouter.get(
+    '/game/resolve/:id',
+    param('id').isString(),
+    query('team').isString(),
+    query('otp').isString(),
+    async (req: Request, res: Response, next) => {
+        try {
+            const jwt = req.headers.authorization?.replace('Bearer ', '') as string
+            const gameId = req.params.id
+            const teamId = req.query.team as string
+            const otp = req.query.otp as string
+            const services = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
+            const { game, token } = await services.teamTwoJoinGame(gameId, teamId, jwt, otp)
+            return res.json({ game, token })
         } catch (error) {
             next(error)
         }

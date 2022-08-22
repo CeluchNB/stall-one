@@ -113,3 +113,52 @@ describe('test /PUT game', () => {
             .expect(404)
     })
 })
+
+describe('test /GET game join', () => {
+    it('with valid data', async () => {
+        const initialGame = await Game.create(gameData)
+        initialGame.teamTwo = {
+            _id: new Types.ObjectId(),
+            place: 'Place 2',
+            name: 'Name 2',
+            teamname: 'place2name2',
+        }
+        await initialGame.save()
+
+        const response = await request(app)
+            .get(
+                `/api/v1/game/resolve/${initialGame._id}?team=${initialGame.teamTwo._id}&otp=${initialGame.resolveCode}`,
+            )
+            .set('Authorization', 'Bearer fake.adf345.jwt')
+            .send()
+            .expect(200)
+
+        const { game, token } = response.body
+        expect(game._id.toString()).toBe(initialGame._id.toString())
+        expect(token).toBe(initialGame.token)
+    })
+
+    it('with unfound game', async () => {
+        const initialGame = await Game.create(gameData)
+        initialGame.teamTwo = {
+            _id: new Types.ObjectId(),
+            place: 'Place 2',
+            name: 'Name 2',
+            teamname: 'place2name2',
+        }
+        await initialGame.save()
+
+        const response = await request(app)
+            .get(
+                `/api/v1/game/resolve/${new Types.ObjectId()}?team=${initialGame.teamTwo._id}&otp=${
+                    initialGame.resolveCode
+                }`,
+            )
+            .set('Authorization', 'Bearer fake.adf345.jwt')
+            .send()
+            .expect(404)
+
+        const { message } = response.body
+        expect(message).toBe(Constants.UNABLE_TO_FIND_GAME)
+    })
+})
