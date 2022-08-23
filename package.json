@@ -8,7 +8,7 @@
   "license": "MIT",
   "scripts": {
     "test": "jest --runInBand --collectCoverage",
-    "start": "node --max_old_space_size=400 -- node_modules/.bin/ts-node ./src/index.ts ",
+    "start": "ts-node ./src/index.ts ",
     "dev": "nodemon ./src/index.ts",
     "lint": "eslint '*/**/*.{js,ts,tsx}' --quiet --fix"
   },
@@ -30,8 +30,8 @@
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.0",
     "randomstring": "^1.2.2",
-    "ts-node": "^10.9.1",
-    "typescript": "^4.7.4"
+    "ts-node": "10.4.0",
+    "typescript": "4.5.2"
   },
   "devDependencies": {
     "@types/jest": "^28.1.6",
