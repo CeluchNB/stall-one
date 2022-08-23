@@ -2,8 +2,10 @@ import * as Constants from '../../../src/utils/constants'
 import app from '../../../src/app'
 import request from 'supertest'
 import Game from '../../../src/models/game'
-import { setUpDatabase, tearDownDatabase, createData, getMock, resetDatabase } from '../../fixtures/setup-db'
+import { setUpDatabase, tearDownDatabase, createData, gameData, getMock, resetDatabase } from '../../fixtures/setup-db'
 import axios from 'axios'
+import { Types } from 'mongoose'
+import jwt from 'jsonwebtoken'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -51,5 +53,112 @@ describe('test /POST game', () => {
             .expect(500)
 
         expect(response.body.message).toBe(Constants.GENERIC_ERROR)
+    })
+})
+
+describe('test /PUT game', () => {
+    it('with valid data', async () => {
+        const game = await Game.create(gameData)
+        const response = await request(app)
+            .put('/api/v1/game')
+            .set('Authorization', `Bearer ${game.token}`)
+            .send({
+                gameData: { timeoutPerHalf: 10 },
+            })
+            .expect(200)
+
+        const { game: gameResponse } = response.body
+        expect(gameResponse._id).toBe(game._id.toString())
+        expect(gameResponse.timeoutPerHalf).toBe(10)
+
+        const gameRecord = await Game.findById(game._id)
+        expect(gameRecord?._id.toString()).toBe(game._id.toString())
+        expect(gameRecord?.timeoutPerHalf).toBe(10)
+    })
+
+    it('with unauthenticated', async () => {
+        await Game.create(gameData)
+        await request(app)
+            .put('/api/v1/game')
+            .set('Authorization', 'Bearer badjwt')
+            .send({
+                gameData: { timeoutPerHalf: 10 },
+            })
+            .expect(401)
+    })
+
+    it('with unfound team in passport', async () => {
+        await Game.create(gameData)
+        const token = jwt.sign({ subject: new Types.ObjectId(), iat: Date.now() }, process.env.JWT_SECRET as string)
+        await request(app)
+            .put('/api/v1/game')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                gameData: { timeoutPerHalf: 10 },
+            })
+            .expect(401)
+    })
+
+    it('with error', async () => {
+        getMock.mockImplementationOnce(() => {
+            return Promise.resolve({ ok: false, status: 400 })
+        })
+        const game = await Game.create(gameData)
+        await request(app)
+            .put('/api/v1/game')
+            .set('Authorization', `Bearer ${game.token}`)
+            .send({
+                gameData: { timeoutPerHalf: 10, teamTwoResolved: true },
+            })
+            .expect(404)
+    })
+})
+
+describe('test /GET game join', () => {
+    it('with valid data', async () => {
+        const initialGame = await Game.create(gameData)
+        initialGame.teamTwo = {
+            _id: new Types.ObjectId(),
+            place: 'Place 2',
+            name: 'Name 2',
+            teamname: 'place2name2',
+        }
+        await initialGame.save()
+
+        const response = await request(app)
+            .get(
+                `/api/v1/game/resolve/${initialGame._id}?team=${initialGame.teamTwo._id}&otp=${initialGame.resolveCode}`,
+            )
+            .set('Authorization', 'Bearer fake.adf345.jwt')
+            .send()
+            .expect(200)
+
+        const { game, token } = response.body
+        expect(game._id.toString()).toBe(initialGame._id.toString())
+        expect(token).toBe(initialGame.token)
+    })
+
+    it('with unfound game', async () => {
+        const initialGame = await Game.create(gameData)
+        initialGame.teamTwo = {
+            _id: new Types.ObjectId(),
+            place: 'Place 2',
+            name: 'Name 2',
+            teamname: 'place2name2',
+        }
+        await initialGame.save()
+
+        const response = await request(app)
+            .get(
+                `/api/v1/game/resolve/${new Types.ObjectId()}?team=${initialGame.teamTwo._id}&otp=${
+                    initialGame.resolveCode
+                }`,
+            )
+            .set('Authorization', 'Bearer fake.adf345.jwt')
+            .send()
+            .expect(404)
+
+        const { message } = response.body
+        expect(message).toBe(Constants.UNABLE_TO_FIND_GAME)
     })
 })

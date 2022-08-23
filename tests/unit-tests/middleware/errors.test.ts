@@ -20,4 +20,17 @@ describe('should return correct message for error', () => {
             code: 500,
         })
     })
+    it('with wrong resolve code', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.WRONG_RESOLVE_CODE}`)).toEqual({
+            message: Constants.WRONG_RESOLVE_CODE,
+            code: 401,
+        })
+    })
+
+    it('with unfound game', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.UNABLE_TO_FIND_GAME}`)).toEqual({
+            message: Constants.UNABLE_TO_FIND_GAME,
+            code: 404,
+        })
+    })
 })

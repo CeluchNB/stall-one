@@ -1,15 +1,11 @@
 import request from 'supertest'
 import app from '../../../src/app'
+import axios from 'axios'
 
 describe('GET /stall-one', () => {
     it('should return a message', async () => {
-        global.fetch = jest.fn().mockImplementation(() => {
-            return Promise.resolve({
-                json: () =>
-                    Promise.resolve({
-                        message: 'test message',
-                    }),
-            })
+        jest.spyOn(axios, 'get').mockImplementation(() => {
+            return Promise.resolve({ data: { message: 'test message' } })
         })
         const response = await request(app).get('/stall-one').send().expect(200)
 
