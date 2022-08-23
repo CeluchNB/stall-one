@@ -8,7 +8,7 @@
   "license": "MIT",
   "scripts": {
     "test": "jest --runInBand --collectCoverage",
-    "start": "ts-node ./src/index.ts",
+    "start": "node --max_old_space_size=400 -- node_modules/.bin/ts-node ./src/index.ts ",
     "dev": "nodemon ./src/index.ts",
     "lint": "eslint '*/**/*.{js,ts,tsx}' --quiet --fix"
   },
