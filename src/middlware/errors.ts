@@ -10,6 +10,8 @@ export const userErrorResponse = (error: string): { message: string; code: numbe
         return { message: Constants.WRONG_RESOLVE_CODE, code: 401 }
     } else if (error.includes(Constants.UNABLE_TO_FIND_GAME)) {
         return { message: Constants.UNABLE_TO_FIND_GAME, code: 404 }
+    } else if (error.includes(Constants.UNABLE_TO_ADD_PLAYER)) {
+        return { message: Constants.UNABLE_TO_ADD_PLAYER, code: 400 }
     } else {
         return { message: Constants.GENERIC_ERROR, code: 500 }
     }

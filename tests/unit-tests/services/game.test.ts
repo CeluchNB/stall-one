@@ -4,6 +4,7 @@ import GameServices from '../../../src/services/v1/game'
 import Game from '../../../src/models/game'
 import { ApiError } from '../../../src/types/errors'
 import { CreateGame } from '../../../src/types/game'
+import { TeamNumber } from '../../../src/types/ultmt'
 import { Types } from 'mongoose'
 import jwt from 'jsonwebtoken'
 import axios from 'axios'
@@ -192,7 +193,6 @@ describe('test edit game', () => {
         const game = await Game.create(gameData)
 
         const updatedGame = await services.updateGame(game._id.toString(), {
-            ...createData,
             timeoutPerHalf: 10,
             liveGame: false,
             floaterTimeout: false,
@@ -205,6 +205,7 @@ describe('test edit game', () => {
         const gameRecord = await Game.findById(game._id)
         expect(gameRecord?.liveGame).toBe(false)
         expect(gameRecord?.floaterTimeout).toBe(false)
+        expect(gameRecord?.timeoutPerHalf).toBe(10)
         expect(gameRecord?.teamTwoResolved).toBe(false)
         expect(gameRecord?.teamTwoDefined).toBe(false)
     })
@@ -391,5 +392,76 @@ describe('test team two join', () => {
         const gameRecord = await Game.findById(initialGame._id)
         expect(gameRecord?.teamTwoResolved).toBe(false)
         expect(gameRecord?.teamTwoToken).toBe(undefined)
+    })
+})
+
+describe('test add guest player to team', () => {
+    it('with valid data for team one', async () => {
+        const game = await Game.create(gameData)
+
+        const gameResult = await services.addGuestPlayer(game._id.toString(), TeamNumber.ONE, {
+            firstName: 'Noah',
+            lastName: 'Celuch',
+        })
+
+        expect(gameResult.teamOnePlayers.length).toBe(1)
+        expect(gameResult.teamOnePlayers[0]._id).toBeUndefined()
+        expect(gameResult.teamOnePlayers[0].firstName).toBe('Noah')
+        expect(gameResult.teamOnePlayers[0].lastName).toBe('Celuch')
+        expect(gameResult.teamOnePlayers[0].username).toBe('guest')
+
+        const gameRecord = await Game.findById(game._id)
+        expect(gameRecord?.teamOnePlayers.length).toBe(1)
+        expect(gameRecord?.teamOnePlayers[0]._id).toBeUndefined()
+        expect(gameRecord?.teamOnePlayers[0].firstName).toBe('Noah')
+        expect(gameRecord?.teamOnePlayers[0].lastName).toBe('Celuch')
+        expect(gameRecord?.teamOnePlayers[0].username).toBe('guest')
+    })
+
+    it('with valid data for team two', async () => {
+        const game = await Game.create(gameData)
+        game.teamTwoResolved = true
+        game.teamTwoDefined = true
+        await game.save()
+
+        const gameResult = await services.addGuestPlayer(game._id.toString(), TeamNumber.TWO, {
+            firstName: 'Noah',
+            lastName: 'Celuch',
+        })
+
+        expect(gameResult.teamTwoPlayers.length).toBe(1)
+        expect(gameResult.teamTwoPlayers[0]._id).toBeUndefined()
+        expect(gameResult.teamTwoPlayers[0].firstName).toBe('Noah')
+        expect(gameResult.teamTwoPlayers[0].lastName).toBe('Celuch')
+        expect(gameResult.teamTwoPlayers[0].username).toBe('guest')
+
+        const gameRecord = await Game.findById(game._id)
+        expect(gameRecord?.teamTwoPlayers.length).toBe(1)
+        expect(gameRecord?.teamTwoPlayers[0]._id).toBeUndefined()
+        expect(gameRecord?.teamTwoPlayers[0].firstName).toBe('Noah')
+        expect(gameRecord?.teamTwoPlayers[0].lastName).toBe('Celuch')
+        expect(gameRecord?.teamTwoPlayers[0].username).toBe('guest')
+    })
+
+    it('with unfound game', async () => {
+        await Game.create(gameData)
+
+        expect(
+            services.addGuestPlayer(new Types.ObjectId().toString(), TeamNumber.ONE, {
+                firstName: 'Noah',
+                lastName: 'Celuch',
+            }),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
+    })
+
+    it('with unable to add player', async () => {
+        const game = await Game.create(gameData)
+
+        expect(
+            services.addGuestPlayer(game._id.toString(), TeamNumber.TWO, {
+                firstName: 'Noah',
+                lastName: 'Celuch',
+            }),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400))
     })
 })

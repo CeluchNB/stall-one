@@ -5,6 +5,7 @@ import { ApiError } from '../../types/errors'
 import axios from 'axios'
 import randomstring from 'randomstring'
 import jwt from 'jsonwebtoken'
+import { Player, TeamNumber } from '../../types/ultmt'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -183,5 +184,37 @@ export default class GameServices {
         await game.save()
 
         return { game, token }
+    }
+
+    /**
+     * Method to add a guest player to a team for a single game
+     * @param gameId id of game
+     * @param team team to add player to (either 'one' or 'two')
+     * @param player data of player to add
+     * @returns updated game object
+     */
+    addGuestPlayer = async (gameId: string, team: TeamNumber, player: Player): Promise<IGame> => {
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        const playerData = {
+            firstName: player.firstName,
+            lastName: player.lastName,
+            _id: undefined,
+            username: 'guest',
+        }
+        if (team === TeamNumber.ONE) {
+            game.teamOnePlayers.push(playerData)
+        } else if (game.teamTwoResolved) {
+            game.teamTwoPlayers.push(playerData)
+        } else {
+            throw new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400)
+        }
+
+        await game.save()
+
+        return game
     }
 }

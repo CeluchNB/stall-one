@@ -89,7 +89,10 @@ describe('test /PUT game', () => {
 
     it('with unfound team in passport', async () => {
         await Game.create(gameData)
-        const token = jwt.sign({ subject: new Types.ObjectId(), iat: Date.now() }, process.env.JWT_SECRET as string)
+        const token = jwt.sign(
+            { sub: new Types.ObjectId(), iat: Date.now(), team: 'one' },
+            process.env.JWT_SECRET as string,
+        )
         await request(app)
             .put('/api/v1/game')
             .set('Authorization', `Bearer ${token}`)
@@ -162,5 +165,56 @@ describe('test /PUT game join', () => {
 
         const { message } = response.body
         expect(message).toBe(Constants.UNABLE_TO_FIND_GAME)
+    })
+})
+
+describe('test /PUT add guest player', () => {
+    it('with valid data', async () => {
+        const game = await Game.create(gameData)
+
+        const response = await request(app)
+            .put('/api/v1/game/player/guest')
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .send({
+                player: {
+                    firstName: 'Noah',
+                    lastName: 'Celuch',
+                },
+            })
+            .expect(200)
+
+        const { game: gameResponse } = response.body
+        expect(gameResponse.teamOnePlayers.length).toBe(1)
+        expect(gameResponse.teamOnePlayers[0]).toEqual({ firstName: 'Noah', lastName: 'Celuch', username: 'guest' })
+    })
+
+    it('with bad token', async () => {
+        await request(app)
+            .put('/api/v1/game/player/guest')
+            .set('Authorization', `Bearer basdf1234.tokenasd45.asdfas`)
+            .send({
+                player: {
+                    firstName: 'Noah',
+                    lastName: 'Celuch',
+                },
+            })
+            .expect(401)
+    })
+
+    it('with game error', async () => {
+        const game = await Game.create(gameData)
+        const token = jwt.sign({ sub: game._id, iat: Date.now(), team: 'three' }, process.env.JWT_SECRET as string)
+        const response = await request(app)
+            .put('/api/v1/game/player/guest')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+                player: {
+                    firstName: 'Noah',
+                    lastName: 'Celuch',
+                },
+            })
+            .expect(400)
+
+        expect(response.body.message).toBe(Constants.UNABLE_TO_ADD_PLAYER)
     })
 })

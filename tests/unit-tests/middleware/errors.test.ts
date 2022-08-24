@@ -26,11 +26,16 @@ describe('should return correct message for error', () => {
             code: 401,
         })
     })
-
     it('with unfound game', () => {
         expect(userErrorResponse(`Extra Error: ${Constants.UNABLE_TO_FIND_GAME}`)).toEqual({
             message: Constants.UNABLE_TO_FIND_GAME,
             code: 404,
+        })
+    })
+    it('with unable to add player', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.UNABLE_TO_ADD_PLAYER}`)).toEqual({
+            message: Constants.UNABLE_TO_ADD_PLAYER,
+            code: 400,
         })
     })
 })
