@@ -34,7 +34,7 @@ describe('test /POST game', () => {
         const { game, token } = response.body
         const gameRecord = await Game.findOne({})
         expect(game._id.toString()).toBe(gameRecord?._id.toString())
-        expect(game.teamTwoResolved).toBe(false)
+        expect(game.teamTwoDefined).toBe(false)
         expect(game.teamOnePlayers.length).toBe(2)
         expect(game.teamTwoPlayers.length).toBe(0)
         expect(game.token).toBeUndefined()
@@ -61,7 +61,7 @@ describe('test /PUT game', () => {
         const game = await Game.create(gameData)
         const response = await request(app)
             .put('/api/v1/game')
-            .set('Authorization', `Bearer ${game.token}`)
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
             .send({
                 gameData: { timeoutPerHalf: 10 },
             })
@@ -106,15 +106,15 @@ describe('test /PUT game', () => {
         const game = await Game.create(gameData)
         await request(app)
             .put('/api/v1/game')
-            .set('Authorization', `Bearer ${game.token}`)
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
             .send({
-                gameData: { timeoutPerHalf: 10, teamTwoResolved: true },
+                gameData: { timeoutPerHalf: 10, teamTwoDefined: true },
             })
             .expect(404)
     })
 })
 
-describe('test /GET game join', () => {
+describe('test /PUT game join', () => {
     it('with valid data', async () => {
         const initialGame = await Game.create(gameData)
         initialGame.teamTwo = {
@@ -126,7 +126,7 @@ describe('test /GET game join', () => {
         await initialGame.save()
 
         const response = await request(app)
-            .get(
+            .put(
                 `/api/v1/game/resolve/${initialGame._id}?team=${initialGame.teamTwo._id}&otp=${initialGame.resolveCode}`,
             )
             .set('Authorization', 'Bearer fake.adf345.jwt')
@@ -135,7 +135,9 @@ describe('test /GET game join', () => {
 
         const { game, token } = response.body
         expect(game._id.toString()).toBe(initialGame._id.toString())
-        expect(token).toBe(initialGame.token)
+        const gameRecord = await Game.findById(game._id)
+        expect(token).toBe(gameRecord?.teamTwoToken)
+        expect(gameRecord?.teamTwoResolved).toBe(true)
     })
 
     it('with unfound game', async () => {
@@ -149,7 +151,7 @@ describe('test /GET game join', () => {
         await initialGame.save()
 
         const response = await request(app)
-            .get(
+            .put(
                 `/api/v1/game/resolve/${new Types.ObjectId()}?team=${initialGame.teamTwo._id}&otp=${
                     initialGame.resolveCode
                 }`,

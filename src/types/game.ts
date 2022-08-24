@@ -3,7 +3,7 @@ import { Player, Team } from './ultmt'
 
 export interface UpdateGame {
     teamTwo?: Team
-    teamTwoResolved?: boolean
+    teamTwoDefined?: boolean
     scoreLimit?: number
     startTime?: Date
     softcapMins?: number
@@ -17,7 +17,7 @@ export interface UpdateGame {
 type UpdateGameKey = keyof UpdateGame
 export const updateGameKeys: UpdateGameKey[] = [
     'teamTwo',
-    'teamTwoResolved',
+    'teamTwoDefined',
     'scoreLimit',
     'startTime',
     'softcapMins',
@@ -29,9 +29,10 @@ export const updateGameKeys: UpdateGameKey[] = [
 ]
 
 export interface CreateGame extends UpdateGame {
+    creator: Player
     teamOne: Team
     teamTwo: Team
-    teamTwoResolved: boolean
+    teamTwoDefined: boolean
     scoreLimit: number
     startTime: Date
     softcapMins: number
@@ -44,14 +45,15 @@ export interface CreateGame extends UpdateGame {
 
 interface IGame extends CreateGame {
     _id: Types.ObjectId
-    creator: Player
-    token: string
+    teamOneToken: string
+    teamTwoToken?: string
     teamOneScore: number
     teamTwoScore: number
+    teamTwoResolved: boolean
     completeGame: boolean
     teamOnePlayers: Player[]
     teamTwoPlayers: Player[]
-    resolveCode: string // ensure this cannot be set from post/put call, delete once used
+    resolveCode: string
 }
 
 export default IGame

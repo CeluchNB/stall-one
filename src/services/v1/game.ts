@@ -4,6 +4,7 @@ import IGame, { CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import axios from 'axios'
 import randomstring from 'randomstring'
+import jwt from 'jsonwebtoken'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -19,14 +20,14 @@ export default class GameServices {
     /**
      * Method to create a game
      * @param gameData initial data to create game
-     * @param jwt user's jwt
+     * @param userJwt user's jwt
      * @returns new game value
      */
-    createGame = async (gameData: CreateGame, jwt: string): Promise<{ game: IGame; token: string }> => {
+    createGame = async (gameData: CreateGame, userJwt: string): Promise<{ game: IGame; token: string }> => {
         const response = await axios.get(
             `${this.ultmtUrl}/api/v1/user/manager/authenticate?team=${gameData.teamOne._id}`,
             {
-                headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${jwt}` },
+                headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
             },
         )
 
@@ -35,9 +36,10 @@ export default class GameServices {
         }
 
         const safeData: CreateGame = {
+            creator: gameData.creator,
             teamOne: gameData.teamOne,
             teamTwo: gameData.teamTwo,
-            teamTwoResolved: gameData.teamTwoResolved,
+            teamTwoDefined: gameData.teamTwoDefined,
             scoreLimit: gameData.scoreLimit,
             startTime: new Date(gameData.startTime),
             softcapMins: gameData.softcapMins,
@@ -56,7 +58,7 @@ export default class GameServices {
         }
 
         let teamTwoResponse
-        if (safeData.teamTwoResolved) {
+        if (safeData.teamTwoDefined) {
             teamTwoResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo._id}`, {
                 headers: { 'X-API-Key': this.apiKey },
             })
@@ -69,11 +71,21 @@ export default class GameServices {
             ...safeData,
             creator: response.data.user,
             teamOnePlayers: teamOneResponse.data.team.players,
-            teamTwoPlayers: safeData.teamTwoResolved ? teamTwoResponse?.data?.team.players : [],
+            teamTwoPlayers: safeData.teamTwoDefined ? teamTwoResponse?.data?.team.players : [],
             resolveCode: randomstring.generate({ length: 6, charset: 'numeric' }),
         })
 
-        return { game, token: game.token }
+        const payload = {
+            sub: game._id.toString(),
+            iat: Date.now(),
+            team: 'one',
+        }
+
+        const token = jwt.sign(payload, process.env.JWT_SECRET as string)
+        game.teamOneToken = token
+        await game.save()
+
+        return { game, token: game.teamOneToken }
     }
 
     /**
@@ -91,7 +103,7 @@ export default class GameServices {
         // This does not actually work b/c of 0's
         const safeData: UpdateGame = {
             teamTwo: gameData.teamTwo,
-            teamTwoResolved: gameData.teamTwoResolved,
+            teamTwoDefined: gameData.teamTwoDefined,
             scoreLimit: gameData.scoreLimit,
             startTime: gameData.startTime,
             softcapMins: gameData.softcapMins,
@@ -109,7 +121,7 @@ export default class GameServices {
         }
 
         let teamTwoResponse
-        if (safeData.teamTwoResolved && game.teamTwoPlayers.length === 0) {
+        if (safeData.teamTwoDefined && game.teamTwoPlayers.length === 0) {
             teamTwoResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo?._id}`, {
                 headers: { 'X-API-Key': this.apiKey },
             })
@@ -159,6 +171,17 @@ export default class GameServices {
             throw new ApiError(Constants.WRONG_RESOLVE_CODE, 401)
         }
 
-        return { game, token: game.token }
+        const payload = {
+            sub: game._id.toString(),
+            iat: Date.now(),
+            team: 'two',
+        }
+
+        const token = jwt.sign(payload, process.env.JWT_SECRET as string)
+        game.teamTwoToken = token
+        game.teamTwoResolved = true
+        await game.save()
+
+        return { game, token }
     }
 }

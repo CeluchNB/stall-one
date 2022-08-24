@@ -16,6 +16,12 @@ export const tearDownDatabase = () => {
 }
 
 export const createData: CreateGame = {
+    creator: {
+        _id: new Types.ObjectId(),
+        firstName: 'First1',
+        lastName: 'Last1',
+        username: 'first1last1',
+    },
     teamOne: {
         _id: new Types.ObjectId(),
         place: 'Place1',
@@ -27,7 +33,7 @@ export const createData: CreateGame = {
     teamTwo: {
         name: 'Name2',
     },
-    teamTwoResolved: false,
+    teamTwoDefined: false,
     scoreLimit: 15,
     startTime: new Date(),
     softcapMins: 75,
@@ -45,7 +51,8 @@ export const gameData: IGame = {
     teamOnePlayers: [],
     teamTwoPlayers: [],
     creator: { firstName: 'first', lastName: 'last', _id: new Types.ObjectId(), username: 'firstlast' },
-    token: jwt.sign({ sub: gameId, iat: 657483 }, process.env.JWT_SECRET as string),
+    teamOneToken: jwt.sign({ sub: gameId, iat: 657483, team: 'one' }, process.env.JWT_SECRET as string),
+    teamTwoToken: undefined,
     teamOneScore: 0,
     teamTwoScore: 0,
     teamTwoResolved: false,

@@ -36,7 +36,7 @@ gameRouter.put(
     },
 )
 
-gameRouter.get(
+gameRouter.put(
     '/game/resolve/:id',
     param('id').isString(),
     query('team').isString(),

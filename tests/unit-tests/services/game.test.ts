@@ -34,6 +34,7 @@ describe('test create game', () => {
         expect(game.teamOneScore).toBe(0)
         expect(game.teamTwoScore).toBe(0)
         expect(game.teamTwoResolved).toBe(false)
+        expect(game.teamTwoDefined).toBe(false)
         expect(token.length).toBeGreaterThan(20)
         expect(gameRecord?.completeGame).toBe(false)
         expect(gameRecord?.creator.username).toBe('firstlast')
@@ -42,18 +43,21 @@ describe('test create game', () => {
     })
 
     it('with valid data and team two resolved', async () => {
-        const { game, token } = await services.createGame({ ...createData, teamTwoResolved: true }, '')
+        const { game, token } = await services.createGame({ ...createData, teamTwoDefined: true }, '')
 
         const gameRecord = await Game.findById(game._id)
         expect(game._id.toString()).toBe(gameRecord?._id.toString())
         expect(game.teamOneScore).toBe(0)
         expect(game.teamTwoScore).toBe(0)
-        expect(game.teamTwoResolved).toBe(true)
+        expect(game.teamTwoResolved).toBe(false)
+        expect(game.teamTwoDefined).toBe(true)
         expect(token.length).toBeGreaterThan(20)
         expect(gameRecord?.completeGame).toBe(false)
         expect(gameRecord?.creator.username).toBe('firstlast')
         expect(gameRecord?.teamOnePlayers.length).toBe(2)
         expect(gameRecord?.teamTwoPlayers.length).toBe(2)
+        expect(token).toBe(gameRecord?.teamOneToken)
+        expect(gameRecord?.teamTwoToken).toBeUndefined()
     })
 
     it('with fetch error', async () => {
@@ -139,7 +143,7 @@ describe('test create game', () => {
             return Promise.resolve({ ok: false })
         })
 
-        expect(services.createGame({ ...createData, teamTwoResolved: true }, '')).rejects.toThrowError(
+        expect(services.createGame({ ...createData, teamTwoDefined: true }, '')).rejects.toThrowError(
             new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404),
         )
         const games = await Game.find({})
@@ -155,6 +159,7 @@ describe('test create game', () => {
                 token: 'token1',
                 teamOneScore: 21,
                 teamTwoScore: -99,
+                teamTwoResolved: true,
             } as CreateGame,
             '',
         )
@@ -201,6 +206,7 @@ describe('test edit game', () => {
         expect(gameRecord?.liveGame).toBe(false)
         expect(gameRecord?.floaterTimeout).toBe(false)
         expect(gameRecord?.teamTwoResolved).toBe(false)
+        expect(gameRecord?.teamTwoDefined).toBe(false)
     })
 
     it('should update with valid data and team 2', async () => {
@@ -210,16 +216,18 @@ describe('test edit game', () => {
             ...createData,
             timeoutPerHalf: 0,
             teamTwo: { _id: new Types.ObjectId(), place: 'Place 2', name: 'Name 2', teamname: 'place2name2' },
-            teamTwoResolved: true,
+            teamTwoDefined: true,
         })
 
-        expect(updatedGame.teamTwoResolved).toBe(true)
+        expect(updatedGame.teamTwoResolved).toBe(false)
+        expect(updatedGame.teamTwoDefined).toBe(true)
         expect(updatedGame.teamTwo?.place).toBe('Place 2')
         expect(updatedGame.teamTwoPlayers.length).toBe(2)
         expect(updatedGame.liveGame).toBe(true)
 
         const gameRecord = await Game.findById(updatedGame._id)
-        expect(gameRecord?.teamTwoResolved).toBe(true)
+        expect(gameRecord?.teamTwoResolved).toBe(false)
+        expect(gameRecord?.teamTwoDefined).toBe(true)
         expect(gameRecord?.teamTwoPlayers.length).toBe(2)
         expect(gameRecord?.liveGame).toBe(true)
     })
@@ -231,7 +239,7 @@ describe('test edit game', () => {
             services.updateGame(new Types.ObjectId().toString(), {
                 ...createData,
                 teamTwo: { _id: new Types.ObjectId(), place: 'Place 2', name: 'Name 2', teamname: 'place2name2' },
-                teamTwoResolved: true,
+                teamTwoDefined: true,
             }),
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
     })
@@ -245,7 +253,7 @@ describe('test edit game', () => {
             services.updateGame(game._id.toString(), {
                 ...createData,
                 teamTwo: { _id: new Types.ObjectId(), place: 'Place 2', name: 'Name 2', teamname: 'place2name2' },
-                teamTwoResolved: true,
+                teamTwoDefined: true,
             }),
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404))
     })
@@ -269,8 +277,10 @@ describe('test team two join', () => {
             initialGame.resolveCode,
         )
 
-        expect(token).toBe(initialGame.token)
+        const gameRecord = await Game.findById(initialGame._id)
+        expect(token).toBe(gameRecord?.teamTwoToken)
         expect(game._id).toEqual(initialGame._id)
+        expect(gameRecord?.teamTwoResolved).toBe(true)
     })
 
     it('with unfound game', async () => {
@@ -291,6 +301,10 @@ describe('test team two join', () => {
                 initialGame.resolveCode,
             ),
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
+
+        const gameRecord = await Game.findById(initialGame._id)
+        expect(gameRecord?.teamTwoResolved).toBe(false)
+        expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 
     it('with unfound user', async () => {
@@ -316,6 +330,10 @@ describe('test team two join', () => {
                 initialGame.resolveCode,
             ),
         ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
+
+        const gameRecord = await Game.findById(initialGame._id)
+        expect(gameRecord?.teamTwoResolved).toBe(false)
+        expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 
     it('with user from wrong team', async () => {
@@ -341,6 +359,10 @@ describe('test team two join', () => {
                 initialGame.resolveCode,
             ),
         ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
+
+        const gameRecord = await Game.findById(initialGame._id)
+        expect(gameRecord?.teamTwoResolved).toBe(false)
+        expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 
     it('with wrong resolve code', async () => {
@@ -365,5 +387,9 @@ describe('test team two join', () => {
                 '654321',
             ),
         ).rejects.toThrowError(new ApiError(Constants.WRONG_RESOLVE_CODE, 401))
+
+        const gameRecord = await Game.findById(initialGame._id)
+        expect(gameRecord?.teamTwoResolved).toBe(false)
+        expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 })
