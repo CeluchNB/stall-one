@@ -89,7 +89,8 @@ schema.pre('save', async function (next) {
 
 schema.methods.toJSON = function () {
     const gameObject = this.toObject()
-    delete gameObject.token
+    delete gameObject.teamOneToken
+    delete gameObject.teamTwoToken
 
     return gameObject
 }
