@@ -22,9 +22,38 @@ const schema = new Schema<IGamePoint>({
     ],
     teamOneScore: { type: Number, required: true },
     teamTwoScore: { type: Number, required: true },
-    pullingTeam: { type: SchemaTypes.ObjectId, required: true },
-    receivingTeam: { type: SchemaTypes.ObjectId, required: true },
-    scoringTeam: { type: SchemaTypes.ObjectId },
+    pullingTeam: {
+        type: {
+            _id: SchemaTypes.ObjectId,
+            place: String,
+            name: String,
+            teamname: String,
+            seasonStart: Date,
+            seasonEnd: Date,
+        },
+        required: true,
+    },
+    receivingTeam: {
+        type: {
+            _id: SchemaTypes.ObjectId,
+            place: String,
+            name: String,
+            teamname: String,
+            seasonStart: Date,
+            seasonEnd: Date,
+        },
+        required: true,
+    },
+    scoringTeam: {
+        type: {
+            _id: SchemaTypes.ObjectId,
+            place: String,
+            name: String,
+            teamname: String,
+            seasonStart: Date,
+            seasonEnd: Date,
+        },
+    },
 })
 
 const GamePoint = model<IGamePoint>('GamePoint', schema)

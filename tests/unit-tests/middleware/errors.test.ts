@@ -38,4 +38,16 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
+    it('with other team pulling', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.UNABLE_TO_ADD_PLAYER}`)).toEqual({
+            message: Constants.UNABLE_TO_ADD_PLAYER,
+            code: 400,
+        })
+    })
+    it('with other conflicting possession', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.CONFLICTING_POSSESSION}`)).toEqual({
+            message: Constants.CONFLICTING_POSSESSION,
+            code: 400,
+        })
+    })
 })

@@ -40,6 +40,7 @@ const schema = new Schema<IGame>({
     teamOneToken: String,
     teamTwoToken: String,
     scoreLimit: { type: Number, default: 15 },
+    halfScore: { type: Number, default: 8 },
     teamOneScore: { type: Number, default: 0 },
     teamTwoScore: { type: Number, default: 0 },
     startTime: Date,

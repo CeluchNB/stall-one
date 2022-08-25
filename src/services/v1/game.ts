@@ -1,5 +1,5 @@
 import * as Constants from '../../utils/constants'
-import Game, { IGameModel } from '../../models/game'
+import { IGameModel } from '../../models/game'
 import IGame, { CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import axios from 'axios'
@@ -42,6 +42,7 @@ export default class GameServices {
             teamTwo: gameData.teamTwo,
             teamTwoDefined: gameData.teamTwoDefined,
             scoreLimit: gameData.scoreLimit,
+            halfScore: gameData.halfScore,
             startTime: new Date(gameData.startTime),
             softcapMins: gameData.softcapMins,
             hardcapMins: gameData.hardcapMins,
@@ -106,6 +107,7 @@ export default class GameServices {
             teamTwo: gameData.teamTwo,
             teamTwoDefined: gameData.teamTwoDefined,
             scoreLimit: gameData.scoreLimit,
+            halfScore: gameData.halfScore,
             startTime: gameData.startTime,
             softcapMins: gameData.softcapMins,
             hardcapMins: gameData.hardcapMins,
@@ -135,7 +137,7 @@ export default class GameServices {
             { ...safeData, teamTwoPlayers: teamTwoResponse?.data.team.players },
             { omitUndefined: true },
         )
-        const updatedGame = await Game.findById(game._id)
+        const updatedGame = await this.gameModel.findById(game._id)
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         return updatedGame!

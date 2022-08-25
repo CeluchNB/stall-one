@@ -5,6 +5,7 @@ export interface UpdateGame {
     teamTwo?: Team
     teamTwoDefined?: boolean
     scoreLimit?: number
+    halfScore?: number
     startTime?: Date
     softcapMins?: number
     hardcapMins?: number
@@ -19,6 +20,7 @@ export const updateGameKeys: UpdateGameKey[] = [
     'teamTwo',
     'teamTwoDefined',
     'scoreLimit',
+    'halfScore',
     'startTime',
     'softcapMins',
     'hardcapMins',
@@ -34,6 +36,7 @@ export interface CreateGame extends UpdateGame {
     teamTwo: Team
     teamTwoDefined: boolean
     scoreLimit: number
+    halfScore: number
     startTime: Date
     softcapMins: number
     hardcapMins: number

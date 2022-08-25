@@ -12,6 +12,8 @@ export const userErrorResponse = (error: string): { message: string; code: numbe
         return { message: Constants.UNABLE_TO_FIND_GAME, code: 404 }
     } else if (error.includes(Constants.UNABLE_TO_ADD_PLAYER)) {
         return { message: Constants.UNABLE_TO_ADD_PLAYER, code: 400 }
+    } else if (error.includes(Constants.CONFLICTING_POSSESSION)) {
+        return { message: Constants.CONFLICTING_POSSESSION, code: 400 }
     } else {
         return { message: Constants.GENERIC_ERROR, code: 500 }
     }

@@ -2,6 +2,7 @@ import { connect, connection, Types } from 'mongoose'
 import IGame, { CreateGame } from '../../src/types/game'
 import Game from '../../src/models/game'
 import jwt from 'jsonwebtoken'
+import GamePoint from '../../src/models/gamepoint'
 
 export const setUpDatabase = async () => {
     await connect(process.env.MONGOOSE_URL as string)
@@ -9,6 +10,7 @@ export const setUpDatabase = async () => {
 
 export const resetDatabase = async () => {
     await Game.deleteMany({})
+    await GamePoint.deleteMany({})
 }
 
 export const tearDownDatabase = () => {
@@ -35,6 +37,7 @@ export const createData: CreateGame = {
     },
     teamTwoDefined: false,
     scoreLimit: 15,
+    halfScore: 8,
     startTime: new Date(),
     softcapMins: 75,
     hardcapMins: 90,
