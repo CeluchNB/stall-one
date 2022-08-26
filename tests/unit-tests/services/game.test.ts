@@ -63,7 +63,7 @@ describe('test create game', () => {
 
     it('with fetch error', async () => {
         getMock.mockImplementationOnce(() => Promise.resolve({ status: 401 }))
-        expect(services.createGame(createData, '')).rejects.toThrowError(
+        await expect(services.createGame(createData, '')).rejects.toThrowError(
             new ApiError(Constants.UNAUTHENTICATED_USER, 401),
         )
 
@@ -91,7 +91,7 @@ describe('test create game', () => {
             return Promise.resolve({ ok: false })
         })
 
-        expect(services.createGame(createData, '')).rejects.toThrowError(
+        await expect(services.createGame(createData, '')).rejects.toThrowError(
             new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404),
         )
         const games = await Game.find({})
@@ -144,7 +144,7 @@ describe('test create game', () => {
             return Promise.resolve({ ok: false })
         })
 
-        expect(services.createGame({ ...createData, teamTwoDefined: true }, '')).rejects.toThrowError(
+        await expect(services.createGame({ ...createData, teamTwoDefined: true }, '')).rejects.toThrowError(
             new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404),
         )
         const games = await Game.find({})
@@ -236,7 +236,7 @@ describe('test edit game', () => {
     it('with unfound game', async () => {
         await Game.create(gameData)
 
-        expect(
+        await expect(
             services.updateGame(new Types.ObjectId().toString(), {
                 ...createData,
                 teamTwo: { _id: new Types.ObjectId(), place: 'Place 2', name: 'Name 2', teamname: 'place2name2' },
@@ -250,7 +250,7 @@ describe('test edit game', () => {
         getMock.mockImplementationOnce(() => {
             return Promise.resolve({ ok: false, status: 404 })
         })
-        expect(
+        await expect(
             services.updateGame(game._id.toString(), {
                 ...createData,
                 teamTwo: { _id: new Types.ObjectId(), place: 'Place 2', name: 'Name 2', teamname: 'place2name2' },
@@ -294,7 +294,7 @@ describe('test team two join', () => {
         }
         await initialGame.save()
 
-        expect(
+        await expect(
             services.teamTwoJoinGame(
                 new Types.ObjectId().toString(),
                 initialGame.teamTwo._id?.toString() || '',
@@ -323,7 +323,7 @@ describe('test team two join', () => {
         }
         await initialGame.save()
 
-        expect(
+        await expect(
             services.teamTwoJoinGame(
                 initialGame._id.toString(),
                 initialGame.teamTwo._id?.toString() || '',
@@ -352,7 +352,7 @@ describe('test team two join', () => {
         }
         await initialGame.save()
 
-        expect(
+        await expect(
             services.teamTwoJoinGame(
                 initialGame._id.toString(),
                 initialGame.teamTwo._id?.toString() || '',
@@ -380,7 +380,7 @@ describe('test team two join', () => {
         }
         await initialGame.save()
 
-        expect(
+        await expect(
             services.teamTwoJoinGame(
                 initialGame._id.toString(),
                 initialGame.teamTwo._id?.toString() || '',
@@ -446,7 +446,7 @@ describe('test add guest player to team', () => {
     it('with unfound game', async () => {
         await Game.create(gameData)
 
-        expect(
+        await expect(
             services.addGuestPlayer(new Types.ObjectId().toString(), TeamNumber.ONE, {
                 firstName: 'Noah',
                 lastName: 'Celuch',
@@ -457,7 +457,7 @@ describe('test add guest player to team', () => {
     it('with unable to add player', async () => {
         const game = await Game.create(gameData)
 
-        expect(
+        await expect(
             services.addGuestPlayer(game._id.toString(), TeamNumber.TWO, {
                 firstName: 'Noah',
                 lastName: 'Celuch',

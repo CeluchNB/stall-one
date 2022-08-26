@@ -59,4 +59,9 @@ interface IGame extends CreateGame {
     resolveCode: string
 }
 
+export interface GameAuth {
+    team: 'one' | 'two'
+    game: IGame
+}
+
 export default IGame

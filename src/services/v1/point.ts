@@ -1,16 +1,16 @@
 import * as Constants from '../../utils/constants'
-import { IGamePointModel } from '../../models/gamepoint'
+import { IPointModel } from '../../models/point'
 import { IGameModel } from '../../models/game'
 import { TeamNumber } from '../../types/ultmt'
 import { ApiError } from '../../types/errors'
-import IGamePoint from '../../types/gamepoint'
+import IPoint from '../../types/point'
 
-export default class GamePointServices {
-    gamePointModel: IGamePointModel
+export default class PointServices {
+    pointModel: IPointModel
     gameModel: IGameModel
 
-    constructor(gamePointModel: IGamePointModel, gameModel: IGameModel) {
-        this.gamePointModel = gamePointModel
+    constructor(pointModel: IPointModel, gameModel: IGameModel) {
+        this.pointModel = pointModel
         this.gameModel = gameModel
     }
 
@@ -20,14 +20,14 @@ export default class GamePointServices {
      * @param pullingTeam team that is pulling first
      * @returns created point
      */
-    createFirstPoint = async (gameId: string, pullingTeam: TeamNumber): Promise<IGamePoint> => {
+    createFirstPoint = async (gameId: string, pullingTeam: TeamNumber): Promise<IPoint> => {
         const game = await this.gameModel.findById(gameId)
         if (!game) {
             throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
         }
 
         // check if the first point has already been verified
-        const firstPoint = await this.gamePointModel.findOne({
+        const firstPoint = await this.pointModel.findOne({
             gameId: game._id,
             pointNumber: 1,
         })
@@ -44,7 +44,7 @@ export default class GamePointServices {
         }
 
         // create the first point if it hasn't been created yet
-        const point = await this.gamePointModel.create({
+        const point = await this.pointModel.create({
             gameId: game._id,
             pointNumber: 1,
             teamOnePlayers: [],

@@ -1,7 +1,7 @@
 import { Types } from 'mongoose'
 import { Player, Team } from './ultmt'
 
-interface IGamePoint {
+interface IPoint {
     _id: Types.ObjectId
     gameId: Types.ObjectId
     pointNumber: number
@@ -14,4 +14,4 @@ interface IGamePoint {
     scoringTeam?: Team
 }
 
-export default IGamePoint
+export default IPoint

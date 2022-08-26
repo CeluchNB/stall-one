@@ -1,7 +1,7 @@
 import { Schema, model, SchemaTypes } from 'mongoose'
-import IGamePoint from '../types/gamepoint'
+import IPoint from '../types/point'
 
-const schema = new Schema<IGamePoint>({
+const schema = new Schema<IPoint>({
     gameId: { type: SchemaTypes.ObjectId, ref: 'Game', required: true },
     pointNumber: Number,
     teamOnePlayers: [
@@ -56,6 +56,6 @@ const schema = new Schema<IGamePoint>({
     },
 })
 
-const GamePoint = model<IGamePoint>('GamePoint', schema)
-export type IGamePointModel = typeof GamePoint
-export default GamePoint
+const Point = model<IPoint>('Point', schema)
+export type IPointModel = typeof Point
+export default Point
