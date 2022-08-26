@@ -3,7 +3,7 @@ import { setUpDatabase, tearDownDatabase, gameData, resetDatabase } from '../../
 import PointServices from '../../../src/services/v1/point'
 import Point from '../../../src/models/point'
 import Game from '../../../src/models/game'
-import { TeamNumber } from '../../../src/types/ultmt'
+import { Player, TeamNumber } from '../../../src/types/ultmt'
 import { ApiError } from '../../../src/types/errors'
 import { Types } from 'mongoose'
 
@@ -136,5 +136,127 @@ describe('test create first point', () => {
         await expect(services.createFirstPoint(game._id.toString(), TeamNumber.ONE)).rejects.toThrowError(
             new ApiError(Constants.CONFLICTING_POSSESSION, 400),
         )
+    })
+
+    describe('test add players to point', () => {
+        it('with valid data for team one', async () => {
+            const game = await Game.create(gameData)
+            const initialPoint = await Point.create({
+                gameId: game._id,
+                pointNumber: 1,
+                teamOneScore: 0,
+                teamTwoScore: 0,
+                teamOnePlayers: [],
+                teamTwoPlayers: [],
+                pullingTeam: game.teamOne,
+                receivingTeam: game.teamTwo,
+            })
+
+            const players: Player[] = []
+            for (let i = 0; i < 7; i++) {
+                players.push({
+                    _id: new Types.ObjectId(),
+                    firstName: `First ${i}`,
+                    lastName: `Last ${i}`,
+                    username: `First${i}last${i}`,
+                })
+            }
+
+            const point = await services.setPlayers(initialPoint._id.toString(), TeamNumber.ONE, players)
+            expect(point._id.toString()).toBe(initialPoint._id.toString())
+            expect(point.pointNumber).toBe(1)
+            expect(point.teamOnePlayers.length).toBe(7)
+            expect(point.teamTwoPlayers.length).toBe(0)
+
+            const updatedPoint = await Point.findById(initialPoint._id)
+            expect(updatedPoint?.pointNumber).toBe(1)
+            expect(updatedPoint?.teamOnePlayers.length).toBe(7)
+            expect(updatedPoint?.teamTwoPlayers.length).toBe(0)
+        })
+
+        it('with valid data for team two', async () => {
+            const game = await Game.create(gameData)
+            const initialPoint = await Point.create({
+                gameId: game._id,
+                pointNumber: 1,
+                teamOneScore: 0,
+                teamTwoScore: 0,
+                teamOnePlayers: [],
+                teamTwoPlayers: [],
+                pullingTeam: game.teamOne,
+                receivingTeam: game.teamTwo,
+            })
+
+            const players: Player[] = []
+            for (let i = 0; i < 7; i++) {
+                players.push({
+                    _id: new Types.ObjectId(),
+                    firstName: `First ${i}`,
+                    lastName: `Last ${i}`,
+                    username: `First${i}last${i}`,
+                })
+            }
+
+            const point = await services.setPlayers(initialPoint._id.toString(), TeamNumber.TWO, players)
+            expect(point._id.toString()).toBe(initialPoint._id.toString())
+            expect(point.pointNumber).toBe(1)
+            expect(point.teamOnePlayers.length).toBe(0)
+            expect(point.teamTwoPlayers.length).toBe(7)
+
+            const updatedPoint = await Point.findById(initialPoint._id)
+            expect(updatedPoint?.pointNumber).toBe(1)
+            expect(updatedPoint?.teamOnePlayers.length).toBe(0)
+            expect(updatedPoint?.teamTwoPlayers.length).toBe(7)
+        })
+
+        it('with unfound point', async () => {
+            await expect(services.setPlayers(new Types.ObjectId().toString(), TeamNumber.ONE, [])).rejects.toThrowError(
+                new ApiError(Constants.UNABLE_TO_FIND_POINT, 404),
+            )
+        })
+
+        it('with unfound game', async () => {
+            const point = await Point.create({
+                gameId: new Types.ObjectId(),
+                pointNumber: 1,
+                teamOneScore: 0,
+                teamTwoScore: 0,
+                teamOnePlayers: [],
+                teamTwoPlayers: [],
+                pullingTeam: gameData.teamOne,
+                receivingTeam: gameData.teamTwo,
+            })
+            await expect(services.setPlayers(point._id.toString(), TeamNumber.ONE, [])).rejects.toThrowError(
+                new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
+            )
+        })
+
+        it('with wrong number of players', async () => {
+            const game = await Game.create(gameData)
+            const initialPoint = await Point.create({
+                gameId: game._id,
+                pointNumber: 1,
+                teamOneScore: 0,
+                teamTwoScore: 0,
+                teamOnePlayers: [],
+                teamTwoPlayers: [],
+                pullingTeam: game.teamOne,
+                receivingTeam: game.teamTwo,
+            })
+
+            const players: Player[] = []
+            for (let i = 0; i < 9; i++) {
+                players.push({
+                    _id: new Types.ObjectId(),
+                    firstName: `First ${i}`,
+                    lastName: `Last ${i}`,
+                    username: `First${i}last${i}`,
+                })
+            }
+
+            await expect(
+                services.setPlayers(initialPoint._id.toString(), TeamNumber.ONE, players),
+            ).rejects.toThrowError(new ApiError(Constants.WRONG_NUMBER_OF_PLAYERS, 400))
+        })
     })
 })

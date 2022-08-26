@@ -1,7 +1,7 @@
 import * as Constants from '../../utils/constants'
 import { IPointModel } from '../../models/point'
 import { IGameModel } from '../../models/game'
-import { TeamNumber } from '../../types/ultmt'
+import { Player, TeamNumber } from '../../types/ultmt'
 import { ApiError } from '../../types/errors'
 import IPoint from '../../types/point'
 
@@ -54,6 +54,38 @@ export default class PointServices {
             pullingTeam: pullingTeam === TeamNumber.ONE ? game.teamOne : game.teamTwo,
             receivingTeam: pullingTeam === TeamNumber.ONE ? game.teamTwo : game.teamOne,
         })
+
+        return point
+    }
+
+    /**
+     * Method to add players to point
+     * @param pointId id of point to add players to
+     * @param team team number to add players to
+     * @param players array of players
+     * @returns updated point
+     */
+    setPlayers = async (pointId: string, team: TeamNumber, players: Player[]): Promise<IPoint> => {
+        const point = await this.pointModel.findById(pointId)
+        if (!point) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
+        }
+
+        const game = await this.gameModel.findById(point.gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        if (players.length !== game.playersPerPoint) {
+            throw new ApiError(Constants.WRONG_NUMBER_OF_PLAYERS, 400)
+        }
+
+        if (team === TeamNumber.ONE) {
+            point.teamOnePlayers = players
+        } else {
+            point.teamTwoPlayers = players
+        }
+        await point.save()
 
         return point
     }
