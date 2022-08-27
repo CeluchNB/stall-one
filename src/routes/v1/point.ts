@@ -1,5 +1,5 @@
 import { Request, Response, Router } from 'express'
-import { query } from 'express-validator'
+import { body, param, query } from 'express-validator'
 import passport from 'passport'
 import { errorMiddleware } from '../../middlware/errors'
 import Game from '../../models/game'
@@ -20,6 +20,24 @@ pointRouter.post(
             const pullingTeam = getMyTeamNumber(req.query.pulling === 'true', data.team)
             const services = new PointServices(Point, Game)
             const point = await services.createFirstPoint(data.game._id.toString(), pullingTeam)
+            return res.json({ point })
+        } catch (error) {
+            next(error)
+        }
+    },
+)
+
+pointRouter.put(
+    '/point/players/:id',
+    body('players').isArray(),
+    param('id').isString(),
+    passport.authenticate('jwt', { session: false }),
+    async (req: Request, res: Response, next) => {
+        try {
+            const data = req.user as GameAuth
+            const teamNumber = getMyTeamNumber(true, data.team)
+            const services = new PointServices(Point, Game)
+            const point = await services.setPlayers(req.params.id, teamNumber, req.body.players)
             return res.json({ point })
         } catch (error) {
             next(error)
