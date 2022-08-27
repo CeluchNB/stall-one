@@ -18,6 +18,6 @@ passport.use(
             return done(null, false, { message: Constants.UNABLE_TO_FIND_GAME })
         }
 
-        return done(null, game)
+        return done(null, { game, team: jwtPayload.team })
     }),
 )

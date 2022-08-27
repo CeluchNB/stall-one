@@ -27,7 +27,8 @@ const schema = new Schema<IGame>({
         },
         required: false,
     },
-    teamTwoResolved: Boolean,
+    teamTwoResolved: { type: Boolean, required: true, default: false },
+    teamTwoDefined: { type: Boolean, required: true, default: false },
     creator: {
         type: {
             _id: SchemaTypes.ObjectId,
@@ -36,8 +37,10 @@ const schema = new Schema<IGame>({
             username: String,
         },
     },
-    token: String,
+    teamOneToken: String,
+    teamTwoToken: String,
     scoreLimit: { type: Number, default: 15 },
+    halfScore: { type: Number, default: 8 },
     teamOneScore: { type: Number, default: 0 },
     teamTwoScore: { type: Number, default: 0 },
     startTime: Date,
@@ -68,7 +71,7 @@ const schema = new Schema<IGame>({
 })
 
 schema.pre('save', async function (next) {
-    if (!this.token) {
+    if (!this.teamOneToken) {
         const payload = {
             sub: this._id.toString(),
             iat: Date.now(),
@@ -76,7 +79,7 @@ schema.pre('save', async function (next) {
 
         try {
             const token = jwt.sign(payload, process.env.JWT_SECRET as string)
-            this.token = token
+            this.teamOneToken = token
         } catch (error) {
             throw new ApiError(Constants.GENERIC_ERROR, 500)
         }
@@ -87,7 +90,8 @@ schema.pre('save', async function (next) {
 
 schema.methods.toJSON = function () {
     const gameObject = this.toObject()
-    delete gameObject.token
+    delete gameObject.teamOneToken
+    delete gameObject.teamTwoToken
 
     return gameObject
 }

@@ -15,3 +15,8 @@ export interface Team {
     seasonStart?: Date
     seasonEnd?: Date
 }
+
+export enum TeamNumber {
+    ONE = 'one',
+    TWO = 'two',
+}

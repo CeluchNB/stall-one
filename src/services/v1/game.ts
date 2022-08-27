@@ -1,9 +1,11 @@
 import * as Constants from '../../utils/constants'
-import Game, { IGameModel } from '../../models/game'
+import { IGameModel } from '../../models/game'
 import IGame, { CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import axios from 'axios'
 import randomstring from 'randomstring'
+import jwt from 'jsonwebtoken'
+import { Player, TeamNumber } from '../../types/ultmt'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -19,14 +21,14 @@ export default class GameServices {
     /**
      * Method to create a game
      * @param gameData initial data to create game
-     * @param jwt user's jwt
+     * @param userJwt user's jwt
      * @returns new game value
      */
-    createGame = async (gameData: CreateGame, jwt: string): Promise<{ game: IGame; token: string }> => {
+    createGame = async (gameData: CreateGame, userJwt: string): Promise<{ game: IGame; token: string }> => {
         const response = await axios.get(
             `${this.ultmtUrl}/api/v1/user/manager/authenticate?team=${gameData.teamOne._id}`,
             {
-                headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${jwt}` },
+                headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
             },
         )
 
@@ -35,10 +37,12 @@ export default class GameServices {
         }
 
         const safeData: CreateGame = {
+            creator: gameData.creator,
             teamOne: gameData.teamOne,
             teamTwo: gameData.teamTwo,
-            teamTwoResolved: gameData.teamTwoResolved,
+            teamTwoDefined: gameData.teamTwoDefined,
             scoreLimit: gameData.scoreLimit,
+            halfScore: gameData.halfScore,
             startTime: new Date(gameData.startTime),
             softcapMins: gameData.softcapMins,
             hardcapMins: gameData.hardcapMins,
@@ -56,7 +60,7 @@ export default class GameServices {
         }
 
         let teamTwoResponse
-        if (safeData.teamTwoResolved) {
+        if (safeData.teamTwoDefined) {
             teamTwoResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo._id}`, {
                 headers: { 'X-API-Key': this.apiKey },
             })
@@ -69,11 +73,21 @@ export default class GameServices {
             ...safeData,
             creator: response.data.user,
             teamOnePlayers: teamOneResponse.data.team.players,
-            teamTwoPlayers: safeData.teamTwoResolved ? teamTwoResponse?.data?.team.players : [],
+            teamTwoPlayers: safeData.teamTwoDefined ? teamTwoResponse?.data?.team.players : [],
             resolveCode: randomstring.generate({ length: 6, charset: 'numeric' }),
         })
 
-        return { game, token: game.token }
+        const payload = {
+            sub: game._id.toString(),
+            iat: Date.now(),
+            team: 'one',
+        }
+
+        const token = jwt.sign(payload, process.env.JWT_SECRET as string)
+        game.teamOneToken = token
+        await game.save()
+
+        return { game, token: game.teamOneToken }
     }
 
     /**
@@ -91,8 +105,9 @@ export default class GameServices {
         // This does not actually work b/c of 0's
         const safeData: UpdateGame = {
             teamTwo: gameData.teamTwo,
-            teamTwoResolved: gameData.teamTwoResolved,
+            teamTwoDefined: gameData.teamTwoDefined,
             scoreLimit: gameData.scoreLimit,
+            halfScore: gameData.halfScore,
             startTime: gameData.startTime,
             softcapMins: gameData.softcapMins,
             hardcapMins: gameData.hardcapMins,
@@ -109,7 +124,7 @@ export default class GameServices {
         }
 
         let teamTwoResponse
-        if (safeData.teamTwoResolved && game.teamTwoPlayers.length === 0) {
+        if (safeData.teamTwoDefined && game.teamTwoPlayers.length === 0) {
             teamTwoResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo?._id}`, {
                 headers: { 'X-API-Key': this.apiKey },
             })
@@ -122,7 +137,7 @@ export default class GameServices {
             { ...safeData, teamTwoPlayers: teamTwoResponse?.data.team.players },
             { omitUndefined: true },
         )
-        const updatedGame = await Game.findById(game._id)
+        const updatedGame = await this.gameModel.findById(game._id)
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         return updatedGame!
@@ -159,6 +174,49 @@ export default class GameServices {
             throw new ApiError(Constants.WRONG_RESOLVE_CODE, 401)
         }
 
-        return { game, token: game.token }
+        const payload = {
+            sub: game._id.toString(),
+            iat: Date.now(),
+            team: 'two',
+        }
+
+        const token = jwt.sign(payload, process.env.JWT_SECRET as string)
+        game.teamTwoToken = token
+        game.teamTwoResolved = true
+        await game.save()
+
+        return { game, token }
+    }
+
+    /**
+     * Method to add a guest player to a team for a single game
+     * @param gameId id of game
+     * @param team team to add player to (either 'one' or 'two')
+     * @param player data of player to add
+     * @returns updated game object
+     */
+    addGuestPlayer = async (gameId: string, team: TeamNumber, player: Player): Promise<IGame> => {
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        const playerData = {
+            firstName: player.firstName,
+            lastName: player.lastName,
+            _id: undefined,
+            username: 'guest',
+        }
+        if (team === TeamNumber.ONE) {
+            game.teamOnePlayers.push(playerData)
+        } else if (game.teamTwoResolved) {
+            game.teamTwoPlayers.push(playerData)
+        } else {
+            throw new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400)
+        }
+
+        await game.save()
+
+        return game
     }
 }
