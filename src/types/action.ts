@@ -1,7 +1,7 @@
 import { Types } from 'mongoose'
 import { Player } from './ultmt'
 
-export enum EventType {
+export enum ActionType {
     PULL = 'Pull',
     CATCH = 'Catch',
     DROP = 'Drop',
@@ -11,19 +11,29 @@ export enum EventType {
     SCORE = 'Score',
     SUBSTITUTION = 'Substitution',
     CALL_ON_FIELD = 'CallOnField',
+    UNDO = 'Undo',
     FINISH_GAME = 'FinishGame',
 }
 
-interface Comment {
+export interface Comment {
     user: Player
     comment: string
 }
 
-interface IPointEvent {
+export interface ClientAction {
+    pointId: Types.ObjectId
+    eventType: ActionType
+    team: Types.ObjectId
+    playerOne?: Player
+    playerTwo?: Player
+    tags: string[]
+}
+
+interface IAction {
     _id: Types.ObjectId
     pointId: Types.ObjectId
     eventNumber: number
-    eventType: EventType
+    eventType: ActionType
     displayMessage: string
     comments: Comment[]
     team: Types.ObjectId
@@ -32,4 +42,4 @@ interface IPointEvent {
     tags: string[]
 }
 
-export default IPointEvent
+export default IAction

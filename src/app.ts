@@ -6,6 +6,11 @@ import axios from 'axios'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import socketHandler from './sockets/v1'
+import { connectDatabase } from './loaders/mongoose'
+import { createRedisAdapter } from './loaders/redis'
+import { ClientToServerEvents } from './types/socket'
+
+connectDatabase()
 
 const app = express()
 app.use(cors())
@@ -23,7 +28,10 @@ app.get('/stall-one', async (req, res) => {
 })
 
 const httpServer = createServer(app)
-const io = new Server(httpServer, {})
-io.on('connection', socketHandler)
+const io = new Server<ClientToServerEvents>(httpServer, {})
+Promise.resolve(createRedisAdapter()).then((adapter) => {
+    io.adapter(adapter)
+    io.on('connection', socketHandler)
+})
 
 export default httpServer
