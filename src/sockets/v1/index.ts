@@ -1,23 +1,15 @@
 import { Socket } from 'socket.io'
-import actionHandler from './action'
-import commentHandler from './comment'
+import registerActionHandler from './action'
+import registerCommentHandler from './comment'
+import { createClient } from 'redis'
 
-const socketHandler = (socket: Socket) => {
+const socketHandler = async (socket: Socket) => {
+    const client = createClient({ url: process.env.REDIS_URL })
+    await client.connect()
     socket.join('servers')
 
-    // Handle stat keeper logging action
-    socket.on('action', (data) => {
-        socket.to('servers').emit('serverAction', data)
-        actionHandler(data)
-    })
-    socket.on('serverAction', actionHandler)
-
-    // Handle fan logging comment for action
-    socket.on('comment', (data) => {
-        socket.to('servers').emit('serverComment', data)
-        commentHandler(data)
-    })
-    socket.on('serverComment', commentHandler)
+    registerActionHandler(socket, client)
+    registerCommentHandler(socket, client)
 }
 
 export default socketHandler

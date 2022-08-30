@@ -1,5 +1,6 @@
 import { Types } from 'mongoose'
-import { Player } from './ultmt'
+import { Player, Team } from './ultmt'
+import { createClient } from 'redis'
 
 export enum ActionType {
     PULL = 'Pull',
@@ -11,7 +12,6 @@ export enum ActionType {
     SCORE = 'Score',
     SUBSTITUTION = 'Substitution',
     CALL_ON_FIELD = 'CallOnField',
-    UNDO = 'Undo',
     FINISH_GAME = 'FinishGame',
 }
 
@@ -22,24 +22,26 @@ export interface Comment {
 
 export interface ClientAction {
     pointId: Types.ObjectId
-    eventType: ActionType
-    team: Types.ObjectId
+    actionType: ActionType
+    team: Team
     playerOne?: Player
     playerTwo?: Player
     tags: string[]
 }
 
 interface IAction {
-    _id: Types.ObjectId
+    _id?: Types.ObjectId
     pointId: Types.ObjectId
-    eventNumber: number
-    eventType: ActionType
+    actionNumber: number
+    actionType: ActionType
     displayMessage: string
     comments: Comment[]
-    team: Types.ObjectId
+    team: Team
     playerOne?: Player
     playerTwo?: Player
     tags: string[]
 }
+
+export type RedisClientType = ReturnType<typeof createClient>
 
 export default IAction

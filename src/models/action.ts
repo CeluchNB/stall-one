@@ -3,8 +3,8 @@ import IAction, { ActionType } from '../types/action'
 
 const schema = new Schema<IAction>({
     pointId: { type: SchemaTypes.ObjectId, required: true },
-    eventNumber: { type: Number, required: true },
-    eventType: { type: String, enum: Object.values(ActionType) },
+    actionNumber: { type: Number, required: true },
+    actionType: { type: String, enum: Object.values(ActionType) },
     displayMessage: String,
     comments: [
         {
@@ -17,7 +17,17 @@ const schema = new Schema<IAction>({
             comment: String,
         },
     ],
-    team: SchemaTypes.ObjectId,
+    team: {
+        type: {
+            _id: SchemaTypes.ObjectId,
+            place: String,
+            name: String,
+            teamname: String,
+            seasonStart: Date,
+            seasonEnd: Date,
+        },
+        required: true,
+    },
     playerOne: {
         type: {
             _id: SchemaTypes.ObjectId,
