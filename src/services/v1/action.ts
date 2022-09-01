@@ -12,10 +12,10 @@ export default class ActionServices {
         this.actionModel = actionModel
     }
 
-    createRedisAction = async (data: ClientAction): Promise<IAction> => {
-        const actionNumber = await this.redisClient.incr(`${data.pointId}:total`)
+    createRedisAction = async (data: ClientAction, gameId: string): Promise<IAction> => {
+        const actionNumber = await this.redisClient.incr(`${gameId}:${data.pointId}:actions`)
         const action = this.parseActionData(data, actionNumber)
-        await this.saveActionData(action)
+        await this.saveRedisAction(action)
 
         return action
     }
@@ -34,7 +34,6 @@ export default class ActionServices {
         const tagLength = await this.redisClient.lLen(`${pointId}:${number}:tags`)
         const tags = await this.redisClient.lRange(`${pointId}:${number}:tags`, 0, tagLength)
 
-        console.log(pointId, playerOne.id, teamId)
         return {
             pointId: new Types.ObjectId(pointId),
             actionNumber: number,
@@ -91,7 +90,7 @@ export default class ActionServices {
         return action
     }
 
-    private saveActionData = async (data: IAction) => {
+    private saveRedisAction = async (data: IAction) => {
         const { pointId, actionNumber: number, team, playerOne, playerTwo, displayMessage, tags, actionType } = data
         await this.redisClient.hSet(`${pointId}:${number}:team`, 'id', team._id?.toString() || '')
         await this.redisClient.hSet(`${pointId}:${number}:team`, 'place', team.place || '')

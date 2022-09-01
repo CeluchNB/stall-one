@@ -9,6 +9,7 @@ import socketHandler from './sockets/v1'
 import { connectDatabase } from './loaders/mongoose'
 import { createRedisAdapter } from './loaders/redis'
 import { ClientToServerEvents } from './types/socket'
+import { gameAuth } from './middlware/socket-auth'
 
 connectDatabase()
 
@@ -29,9 +30,12 @@ app.get('/stall-one', async (req, res) => {
 
 const httpServer = createServer(app)
 const io = new Server<ClientToServerEvents>(httpServer, {})
+
 Promise.resolve(createRedisAdapter()).then((adapter) => {
     io.adapter(adapter)
-    io.on('connection', socketHandler)
+    io.of('/live').use(gameAuth).on('connection', socketHandler)
+
+    io.use(gameAuth)
 })
 
 export default httpServer

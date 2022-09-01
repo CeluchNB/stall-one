@@ -10,6 +10,7 @@ export enum ActionType {
     BLOCK = 'Block',
     PICKUP = 'Pickup',
     SCORE = 'Score',
+    TIMEOUT = 'Timeout',
     SUBSTITUTION = 'Substitution',
     CALL_ON_FIELD = 'CallOnField',
     FINISH_GAME = 'FinishGame',
