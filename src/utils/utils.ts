@@ -15,3 +15,7 @@ export const getMyTeamNumber = (isMyTeam: boolean, myTeam: 'one' | 'two'): TeamN
         }
     }
 }
+
+export const getActionBaseKey = (pointId: string, number: number): string => {
+    return `${pointId}:${number}`
+}

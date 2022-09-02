@@ -1,4 +1,4 @@
-import { getMyTeamNumber } from '../../../src/utils/utils'
+import { getMyTeamNumber, getActionBaseKey } from '../../../src/utils/utils'
 import { TeamNumber } from '../../../src/types/ultmt'
 
 describe('test get my team number', () => {
@@ -20,5 +20,11 @@ describe('test get my team number', () => {
     it('case 4', () => {
         const number = getMyTeamNumber(false, 'two')
         expect(number).toBe(TeamNumber.ONE)
+    })
+})
+
+describe('test get action base key', () => {
+    it('gets correct base key', () => {
+        expect(getActionBaseKey('1234', 5)).toBe('1234:5')
     })
 })

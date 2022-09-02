@@ -22,7 +22,7 @@ export interface Comment {
 }
 
 export interface ClientAction {
-    pointId: Types.ObjectId
+    pointId: string
     actionType: ActionType
     team: Team
     playerOne?: Player

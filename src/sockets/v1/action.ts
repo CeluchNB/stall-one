@@ -4,8 +4,7 @@ import ActionServices from '../../services/v1/action'
 
 const actionHandler = async (data: ClientAction, gameId: string, client: RedisClientType): Promise<IAction> => {
     const services = new ActionServices(client)
-    const action = await services.createRedisAction(data, gameId)
-    return await services.getRedisAction(action.pointId.toString(), action.actionNumber)
+    return await services.createLiveAction(data, gameId)
 }
 
 const serverActionHandler = async (
@@ -15,7 +14,7 @@ const serverActionHandler = async (
     // Send action to client
     const { pointId, number } = data
     const services = new ActionServices(client)
-    return await services.getRedisAction(pointId, number)
+    return await services.getLiveAction(pointId, number)
 }
 
 const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
