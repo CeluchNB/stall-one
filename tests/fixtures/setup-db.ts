@@ -1,20 +1,26 @@
 import { connect, connection, Types } from 'mongoose'
+import { createClient } from 'redis'
 import IGame, { CreateGame } from '../../src/types/game'
 import Game from '../../src/models/game'
 import jwt from 'jsonwebtoken'
 import Point from '../../src/models/point'
+import Action from '../../src/models/action'
 
+const client = createClient()
 export const setUpDatabase = async () => {
     await connect(process.env.MONGOOSE_URL as string)
+    await client.connect()
 }
 
 export const resetDatabase = async () => {
     await Game.deleteMany({})
     await Point.deleteMany({})
+    await Action.deleteMany({})
 }
 
 export const tearDownDatabase = () => {
     connection.close()
+    client.quit()
 }
 
 export const createData: CreateGame = {

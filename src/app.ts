@@ -6,8 +6,8 @@ import axios from 'axios'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import socketHandler from './sockets/v1'
-import { connectDatabase } from './loaders/mongoose'
-import { createRedisAdapter } from './loaders/redis'
+import { connectDatabase, closeDatabase } from './loaders/mongoose'
+import { createRedisAdapter, closeRedisConnection } from './loaders/redis'
 import { ClientToServerEvents } from './types/socket'
 import { gameAuth } from './middlware/socket-auth'
 
@@ -37,5 +37,11 @@ Promise.resolve(createRedisAdapter()).then((adapter) => {
 
     io.use(gameAuth)
 })
+
+// Close all connections, for testing purposes
+export const close = async () => {
+    await closeDatabase()
+    closeRedisConnection()
+}
 
 export default httpServer

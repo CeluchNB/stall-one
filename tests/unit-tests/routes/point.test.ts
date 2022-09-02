@@ -1,18 +1,14 @@
 import * as Constants from '../../../src/utils/constants'
-import app from '../../../src/app'
+import app, { close } from '../../../src/app'
 import request from 'supertest'
 import Game from '../../../src/models/game'
-import { setUpDatabase, tearDownDatabase, gameData, resetDatabase } from '../../fixtures/setup-db'
+import { gameData, resetDatabase } from '../../fixtures/setup-db'
 import Point from '../../../src/models/point'
 import { Types } from 'mongoose'
 import { Player } from '../../../src/types/ultmt'
 
-beforeAll(async () => {
-    await setUpDatabase()
-})
-
 afterAll(async () => {
-    await tearDownDatabase()
+    await close()
 })
 
 afterEach(async () => {
