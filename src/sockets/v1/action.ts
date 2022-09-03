@@ -18,7 +18,6 @@ const serverActionHandler = async (
 }
 
 const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
-    socket.join('servers')
     socket.on('action:client', async (data) => {
         const { gameId } = socket.data
         const dataJson = JSON.parse(data)
