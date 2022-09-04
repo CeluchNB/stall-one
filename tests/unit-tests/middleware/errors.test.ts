@@ -62,4 +62,16 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
+    it('with invaid data case one', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.INVALID_DATA}`)).toEqual({
+            message: Constants.INVALID_DATA,
+            code: 400,
+        })
+    })
+    it('with invaid data case two', () => {
+        expect(userErrorResponse('Extra Error: Invalid argument type')).toEqual({
+            message: Constants.INVALID_DATA,
+            code: 400,
+        })
+    })
 })

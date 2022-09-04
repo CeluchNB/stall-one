@@ -18,6 +18,8 @@ export const userErrorResponse = (error: string): { message: string; code: numbe
         return { message: Constants.UNABLE_TO_FIND_POINT, code: 404 }
     } else if (error.includes(Constants.WRONG_NUMBER_OF_PLAYERS)) {
         return { message: Constants.WRONG_NUMBER_OF_PLAYERS, code: 400 }
+    } else if (error.includes(Constants.INVALID_DATA) || error.includes('Invalid argument type')) {
+        return { message: Constants.INVALID_DATA, code: 400 }
     } else {
         return { message: Constants.GENERIC_ERROR, code: 500 }
     }

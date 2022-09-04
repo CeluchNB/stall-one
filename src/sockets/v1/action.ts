@@ -1,7 +1,9 @@
+import * as Constants from '../../utils/constants'
 import IAction, { ClientAction, RedisClientType } from '../../types/action'
 import { Socket } from 'socket.io'
 import ActionServices from '../../services/v1/action'
 import { userErrorResponse } from '../../middlware/errors'
+import { ApiError } from '../../types/errors'
 
 const actionHandler = async (data: ClientAction, gameId: string, client: RedisClientType): Promise<IAction> => {
     const services = new ActionServices(client)
@@ -14,6 +16,9 @@ const serverActionHandler = async (
 ): Promise<IAction> => {
     // Send action to client
     const { pointId, number } = data
+    if (!pointId || !number) {
+        throw new ApiError(Constants.INVALID_DATA, 400)
+    }
     const services = new ActionServices(client)
     return await services.getLiveAction(pointId, number)
 }
@@ -27,18 +32,29 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
             socket.emit('action', action)
             socket.to('servers').emit('action:server', { pointId: action.pointId, number: action.actionNumber })
         } catch (error) {
-            if (typeof error === 'object' && error) {
+            if (error && typeof error === 'object') {
                 const errorData = userErrorResponse(error.toString())
                 socket.emit('action:error', errorData)
             } else {
-                socket.emit('action:error')
+                const response = userErrorResponse('')
+                socket.emit('action:error', response)
             }
         }
     })
     socket.on('action:server', async (data) => {
-        const dataJson = JSON.parse(data)
-        const action = await serverActionHandler(client, dataJson)
-        socket.emit('action', action)
+        try {
+            const dataJson = JSON.parse(data)
+            const action = await serverActionHandler(client, dataJson)
+            socket.emit('action', action)
+        } catch (error) {
+            if (error && typeof error === 'object') {
+                const errorData = userErrorResponse(error.toString())
+                socket.emit('action:error', errorData)
+            } else {
+                const response = userErrorResponse('')
+                socket.emit('action:error', response)
+            }
+        }
     })
 }
 
