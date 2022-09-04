@@ -19,10 +19,10 @@ export const saveRedisAction = async (redisClient: RedisClientType, data: IActio
         await redisClient.hSet(`${baseKey}:team`, 'teamname', teamname)
     }
     if (seasonStart) {
-        await redisClient.hSet(`${baseKey}:team`, 'seasonStart', seasonStart.getUTCFullYear())
+        await redisClient.hSet(`${baseKey}:team`, 'seasonStart', new Date(seasonStart).getUTCFullYear())
     }
     if (seasonEnd) {
-        await redisClient.hSet(`${baseKey}:team`, 'seasonEnd', seasonEnd.getUTCFullYear())
+        await redisClient.hSet(`${baseKey}:team`, 'seasonEnd', new Date(seasonEnd).getUTCFullYear())
     }
 
     await redisClient.set(`${baseKey}:type`, actionType)

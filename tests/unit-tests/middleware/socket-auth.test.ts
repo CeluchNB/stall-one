@@ -1,6 +1,6 @@
 import * as Constants from '../../../src/utils/constants'
 import { gameAuth } from '../../../src/middlware/socket-auth'
-import { setUpDatabase, tearDownDatabase, createData } from '../../fixtures/setup-db'
+import { setUpDatabase, tearDownDatabase, resetDatabase, createData } from '../../fixtures/setup-db'
 import Game from '../../../src/models/game'
 import { Socket } from 'socket.io'
 import jwt from 'jsonwebtoken'
@@ -11,6 +11,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await tearDownDatabase()
+})
+
+afterEach(async () => {
+    await resetDatabase()
 })
 
 describe('test game auth method', () => {

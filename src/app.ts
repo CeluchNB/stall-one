@@ -5,7 +5,7 @@ import { router as v1Router } from '../src/routes/v1'
 import axios from 'axios'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
-import socketHandler from './sockets/v1'
+import socketHandler, { client } from './sockets/v1'
 import { connectDatabase, closeDatabase } from './loaders/mongoose'
 import { createRedisAdapter, closeRedisConnection } from './loaders/redis'
 import { ClientToServerEvents } from './types/socket'
@@ -34,14 +34,15 @@ const io = new Server<ClientToServerEvents>(httpServer, {})
 Promise.resolve(createRedisAdapter()).then((adapter) => {
     io.adapter(adapter)
     io.of('/live').use(gameAuth).on('connection', socketHandler)
-
-    io.use(gameAuth)
 })
 
 // Close all connections, for testing purposes
 export const close = async () => {
+    if (client && client.isOpen) {
+        await client.quit()
+    }
     await closeDatabase()
-    closeRedisConnection()
+    await closeRedisConnection()
 }
 
 export default httpServer

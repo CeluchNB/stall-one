@@ -11,7 +11,11 @@ export async function createRedisAdapter() {
     return createAdapter(pubClient, subClient)
 }
 
-export function closeRedisConnection() {
-    pubClient.quit()
-    subClient.quit()
+export async function closeRedisConnection() {
+    if (pubClient.isOpen) {
+        await pubClient.quit()
+    }
+    if (subClient.isOpen) {
+        await subClient.quit()
+    }
 }

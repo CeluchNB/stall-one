@@ -1,6 +1,7 @@
 import IAction, { ClientAction, RedisClientType } from '../../types/action'
 import { Socket } from 'socket.io'
 import ActionServices from '../../services/v1/action'
+import { userErrorResponse } from '../../middlware/errors'
 
 const actionHandler = async (data: ClientAction, gameId: string, client: RedisClientType): Promise<IAction> => {
     const services = new ActionServices(client)
@@ -19,11 +20,20 @@ const serverActionHandler = async (
 
 const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
     socket.on('action:client', async (data) => {
-        const { gameId } = socket.data
-        const dataJson = JSON.parse(data)
-        const action = await actionHandler(dataJson, gameId, client)
-        socket.emit('action', action)
-        socket.to('servers').emit('action:server', { pointId: action.pointId, number: action.actionNumber })
+        try {
+            const { gameId } = socket.data
+            const dataJson = JSON.parse(data)
+            const action = await actionHandler(dataJson, gameId, client)
+            socket.emit('action', action)
+            socket.to('servers').emit('action:server', { pointId: action.pointId, number: action.actionNumber })
+        } catch (error) {
+            if (typeof error === 'object' && error) {
+                const errorData = userErrorResponse(error.toString())
+                socket.emit('action:error', errorData)
+            } else {
+                socket.emit('action:error')
+            }
+        }
     })
     socket.on('action:server', async (data) => {
         const dataJson = JSON.parse(data)
