@@ -1,4 +1,5 @@
 import { TeamNumber } from '../types/ultmt'
+import { userErrorResponse } from '../middlware/errors'
 
 export const getMyTeamNumber = (isMyTeam: boolean, myTeam: 'one' | 'two'): TeamNumber => {
     if (isMyTeam) {
@@ -18,4 +19,13 @@ export const getMyTeamNumber = (isMyTeam: boolean, myTeam: 'one' | 'two'): TeamN
 
 export const getActionBaseKey = (pointId: string, number: number): string => {
     return `${pointId}:${number}`
+}
+
+export const handleSocketError = (error: unknown): { message: string; code: number } => {
+    if (error && typeof error === 'object') {
+        const errorData = userErrorResponse(error.toString())
+        return errorData
+    }
+    const errorData = userErrorResponse('')
+    return errorData
 }

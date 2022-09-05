@@ -2,8 +2,8 @@ import * as Constants from '../../utils/constants'
 import IAction, { ClientAction, RedisClientType } from '../../types/action'
 import { Socket } from 'socket.io'
 import ActionServices from '../../services/v1/action'
-import { userErrorResponse } from '../../middlware/errors'
 import { ApiError } from '../../types/errors'
+import { handleSocketError } from '../../utils/utils'
 
 const actionHandler = async (data: ClientAction, gameId: string, client: RedisClientType): Promise<IAction> => {
     const services = new ActionServices(client)
@@ -32,13 +32,8 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
             socket.emit('action', action)
             socket.to('servers').emit('action:server', { pointId: action.pointId, number: action.actionNumber })
         } catch (error) {
-            if (error && typeof error === 'object') {
-                const errorData = userErrorResponse(error.toString())
-                socket.emit('action:error', errorData)
-            } else {
-                const response = userErrorResponse('')
-                socket.emit('action:error', response)
-            }
+            const response = handleSocketError(error)
+            socket.emit('action:error', response)
         }
     })
     socket.on('action:server', async (data) => {
@@ -47,13 +42,8 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
             const action = await serverActionHandler(client, dataJson)
             socket.emit('action', action)
         } catch (error) {
-            if (error && typeof error === 'object') {
-                const errorData = userErrorResponse(error.toString())
-                socket.emit('action:error', errorData)
-            } else {
-                const response = userErrorResponse('')
-                socket.emit('action:error', response)
-            }
+            const response = handleSocketError(error)
+            socket.emit('action:error', response)
         }
     })
 }

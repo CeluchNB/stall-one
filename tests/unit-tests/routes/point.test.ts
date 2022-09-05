@@ -20,7 +20,7 @@ describe('test /POST first point route', () => {
         const game = await Game.create(gameData)
 
         const response = await request(app)
-            .post('/api/v1/point/first?pulling=true')
+            .post('/api/v1/point?pulling=true&number=1')
             .set('Authorization', `Bearer ${game.teamOneToken}`)
             .send()
             .expect(200)
@@ -37,7 +37,7 @@ describe('test /POST first point route', () => {
 
     it('with bad game authentication', async () => {
         await request(app)
-            .post('/api/v1/point/first?pulling=true')
+            .post('/api/v1/point?pulling=true&number=1')
             .set('Authorization', 'Bearer asf134fsg.adsf43esgd.4312123')
             .send()
             .expect(401)
@@ -57,7 +57,7 @@ describe('test /POST first point route', () => {
         })
 
         const response = await request(app)
-            .post('/api/v1/point/first?pulling=false')
+            .post('/api/v1/point?pulling=false&number=1')
             .set('Authorization', `Bearer ${game.teamOneToken}`)
             .send()
             .expect(400)

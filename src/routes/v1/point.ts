@@ -11,15 +11,16 @@ import { getMyTeamNumber } from '../../utils/utils'
 export const pointRouter = Router()
 
 pointRouter.post(
-    '/point/first',
+    '/point',
     query('pulling').isBoolean(),
+    query('number').isNumeric(),
     passport.authenticate('jwt', { session: false }),
     async (req: Request, res: Response, next) => {
         try {
             const data = req.user as GameAuth
             const pullingTeam = getMyTeamNumber(req.query.pulling === 'true', data.team)
             const services = new PointServices(Point, Game)
-            const point = await services.createFirstPoint(data.game._id.toString(), pullingTeam)
+            const point = await services.createPoint(data.game._id.toString(), pullingTeam, Number(req.query.number))
             return res.json({ point })
         } catch (error) {
             next(error)

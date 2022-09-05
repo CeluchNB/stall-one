@@ -15,29 +15,44 @@ export default class PointServices {
     }
 
     /**
-     * Method to create the first point of a game
+     * Method to create a point in the game
      * @param gameId id of game to create point on
      * @param pullingTeam team that is pulling first
      * @returns created point
      */
-    createFirstPoint = async (gameId: string, pullingTeam: TeamNumber): Promise<IPoint> => {
+    createPoint = async (gameId: string, pullingTeam: TeamNumber, pointNumber: number): Promise<IPoint> => {
+        if (pointNumber < 1) {
+            throw new ApiError(Constants.INVALID_DATA, 400)
+        }
+
         const game = await this.gameModel.findById(gameId)
         if (!game) {
             throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
         }
 
+        if (pointNumber > 1) {
+            const prevPoint = await this.pointModel.findOne({
+                gameId: game._id,
+                pointNumber: pointNumber - 1,
+            })
+
+            if (!prevPoint) {
+                throw new ApiError(Constants.INVALID_DATA, 400)
+            }
+        }
+
         // check if the first point has already been verified
-        const firstPoint = await this.pointModel.findOne({
+        const pointRecord = await this.pointModel.findOne({
             gameId: game._id,
-            pointNumber: 1,
+            pointNumber,
         })
 
-        if (firstPoint) {
+        if (pointRecord) {
             if (
-                (pullingTeam === TeamNumber.ONE && firstPoint.pullingTeam._id?.equals(game.teamOne._id || '')) ||
-                (pullingTeam === TeamNumber.TWO && firstPoint.pullingTeam._id?.equals(game.teamTwo._id || ''))
+                (pullingTeam === TeamNumber.ONE && pointRecord.pullingTeam._id?.equals(game.teamOne._id || '')) ||
+                (pullingTeam === TeamNumber.TWO && pointRecord.pullingTeam._id?.equals(game.teamTwo._id || ''))
             ) {
-                return firstPoint
+                return pointRecord
             } else {
                 throw new ApiError(Constants.CONFLICTING_POSSESSION, 400)
             }
@@ -46,7 +61,7 @@ export default class PointServices {
         // create the first point if it hasn't been created yet
         const point = await this.pointModel.create({
             gameId: game._id,
-            pointNumber: 1,
+            pointNumber: pointNumber,
             teamOnePlayers: [],
             teamTwoPlayers: [],
             teamOneScore: 0,
