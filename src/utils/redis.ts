@@ -137,3 +137,14 @@ export const getRedisAction = async (
 
     return action
 }
+
+export const deleteRedisAction = async (redisClient: RedisClientType, pointId: string, number: number) => {
+    const baseKey = getActionBaseKey(pointId, number)
+    await redisClient.del(`${baseKey}:team`)
+    await redisClient.del(`${baseKey}:type`)
+    await redisClient.del(`${baseKey}:display`)
+    await redisClient.del(`${baseKey}:playerone`)
+    await redisClient.del(`${baseKey}:playertwo`)
+    await redisClient.del(`${baseKey}:tags`)
+    await redisClient.del(`${baseKey}:comments`)
+}

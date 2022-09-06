@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Types } from 'mongoose'
 import IAction, { ActionType } from '../../../src/types/action'
-import { saveRedisAction, getRedisAction } from '../../../src/utils/redis'
+import { saveRedisAction, getRedisAction, deleteRedisAction } from '../../../src/utils/redis'
 import { getActionBaseKey } from '../../../src/utils/utils'
 import { client, setUpDatabase, tearDownDatabase, resetDatabase } from '../../fixtures/setup-db'
 
@@ -390,5 +390,117 @@ describe('test get redis action', () => {
         expect(action.tags[0]).toBe(actionData.tags[0])
         expect(action.tags[1]).toBe(actionData.tags[1])
         expect(action.comments.length).toBe(0)
+    })
+})
+
+describe('test delete redis action', () => {
+    it('delete all data', async () => {
+        const actionData: IAction = {
+            _id: new Types.ObjectId(),
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'San Francisco',
+                name: 'Sockeye',
+                teamname: 'sfsockeye',
+                seasonStart: new Date('2022'),
+                seasonEnd: new Date('2022'),
+            },
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'First',
+                lastName: 'Last',
+                username: 'firstlast',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Last',
+                lastName: 'First',
+                username: 'lastfirst',
+            },
+            pointId: new Types.ObjectId(),
+            actionNumber: 1,
+            actionType: ActionType.CATCH,
+            displayMessage: 'First Last throws to Last First',
+            comments: [],
+            tags: ['good', 'huck'],
+        }
+
+        const baseKey = getActionBaseKey(actionData.pointId.toString(), actionData.actionNumber)
+        await client.hSet(`${baseKey}:team`, 'name', actionData.team.name)
+        await client.hSet(`${baseKey}:team`, 'id', actionData.team._id!.toString())
+        await client.hSet(`${baseKey}:team`, 'place', actionData.team.place!)
+        await client.hSet(`${baseKey}:team`, 'teamname', actionData.team.teamname!)
+        await client.hSet(`${baseKey}:team`, 'seasonStart', actionData.team.seasonStart!.getUTCFullYear())
+        await client.hSet(`${baseKey}:team`, 'seasonEnd', actionData.team.seasonEnd!.getUTCFullYear())
+        await client.set(`${baseKey}:type`, actionData.actionType)
+        await client.set(`${baseKey}:display`, actionData.displayMessage)
+        await client.hSet(`${baseKey}:playerone`, 'id', actionData.playerOne!._id!.toString())
+        await client.hSet(`${baseKey}:playerone`, 'firstName', actionData.playerOne!.firstName)
+        await client.hSet(`${baseKey}:playerone`, 'lastName', actionData.playerOne!.lastName)
+        await client.hSet(`${baseKey}:playerone`, 'username', actionData.playerOne!.username!)
+        await client.hSet(`${baseKey}:playertwo`, 'id', actionData.playerTwo!._id!.toString())
+        await client.hSet(`${baseKey}:playertwo`, 'firstName', actionData.playerTwo!.firstName)
+        await client.hSet(`${baseKey}:playertwo`, 'lastName', actionData.playerTwo!.lastName)
+        await client.hSet(`${baseKey}:playertwo`, 'username', actionData.playerTwo!.username!)
+        for (const tag of actionData.tags) {
+            await client.rPush(`${baseKey}:tags`, tag)
+        }
+
+        await deleteRedisAction(client, actionData.pointId.toString(), actionData.actionNumber)
+        const team = await client.hGetAll(`${baseKey}:team`)
+        const type = await client.get(`${baseKey}:type`)
+        const display = await client.get(`${baseKey}:display`)
+        const playerOne = await client.hGetAll(`${baseKey}:playerone`)
+        const playerTwo = await client.hGetAll(`${baseKey}:playertwo`)
+        expect(team).toMatchObject({})
+        expect(type).toBeNull()
+        expect(display).toBeNull()
+        expect(playerOne).toMatchObject({})
+        expect(playerTwo).toMatchObject({})
+    })
+
+    it('with no previously existing data', async () => {
+        const actionData: IAction = {
+            _id: new Types.ObjectId(),
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'San Francisco',
+                name: 'Sockeye',
+                teamname: 'sfsockeye',
+                seasonStart: new Date('2022'),
+                seasonEnd: new Date('2022'),
+            },
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'First',
+                lastName: 'Last',
+                username: 'firstlast',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Last',
+                lastName: 'First',
+                username: 'lastfirst',
+            },
+            pointId: new Types.ObjectId(),
+            actionNumber: 1,
+            actionType: ActionType.CATCH,
+            displayMessage: 'First Last throws to Last First',
+            comments: [],
+            tags: ['good', 'huck'],
+        }
+        await deleteRedisAction(client, actionData.pointId.toString(), actionData.actionNumber)
+
+        const baseKey = getActionBaseKey(actionData.pointId.toString(), actionData.actionNumber)
+        const team = await client.hGetAll(`${baseKey}:team`)
+        const type = await client.get(`${baseKey}:type`)
+        const display = await client.get(`${baseKey}:display`)
+        const playerOne = await client.hGetAll(`${baseKey}:playerone`)
+        const playerTwo = await client.hGetAll(`${baseKey}:playertwo`)
+        expect(team).toMatchObject({})
+        expect(type).toBeNull()
+        expect(display).toBeNull()
+        expect(playerOne).toMatchObject({})
+        expect(playerTwo).toMatchObject({})
     })
 })
