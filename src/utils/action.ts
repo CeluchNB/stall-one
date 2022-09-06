@@ -1,6 +1,33 @@
+import * as Constants from './constants'
 import IAction, { ClientAction, ActionType } from '../types/action'
 import { Types } from 'mongoose'
 import { Player } from '../types/ultmt'
+import { ApiError } from '../types/errors'
+
+export const validateActionData = (data: ClientAction) => {
+    const { playerOne, playerTwo } = data
+
+    switch (data.actionType) {
+        case ActionType.PULL:
+        case ActionType.THROWAWAY:
+        case ActionType.BLOCK:
+        case ActionType.PICKUP:
+        case ActionType.TIMEOUT:
+        case ActionType.CALL_ON_FIELD:
+            if (!playerOne || playerTwo) {
+                throw new ApiError(Constants.INVALID_DATA, 400)
+            }
+            break
+        case ActionType.CATCH:
+        case ActionType.DROP:
+        case ActionType.SCORE:
+        case ActionType.SUBSTITUTION:
+            if (!playerOne || !playerTwo) {
+                throw new ApiError(Constants.INVALID_DATA, 400)
+            }
+            break
+    }
+}
 
 export const parseActionData = (data: ClientAction, actionNumber: number): IAction => {
     return {
