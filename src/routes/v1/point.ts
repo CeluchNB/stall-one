@@ -29,7 +29,7 @@ pointRouter.post(
 )
 
 pointRouter.put(
-    '/point/players/:id',
+    '/point/:id/players',
     body('players').isArray(),
     param('id').isString(),
     passport.authenticate('jwt', { session: false }),

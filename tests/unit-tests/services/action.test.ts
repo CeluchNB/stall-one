@@ -98,6 +98,39 @@ describe('test create a live action', () => {
             services.createLiveAction(actionData as unknown as ClientAction, game._id.toString()),
         ).rejects.toThrow()
     })
+
+    it('with substitute side effect', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        game.teamOne = createPointData.pullingTeam
+        await game.save()
+
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.SUBSTITUTION,
+            team: createPointData.pullingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        const action = await services.createLiveAction(actionData, game._id.toString())
+        expect(action.actionNumber).toBe(1)
+        expect(action.actionType).toBe(ActionType.SUBSTITUTION)
+        const updatedPoint = await Point.findOne({})
+        expect(updatedPoint?.teamOnePlayers.length).toBe(1)
+        expect(updatedPoint?.teamOnePlayers[0].username).toBe(actionData.playerTwo?.username)
+    })
 })
 
 describe('test get live action', () => {

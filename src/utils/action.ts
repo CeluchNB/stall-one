@@ -75,6 +75,7 @@ export const handleSubstitute = async (
     await point.save()
 }
 
+// Not being used yet
 export const handleScore = async (
     data: ClientAction,
     gameId: string,

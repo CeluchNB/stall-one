@@ -91,7 +91,7 @@ describe('test /PUT set players', () => {
         }
 
         const response = await request(app)
-            .put(`/api/v1/point/players/${initialPoint._id.toString()}`)
+            .put(`/api/v1/point/${initialPoint._id.toString()}/players`)
             .set('Authorization', `Bearer ${game.teamOneToken}`)
             .send({ players })
             .expect(200)
@@ -130,7 +130,7 @@ describe('test /PUT set players', () => {
         }
 
         await request(app)
-            .put(`/api/v1/point/players/${initialPoint._id.toString()}`)
+            .put(`/api/v1/point/${initialPoint._id.toString()}/players`)
             .set('Authorization', 'Bearer asdf1234.afadsf43a.agsd34asd')
             .send({ players })
             .expect(401)
@@ -160,7 +160,7 @@ describe('test /PUT set players', () => {
         }
 
         const response = await request(app)
-            .put(`/api/v1/point/players/${initialPoint._id.toString()}`)
+            .put(`/api/v1/point/${initialPoint._id.toString()}/players`)
             .set('Authorization', `Bearer ${game.teamOneToken}`)
             .send({ players })
             .expect(400)
