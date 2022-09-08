@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Types } from 'mongoose'
-import IAction, { ActionType } from '../../../src/types/action'
-import { saveRedisAction, getRedisAction, deleteRedisAction } from '../../../src/utils/redis'
+import IAction, { ActionType, Comment } from '../../../src/types/action'
+import { saveRedisAction, getRedisAction, deleteRedisAction, saveRedisComment } from '../../../src/utils/redis'
 import { getActionBaseKey } from '../../../src/utils/utils'
 import { client, setUpDatabase, tearDownDatabase, resetDatabase } from '../../fixtures/setup-db'
 
@@ -502,5 +502,45 @@ describe('test delete redis action', () => {
         expect(display).toBeNull()
         expect(playerOne).toMatchObject({})
         expect(playerTwo).toMatchObject({})
+    })
+})
+
+describe('test save redis comment', () => {
+    it('with all data', async () => {
+        const commentData: Comment = {
+            comment: 'That was a wild huck',
+            user: { _id: new Types.ObjectId(), firstName: 'Noah', lastName: 'Celuch', username: 'noah' },
+        }
+        await saveRedisComment(client, 'point1', 1, commentData)
+        const key = getActionBaseKey('point1', 1)
+
+        const totalComments = await client.get(`${key}:comments`)
+        const comment = await client.get(`${key}:comments:1:text`)
+        const user = await client.hGetAll(`${key}:comments:1:user`)
+        expect(totalComments).toBe('1')
+        expect(comment).toBe(commentData.comment)
+        expect(user.id).toBe(commentData.user._id?.toString())
+        expect(user.firstName).toBe(commentData.user.firstName)
+        expect(user.lastName).toBe(commentData.user.lastName)
+        expect(user.username).toBe(commentData.user.username)
+    })
+
+    it('without unnecessary user properties', async () => {
+        const commentData: Comment = {
+            comment: 'That was a wild huck',
+            user: { firstName: 'Noah', lastName: 'Celuch' },
+        }
+        await saveRedisComment(client, 'point1', 1, commentData)
+        const key = getActionBaseKey('point1', 1)
+
+        const totalComments = await client.get(`${key}:comments`)
+        const comment = await client.get(`${key}:comments:1:text`)
+        const user = await client.hGetAll(`${key}:comments:1:user`)
+        expect(totalComments).toBe('1')
+        expect(comment).toBe(commentData.comment)
+        expect(user.id).toBeUndefined()
+        expect(user.firstName).toBe(commentData.user.firstName)
+        expect(user.lastName).toBe(commentData.user.lastName)
+        expect(user.username).toBeUndefined()
     })
 })

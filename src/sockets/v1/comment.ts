@@ -14,9 +14,10 @@ const serverCommentHandler = (client: RedisClientType) => {
 const registerCommentHandler = (socket: Socket, client: RedisClientType) => {
     socket.on('comment:client', (data) => {
         commentHandler(data, client)
+        socket.to('servers').emit('comment:server')
     })
 
-    socket.on('common:server', () => {
+    socket.on('comment:server', () => {
         serverCommentHandler(client)
     })
 }

@@ -1,4 +1,4 @@
-import IAction, { RedisClientType, ActionType } from '../types/action'
+import IAction, { RedisClientType, ActionType, Comment } from '../types/action'
 import { getActionBaseKey } from './utils'
 import { Types } from 'mongoose'
 import { Player, Team } from '../types/ultmt'
@@ -147,4 +147,23 @@ export const deleteRedisAction = async (redisClient: RedisClientType, pointId: s
     await redisClient.del(`${baseKey}:playertwo`)
     await redisClient.del(`${baseKey}:tags`)
     await redisClient.del(`${baseKey}:comments`)
+}
+
+export const saveRedisComment = async (
+    redisClient: RedisClientType,
+    pointId: string,
+    actionNumber: number,
+    data: Comment,
+) => {
+    const baseKey = getActionBaseKey(pointId, actionNumber)
+    const totalComments = await redisClient.incr(`${baseKey}:comments`)
+    await redisClient.set(`${baseKey}:comments:${totalComments}:text`, data.comment)
+    if (data.user._id) {
+        await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'id', data.user._id.toString())
+    }
+    if (data.user.username) {
+        await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'username', data.user.username)
+    }
+    await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', data.user.firstName)
+    await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', data.user.lastName)
 }

@@ -1,6 +1,6 @@
 import Action, { IActionModel } from '../../models/action'
-import IAction, { RedisClientType, ClientAction, ActionType } from '../../types/action'
-import { saveRedisAction, getRedisAction } from '../../utils/redis'
+import IAction, { RedisClientType, ClientAction, ActionType, Comment } from '../../types/action'
+import { saveRedisAction, getRedisAction, saveRedisComment } from '../../utils/redis'
 import { handleSubstitute, parseActionData, validateActionData } from '../../utils/action'
 import Point, { IPointModel } from '../../models/point'
 import Game, { IGameModel } from '../../models/game'
@@ -35,8 +35,16 @@ export default class ActionServices {
         return action
     }
 
-    getLiveAction = async (pointId: string, number: number): Promise<IAction> => {
-        return await getRedisAction(this.redisClient, pointId, number)
+    getLiveAction = async (pointId: string, actionNumber: number): Promise<IAction> => {
+        return await getRedisAction(this.redisClient, pointId, actionNumber)
+    }
+
+    addComment = async (pointId: string, actionNumber: number, data: Comment): Promise<IAction> => {
+        // TODO: Add user authentication
+        // TODO: Validate action exists
+        // TODO: Prevent inappropriate messages
+        await saveRedisComment(this.redisClient, pointId, actionNumber, data)
+        return await getRedisAction(this.redisClient, pointId, actionNumber)
     }
 
     private handleSideEffects = async (data: ClientAction) => {
