@@ -1,9 +1,24 @@
 import * as Constants from '../../../src/utils/constants'
-import { getDisplayMessage, parseActionData, validateActionData } from '../../../src/utils/action'
+import { getDisplayMessage, handleSubstitute, parseActionData, validateActionData } from '../../../src/utils/action'
 import { Types } from 'mongoose'
 import { ActionType, ClientAction } from '../../../src/types/action'
 import { ApiError } from '../../../src/types/errors'
 import { Player } from '../../../src/types/ultmt'
+import { setUpDatabase, tearDownDatabase, resetDatabase, gameData, createPointData } from '../../fixtures/setup-db'
+import Game from '../../../src/models/game'
+import Point from '../../../src/models/point'
+
+beforeAll(async () => {
+    await setUpDatabase()
+})
+
+afterAll(async () => {
+    await tearDownDatabase()
+})
+
+afterEach(async () => {
+    await resetDatabase()
+})
 
 describe('test get display message', () => {
     it('with pull', () => {
@@ -311,5 +326,128 @@ describe('test validate action data', () => {
         expect(() => {
             validateActionData(action)
         }).not.toThrow()
+    })
+})
+
+describe('test handle substitute', () => {
+    it('with valid data for team one', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        game.teamOne = createPointData.pullingTeam
+        await game.save()
+
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.SUBSTITUTION,
+            team: createPointData.pullingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+        await handleSubstitute(actionData, Point, Game)
+
+        const updatedPoint = await Point.findById(point._id)
+        expect(updatedPoint?.teamOnePlayers.length).toBe(1)
+        expect(updatedPoint?.teamOnePlayers[0].username).toBe(actionData.playerTwo?.username)
+        expect(updatedPoint?.teamTwoPlayers.length).toBe(0)
+    })
+
+    it('with valid data for team two', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        game.teamOne = createPointData.pullingTeam
+        await game.save()
+
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.SUBSTITUTION,
+            team: createPointData.receivingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+        await handleSubstitute(actionData, Point, Game)
+
+        const updatedPoint = await Point.findById(point._id)
+        expect(updatedPoint?.teamTwoPlayers.length).toBe(1)
+        expect(updatedPoint?.teamTwoPlayers[0].username).toBe(actionData.playerTwo?.username)
+        expect(updatedPoint?.teamOnePlayers.length).toBe(0)
+    })
+
+    it('with unfound point error', async () => {
+        const game = await Game.create(gameData)
+        await Point.create(createPointData)
+        game.teamOne = createPointData.pullingTeam
+        await game.save()
+        const actionData: ClientAction = {
+            pointId: new Types.ObjectId().toString(),
+            actionType: ActionType.SUBSTITUTION,
+            team: createPointData.receivingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+        await expect(handleSubstitute(actionData, Point, Game)).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_POINT, 404),
+        )
+    })
+
+    it('with unfound game error', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create({ ...createPointData, gameId: new Types.ObjectId() })
+        game.teamOne = createPointData.pullingTeam
+        await game.save()
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.SUBSTITUTION,
+            team: createPointData.receivingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        await expect(handleSubstitute(actionData, Point, Game)).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
+        )
     })
 })
