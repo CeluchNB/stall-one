@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Types } from 'mongoose'
 import IAction, { ActionType, Comment } from '../../../src/types/action'
-import { saveRedisAction, getRedisAction, deleteRedisAction, saveRedisComment } from '../../../src/utils/redis'
+import {
+    saveRedisAction,
+    getRedisAction,
+    deleteRedisAction,
+    saveRedisComment,
+    actionExists,
+} from '../../../src/utils/redis'
 import { getActionBaseKey } from '../../../src/utils/utils'
 import { client, setUpDatabase, tearDownDatabase, resetDatabase } from '../../fixtures/setup-db'
 
@@ -253,6 +259,12 @@ describe('test get redis action', () => {
         for (const tag of actionData.tags) {
             await client.rPush(`${baseKey}:tags`, tag)
         }
+        await client.set(`${baseKey}:comments`, 1)
+        await client.set(`${baseKey}:comments:1:text`, 'Good play')
+        await client.hSet(`${baseKey}:comments:1:user`, 'id', actionData.playerOne!._id!.toString())
+        await client.hSet(`${baseKey}:comments:1:user`, 'firstName', actionData.playerOne!.firstName)
+        await client.hSet(`${baseKey}:comments:1:user`, 'lastName', actionData.playerOne!.lastName)
+        await client.hSet(`${baseKey}:comments:1:user`, 'username', actionData.playerOne!.username!)
 
         const action = await getRedisAction(client, actionData.pointId.toString(), actionData.actionNumber)
         expect(action._id).toBeUndefined()
@@ -277,7 +289,16 @@ describe('test get redis action', () => {
         expect(action.tags.length).toBe(actionData.tags.length)
         expect(action.tags[0]).toBe(actionData.tags[0])
         expect(action.tags[1]).toBe(actionData.tags[1])
-        expect(action.comments.length).toBe(0)
+        expect(action.comments.length).toBe(1)
+        expect(action.comments[0]).toMatchObject({
+            comment: 'Good play',
+            user: {
+                _id: actionData.playerOne?._id,
+                firstName: actionData.playerOne?.firstName,
+                lastName: actionData.playerOne?.lastName,
+                username: actionData.playerOne?.username,
+            },
+        })
     })
 
     it('with no players', async () => {
@@ -542,5 +563,19 @@ describe('test save redis comment', () => {
         expect(user.firstName).toBe(commentData.user.firstName)
         expect(user.lastName).toBe(commentData.user.lastName)
         expect(user.username).toBeUndefined()
+    })
+})
+
+describe('test action exists', () => {
+    it('with existing action', async () => {
+        const key = getActionBaseKey('point1', 2)
+        await client.set(`${key}:type`, 'SCORE')
+        const exists = await actionExists(client, 'point1', 2)
+        expect(exists).toBe(true)
+    })
+
+    it('with non-existing action', async () => {
+        const exists = await actionExists(client, 'point1', 2)
+        expect(exists).toBe(false)
     })
 })

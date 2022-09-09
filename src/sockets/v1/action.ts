@@ -6,7 +6,7 @@ import { ApiError } from '../../types/errors'
 import { handleSocketError } from '../../utils/utils'
 
 const actionHandler = async (data: ClientAction, gameId: string, client: RedisClientType): Promise<IAction> => {
-    const services = new ActionServices(client)
+    const services = new ActionServices(client, process.env.ULTMT_API_URL as string, process.env.API_KEY as string)
     return await services.createLiveAction(data, gameId)
 }
 
@@ -19,17 +19,17 @@ const serverActionHandler = async (
     if (!pointId || !number) {
         throw new ApiError(Constants.INVALID_DATA, 400)
     }
-    const services = new ActionServices(client)
+    const services = new ActionServices(client, process.env.ULTMT_API_URL as string, process.env.API_KEY as string)
     return await services.getLiveAction(pointId, number)
 }
 
 const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
-    socket.on('action:client', async (data) => {
+    socket.on('action', async (data) => {
         try {
             const { gameId } = socket.data
             const dataJson = JSON.parse(data)
             const action = await actionHandler(dataJson, gameId, client)
-            socket.emit('action', action)
+            socket.emit('action:client', action)
             socket.to('servers').emit('action:server', { pointId: action.pointId, number: action.actionNumber })
         } catch (error) {
             const response = handleSocketError(error)
@@ -40,7 +40,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
         try {
             const dataJson = JSON.parse(data)
             const action = await serverActionHandler(client, dataJson)
-            socket.emit('action', action)
+            socket.emit('action:client', action)
         } catch (error) {
             const response = handleSocketError(error)
             socket.emit('action:error', response)

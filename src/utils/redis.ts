@@ -1,5 +1,5 @@
 import IAction, { RedisClientType, ActionType, Comment } from '../types/action'
-import { getActionBaseKey } from './utils'
+import { getActionBaseKey, parseRedisUser } from './utils'
 import { Types } from 'mongoose'
 import { Player, Team } from '../types/ultmt'
 
@@ -69,6 +69,17 @@ export const getRedisAction = async (
     const playerOne = await redisClient.hGetAll(`${baseKey}:playerone`)
     const playerTwo = await redisClient.hGetAll(`${baseKey}:playertwo`)
     const tags = await redisClient.lRange(`${baseKey}:tags`, 0, -1)
+    const totalComments = await redisClient.get(`${baseKey}:comments`)
+    const comments: Comment[] = []
+
+    for (let i = 1; i <= Number(totalComments); i++) {
+        const comment = await redisClient.get(`${baseKey}:comments:${i}:text`)
+        const commentor = await redisClient.hGetAll(`${baseKey}:comments:${i}:user`)
+        const user = parseRedisUser(commentor) as Player
+        if (comment) {
+            comments.push({ comment, user })
+        }
+    }
 
     const team: Team = {
         name: teamName,
@@ -100,40 +111,42 @@ export const getRedisAction = async (
         actionType: actionType as ActionType,
         displayMessage,
         tags,
-        comments: [],
+        comments,
     }
 
-    if (Object.keys(playerOne).length > 0) {
-        const { id, firstName, lastName, username } = playerOne
-        const player: Player = {
-            firstName: firstName,
-            lastName: lastName,
-        }
-        if (id) {
-            player._id = new Types.ObjectId(id)
-        }
-        if (username) {
-            player.username = username
-        }
+    // if (Object.keys(playerOne).length > 0) {
+    //     const { id, firstName, lastName, username } = playerOne
+    //     const player: Player = {
+    //         firstName: firstName,
+    //         lastName: lastName,
+    //     }
+    //     if (id) {
+    //         player._id = new Types.ObjectId(id)
+    //     }
+    //     if (username) {
+    //         player.username = username
+    //     }
 
-        action.playerOne = player
-    }
+    //     action.playerOne = player
+    // }
+    action.playerOne = parseRedisUser(playerOne)
 
-    if (Object.keys(playerTwo).length > 0) {
-        const { id, firstName, lastName, username } = playerTwo
-        const player: Player = {
-            firstName: firstName,
-            lastName: lastName,
-        }
-        if (id) {
-            player._id = new Types.ObjectId(id)
-        }
-        if (username) {
-            player.username = username
-        }
+    // if (Object.keys(playerTwo).length > 0) {
+    //     const { id, firstName, lastName, username } = playerTwo
+    //     const player: Player = {
+    //         firstName: firstName,
+    //         lastName: lastName,
+    //     }
+    //     if (id) {
+    //         player._id = new Types.ObjectId(id)
+    //     }
+    //     if (username) {
+    //         player.username = username
+    //     }
 
-        action.playerTwo = player
-    }
+    //     action.playerTwo = player
+    // }
+    action.playerTwo = parseRedisUser(playerTwo)
 
     return action
 }
@@ -166,4 +179,14 @@ export const saveRedisComment = async (
     }
     await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', data.user.firstName)
     await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', data.user.lastName)
+}
+
+export const actionExists = async (
+    redisClient: RedisClientType,
+    pointId: string,
+    actionNumber: number,
+): Promise<boolean> => {
+    const baseKey = getActionBaseKey(pointId, actionNumber)
+    const type = await redisClient.get(`${baseKey}:type`)
+    return !!type
 }

@@ -62,15 +62,22 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
-    it('with invaid data case one', () => {
+    it('with invalid data case one', () => {
         expect(userErrorResponse(`Extra Error: ${Constants.INVALID_DATA}`)).toEqual({
             message: Constants.INVALID_DATA,
             code: 400,
         })
     })
-    it('with invaid data case two', () => {
+    it('with invalid data case two', () => {
         expect(userErrorResponse('Extra Error: Invalid argument type')).toEqual({
             message: Constants.INVALID_DATA,
+            code: 400,
+        })
+    })
+
+    it('with profanity error', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.PROFANE_COMMENT}`)).toEqual({
+            message: Constants.PROFANE_COMMENT,
             code: 400,
         })
     })

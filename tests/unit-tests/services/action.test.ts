@@ -14,6 +14,7 @@ import {
 } from '../../fixtures/setup-db'
 import { saveRedisAction } from '../../../src/utils/redis'
 import { parseActionData } from '../../../src/utils/action'
+import axios from 'axios'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -27,7 +28,7 @@ afterAll(async () => {
     await tearDownDatabase()
 })
 
-const services = new ActionServices(client)
+const services = new ActionServices(client, '', '')
 describe('test create a live action', () => {
     it('with valid data', async () => {
         const game = await Game.create(gameData)
@@ -168,5 +169,63 @@ describe('test get live action', () => {
         expect(action.comments.length).toBe(0)
         expect(action.team.teamname).toBe(createPointData.pullingTeam.teamname)
         expect(action.tags[0]).toBe(actionData.tags[0])
+    })
+})
+
+describe('test add live comment', () => {
+    const userData = {
+        _id: new Types.ObjectId(),
+        firstName: 'Noah',
+        lastName: 'Celuch',
+        email: 'noah@email.com',
+        username: 'noah',
+        private: false,
+        playerTeams: [],
+        managerTeams: [],
+        archiveTeams: [],
+        stats: [],
+        requests: [],
+        openToRequests: false,
+    }
+    beforeEach(() => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: userData, status: 200 })
+        })
+    })
+    it('with valid data', async () => {
+        await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.CATCH,
+            team: createPointData.pullingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        await saveRedisAction(client, parseActionData(actionData, 1))
+        const action = await services.addComment(actionData.pointId, 1, { jwt: '', comment: 'That was a good play' })
+        expect(action.pointId.toString()).toBe(actionData.pointId)
+        expect(action.comments.length).toBe(1)
+        expect(action.comments[0]).toMatchObject({
+            comment: 'That was a good play',
+            user: {
+                _id: userData._id,
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                username: userData.username,
+            },
+        })
     })
 })

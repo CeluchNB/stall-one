@@ -57,7 +57,7 @@ describe('test client action sent', () => {
             },
             tags: ['IB'],
         }
-        clientSocket.on('action', (action) => {
+        clientSocket.on('action:client', (action) => {
             expect(action.pointId).toBe(actionData.pointId)
             expect(action.actionNumber).toBe(1)
             expect(action.actionType).toBe(ActionType.PULL)
@@ -65,7 +65,7 @@ describe('test client action sent', () => {
             expect(action.playerOne.username).toBe(actionData.playerOne?.username)
             done()
         })
-        clientSocket.emit('action:client', JSON.stringify(actionData))
+        clientSocket.emit('action', JSON.stringify(actionData))
     })
 
     it('with bad data', (done) => {
@@ -91,7 +91,7 @@ describe('test client action sent', () => {
             expect(error.message).toBe(Constants.INVALID_DATA)
             done()
         })
-        clientSocket.emit('action:client', JSON.stringify(actionData))
+        clientSocket.emit('action', JSON.stringify(actionData))
     })
 
     it('with non object exception', (done) => {
@@ -121,7 +121,7 @@ describe('test client action sent', () => {
             expect(error.message).toBe(Constants.GENERIC_ERROR)
             done()
         })
-        clientSocket.emit('action:client', JSON.stringify(actionData))
+        clientSocket.emit('action', JSON.stringify(actionData))
     })
 })
 
@@ -155,7 +155,7 @@ describe('test server action', () => {
                 pointId: new Types.ObjectId(actionData.pointId),
             }),
         ).then(() => {
-            clientSocket.on('action', (action) => {
+            clientSocket.on('action:client', (action) => {
                 expect(action.pointId.toString()).toBe(actionData.pointId.toString())
                 expect(action.actionType).toBe(actionData.actionType)
                 done()

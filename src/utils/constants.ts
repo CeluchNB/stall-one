@@ -9,3 +9,6 @@ export const CONFLICTING_POSSESSION =
 export const UNABLE_TO_FIND_POINT = 'We are unable to find this point.'
 export const WRONG_NUMBER_OF_PLAYERS = 'You have submitted the wrong number of players for this point.'
 export const INVALID_DATA = 'The wrong data was submitted for this operation.'
+export const PROFANE_COMMENT =
+    'In an effort to keep this app appropriate for all ages. We have prevented \
+certain profane words from being used. Please edit your comment and resubmit.'

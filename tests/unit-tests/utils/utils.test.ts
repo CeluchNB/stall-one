@@ -1,7 +1,8 @@
 import * as Constants from '../../../src/utils/constants'
-import { getMyTeamNumber, getActionBaseKey, handleSocketError } from '../../../src/utils/utils'
+import { getMyTeamNumber, getActionBaseKey, handleSocketError, parseRedisUser } from '../../../src/utils/utils'
 import { TeamNumber } from '../../../src/types/ultmt'
 import { ApiError } from '../../../src/types/errors'
+import { Types } from 'mongoose'
 
 describe('test get my team number', () => {
     it('case 1', () => {
@@ -42,5 +43,43 @@ describe('test handle socket error', () => {
         const response = handleSocketError(7)
         expect(response.message).toBe(Constants.GENERIC_ERROR)
         expect(response.code).toBe(500)
+    })
+})
+
+describe('test parse redis user', () => {
+    it('with all data', () => {
+        const userData = {
+            id: '123456adecbd123456edcfa9',
+            firstName: 'Noah',
+            lastName: 'Celuch',
+            username: 'noah',
+        }
+        const user = parseRedisUser(userData)
+
+        expect(user).toMatchObject({
+            _id: new Types.ObjectId(userData.id),
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            username: user?.username,
+        })
+    })
+
+    it('with minimal data', () => {
+        const userData = {
+            firstName: 'Noah',
+            lastName: 'Celuch',
+        }
+        const user = parseRedisUser(userData)
+
+        expect(user).toMatchObject({
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+        })
+    })
+
+    it('with no data', () => {
+        const user = parseRedisUser({})
+
+        expect(user).toBeUndefined()
     })
 })

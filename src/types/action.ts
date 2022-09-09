@@ -16,6 +16,10 @@ export enum ActionType {
     FINISH_GAME = 'FinishGame',
 }
 
+export interface InputComment {
+    jwt: string
+    comment: string
+}
 export interface Comment {
     user: Player
     comment: string
