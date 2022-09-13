@@ -1,6 +1,5 @@
 import { Socket } from 'socket.io'
 import registerActionHandler from './action'
-import registerCommentHandler from './comment'
 import { createClient } from 'redis'
 import { RedisClientType } from '../../types/action'
 
@@ -11,7 +10,6 @@ const socketHandler = async (socket: Socket) => {
     socket.join('servers')
 
     registerActionHandler(socket, client)
-    registerCommentHandler(socket, client)
 }
 
 export default socketHandler
