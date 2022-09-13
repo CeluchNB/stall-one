@@ -1,3 +1,4 @@
+import * as Constants from '../../../src/utils/constants'
 import { Types } from 'mongoose'
 import Game from '../../../src/models/game'
 import Point from '../../../src/models/point'
@@ -15,6 +16,7 @@ import {
 import { saveRedisAction } from '../../../src/utils/redis'
 import { parseActionData } from '../../../src/utils/action'
 import axios from 'axios'
+import { ApiError } from '../../../src/types/errors'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -187,12 +189,11 @@ describe('test add live comment', () => {
         requests: [],
         openToRequests: false,
     }
-    beforeEach(() => {
+
+    it('with valid data', async () => {
         jest.spyOn(axios, 'get').mockImplementationOnce(() => {
             return Promise.resolve({ data: userData, status: 200 })
         })
-    })
-    it('with valid data', async () => {
         await Game.create(gameData)
         const point = await Point.create(createPointData)
         const actionData: ClientAction = {
@@ -227,5 +228,97 @@ describe('test add live comment', () => {
                 username: userData.username,
             },
         })
+    })
+
+    it('with bad response', async () => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: {}, status: 401 })
+        })
+        await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.CATCH,
+            team: createPointData.pullingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        await saveRedisAction(client, parseActionData(actionData, 1))
+        await expect(
+            services.addComment(actionData.pointId, 1, { jwt: '', comment: 'That was a good play' }),
+        ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
+    })
+
+    it('with action not in redis', async () => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: userData, status: 200 })
+        })
+        await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.CATCH,
+            team: createPointData.pullingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        await expect(
+            services.addComment(actionData.pointId, 1, { jwt: '', comment: 'That was a good play' }),
+        ).rejects.toThrowError(new ApiError(Constants.INVALID_DATA, 404))
+    })
+
+    it('with profane comment', async () => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: userData, status: 200 })
+        })
+        await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.CATCH,
+            team: createPointData.pullingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        await saveRedisAction(client, parseActionData(actionData, 1))
+        await expect(
+            services.addComment(actionData.pointId, 1, { jwt: '', comment: 'That dude sucks ass' }),
+        ).rejects.toThrowError(new ApiError(Constants.PROFANE_COMMENT, 400))
     })
 })
