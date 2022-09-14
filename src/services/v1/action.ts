@@ -51,7 +51,6 @@ export default class ActionServices {
     }
 
     addComment = async (pointId: string, actionNumber: number, data: InputComment): Promise<IAction> => {
-        // TODO: Add user authentication
         const { jwt, comment } = data
         const response = await axios.get(`${this.ultmtUrl}/api/v1/user/me`, {
             headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${jwt}` },
@@ -63,12 +62,10 @@ export default class ActionServices {
         const user: Player = {
             ...response.data,
         }
-        // TODO: Validate action exists
         const exists = await actionExists(this.redisClient, pointId, actionNumber)
         if (!exists) {
             throw new ApiError(Constants.INVALID_DATA, 400)
         }
-        // TODO: Prevent inappropriate messages
         if (filter.isProfane(data.comment)) {
             throw new ApiError(Constants.PROFANE_COMMENT, 400)
         }

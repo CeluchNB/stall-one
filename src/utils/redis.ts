@@ -114,38 +114,7 @@ export const getRedisAction = async (
         comments,
     }
 
-    // if (Object.keys(playerOne).length > 0) {
-    //     const { id, firstName, lastName, username } = playerOne
-    //     const player: Player = {
-    //         firstName: firstName,
-    //         lastName: lastName,
-    //     }
-    //     if (id) {
-    //         player._id = new Types.ObjectId(id)
-    //     }
-    //     if (username) {
-    //         player.username = username
-    //     }
-
-    //     action.playerOne = player
-    // }
     action.playerOne = parseRedisUser(playerOne)
-
-    // if (Object.keys(playerTwo).length > 0) {
-    //     const { id, firstName, lastName, username } = playerTwo
-    //     const player: Player = {
-    //         firstName: firstName,
-    //         lastName: lastName,
-    //     }
-    //     if (id) {
-    //         player._id = new Types.ObjectId(id)
-    //     }
-    //     if (username) {
-    //         player.username = username
-    //     }
-
-    //     action.playerTwo = player
-    // }
     action.playerTwo = parseRedisUser(playerTwo)
 
     return action
@@ -179,6 +148,34 @@ export const saveRedisComment = async (
     }
     await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', data.user.firstName)
     await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', data.user.lastName)
+}
+
+export const getRedisComment = async (
+    redisClient: RedisClientType,
+    pointId: string,
+    actionNumber: number,
+    commentNumber: number,
+): Promise<Comment | undefined> => {
+    const baseKey = getActionBaseKey(pointId, actionNumber)
+    const comment = await redisClient.get(`${baseKey}:comments:${commentNumber}:text`)
+    const userData = await redisClient.hGetAll(`${baseKey}:comments:${commentNumber}:user`)
+    const user = parseRedisUser(userData)
+
+    if (!comment || !user) {
+        return undefined
+    }
+    return { user, comment }
+}
+
+export const deleteRedisComment = async (
+    redisClient: RedisClientType,
+    pointId: string,
+    actionNumber: number,
+    commentNumber: number,
+) => {
+    const baseKey = getActionBaseKey(pointId, actionNumber)
+    await redisClient.del(`${baseKey}:comments:${commentNumber}:text`)
+    await redisClient.del(`${baseKey}:comments:${commentNumber}:user`)
 }
 
 export const actionExists = async (

@@ -7,6 +7,8 @@ import {
     deleteRedisAction,
     saveRedisComment,
     actionExists,
+    deleteRedisComment,
+    getRedisComment,
 } from '../../../src/utils/redis'
 import { getActionBaseKey } from '../../../src/utils/utils'
 import { client, setUpDatabase, tearDownDatabase, resetDatabase } from '../../fixtures/setup-db'
@@ -563,6 +565,101 @@ describe('test save redis comment', () => {
         expect(user.firstName).toBe(commentData.user.firstName)
         expect(user.lastName).toBe(commentData.user.lastName)
         expect(user.username).toBeUndefined()
+    })
+})
+
+describe('test delete redis comment', () => {
+    it('with existing comment', async () => {
+        const data: Comment = {
+            comment: 'That was a wild huck',
+            user: { _id: new Types.ObjectId(), username: 'noah', firstName: 'Noah', lastName: 'Celuch' },
+        }
+        const pointId = 'point1'
+        const actionNumber = 1
+        const baseKey = getActionBaseKey(pointId, actionNumber)
+        const totalComments = await client.incr(`${baseKey}:comments`)
+        await client.set(`${baseKey}:comments:${totalComments}:text`, data.comment)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'id', data.user._id?.toString() || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'username', data.user.username || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', data.user.firstName)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', data.user.lastName)
+
+        await deleteRedisComment(client, 'point1', 1, 1)
+
+        const comment = await client.get(`${baseKey}:comments:${totalComments}:text`)
+        const user = await client.hGetAll(`${baseKey}:comments:${totalComments}:user`)
+        const newTotal = await client.get(`${baseKey}:comments`)
+        expect(comment).toBeNull()
+        expect(user).toMatchObject({})
+        expect(newTotal).toBe('1')
+    })
+
+    it('with non-existing comment', async () => {
+        const pointId = 'point1'
+        const actionNumber = 1
+        const baseKey = getActionBaseKey(pointId, actionNumber)
+        const totalComments = 0
+        await deleteRedisComment(client, 'point1', 1, 1)
+
+        const comment = await client.get(`${baseKey}:comments:${totalComments}:text`)
+        const user = await client.hGetAll(`${baseKey}:comments:${totalComments}:user`)
+        expect(comment).toBeNull()
+        expect(user).toMatchObject({})
+    })
+})
+
+describe('test get redis comment', () => {
+    it('with existing comment', async () => {
+        const data: Comment = {
+            comment: 'That was a wild huck',
+            user: { _id: new Types.ObjectId(), username: 'noah', firstName: 'Noah', lastName: 'Celuch' },
+        }
+        const pointId = 'point1'
+        const actionNumber = 1
+        const baseKey = getActionBaseKey(pointId, actionNumber)
+        const totalComments = await client.incr(`${baseKey}:comments`)
+        await client.set(`${baseKey}:comments:${totalComments}:text`, data.comment)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'id', data.user._id?.toString() || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'username', data.user.username || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', data.user.firstName)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', data.user.lastName)
+
+        const comment = await getRedisComment(client, 'point1', 1, 1)
+        expect(comment?.comment).toBe(data.comment)
+        expect(comment?.user).toMatchObject(data.user)
+    })
+
+    it('with non-existent text', async () => {
+        const data: Comment = {
+            comment: 'That was a wild huck',
+            user: { _id: new Types.ObjectId(), username: 'noah', firstName: 'Noah', lastName: 'Celuch' },
+        }
+        const pointId = 'point1'
+        const actionNumber = 1
+        const baseKey = getActionBaseKey(pointId, actionNumber)
+        const totalComments = await client.incr(`${baseKey}:comments`)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'id', data.user._id?.toString() || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'username', data.user.username || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', data.user.firstName)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', data.user.lastName)
+
+        const comment = await getRedisComment(client, 'point1', 1, 1)
+        expect(comment).toBeUndefined()
+    })
+
+    it('with non-existent user', async () => {
+        const data: Comment = {
+            comment: 'That was a wild huck',
+            user: { _id: new Types.ObjectId(), username: 'noah', firstName: 'Noah', lastName: 'Celuch' },
+        }
+        const pointId = 'point1'
+        const actionNumber = 1
+        const baseKey = getActionBaseKey(pointId, actionNumber)
+        const totalComments = await client.incr(`${baseKey}:comments`)
+        await client.set(`${baseKey}:comments:${totalComments}:text`, data.comment)
+
+        const comment = await getRedisComment(client, 'point1', 1, 1)
+        expect(comment).toBeUndefined()
     })
 })
 
