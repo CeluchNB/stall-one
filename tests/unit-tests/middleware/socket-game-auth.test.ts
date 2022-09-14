@@ -1,5 +1,5 @@
 import * as Constants from '../../../src/utils/constants'
-import { gameAuth } from '../../../src/middlware/socket-auth'
+import { gameAuth } from '../../../src/middlware/socket-game-auth'
 import { setUpDatabase, tearDownDatabase, resetDatabase, createData } from '../../fixtures/setup-db'
 import Game from '../../../src/models/game'
 import { Socket } from 'socket.io'

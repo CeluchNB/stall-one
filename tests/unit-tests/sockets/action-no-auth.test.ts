@@ -11,10 +11,8 @@ import axios from 'axios'
 let clientSocket: ReturnType<typeof ioClient>
 beforeAll((done) => {
     app.listen(process.env.PORT, () => {
-        Game.create(createData, (error, game) => {
-            clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`, {
-                extraHeaders: { authorization: `Bearer ${game.teamOneToken}` },
-            })
+        Game.create(createData, () => {
+            clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`)
             clientSocket.on('connect', () => {
                 done()
             })
@@ -37,68 +35,8 @@ afterAll(async () => {
     app.close()
 })
 
-describe('test client action sent', () => {
-    it('with valid data', (done) => {
-        const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
-            actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
-            playerOne: {
-                _id: new Types.ObjectId(),
-                firstName: 'Noah',
-                lastName: 'Celuch',
-                username: 'noah',
-            },
-            tags: ['IB'],
-        }
-        clientSocket.on('action:client', (action) => {
-            expect(action.pointId).toBe(actionData.pointId)
-            expect(action.actionNumber).toBe(1)
-            expect(action.actionType).toBe(ActionType.PULL)
-            expect(action.team.teamname).toBe(actionData.team.teamname)
-            expect(action.playerOne.username).toBe(actionData.playerOne?.username)
-            done()
-        })
-        clientSocket.emit('action', JSON.stringify(actionData))
-    })
-
-    it('with bad data', (done) => {
-        const actionData = {
-            pointId: new Types.ObjectId().toString(),
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
-            playerOne: {
-                _id: new Types.ObjectId(),
-                firstName: 'Noah',
-                lastName: 'Celuch',
-                username: 'noah',
-            },
-            tags: ['IB'],
-        }
-        clientSocket.on('action:error', (error) => {
-            expect(error.message).toBe(Constants.INVALID_DATA)
-            done()
-        })
-        clientSocket.emit('action', JSON.stringify(actionData))
-    })
-
-    it('with non object exception', (done) => {
-        jest.spyOn(RedisUtils, 'saveRedisAction').mockImplementationOnce(() => {
-            throw 7
-        })
+describe('test client action error case', () => {
+    it('should throw error with bad jwt', (done) => {
         const actionData: ClientAction = {
             pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
@@ -119,7 +57,7 @@ describe('test client action sent', () => {
             tags: ['IB'],
         }
         clientSocket.on('action:error', (error) => {
-            expect(error.message).toBe(Constants.GENERIC_ERROR)
+            expect(error.message).toBe(Constants.UNAUTHENTICATED_USER)
             done()
         })
         clientSocket.emit('action', JSON.stringify(actionData))

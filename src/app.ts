@@ -9,7 +9,6 @@ import socketHandler, { client } from './sockets/v1'
 import { connectDatabase, closeDatabase } from './loaders/mongoose'
 import { createRedisAdapter, closeRedisConnection } from './loaders/redis'
 import { ClientToServerEvents } from './types/socket'
-import { gameAuth } from './middlware/socket-auth'
 
 connectDatabase()
 
@@ -33,7 +32,7 @@ const io = new Server<ClientToServerEvents>(httpServer, {})
 
 Promise.resolve(createRedisAdapter()).then((adapter) => {
     io.adapter(adapter)
-    io.of('/live').use(gameAuth).on('connection', socketHandler)
+    io.of('/live').on('connection', socketHandler)
 })
 
 // Close all connections, for testing purposes
