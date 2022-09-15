@@ -446,6 +446,14 @@ describe('test delete live comment', () => {
         await expect(services.deleteLiveComment(actionData.pointId, 1, 1, '')).rejects.toThrowError(
             new ApiError(Constants.UNAUTHENTICATED_USER, 401),
         )
+
+        const commentText = await client.get(`${baseKey}:comments:${totalComments}:text`)
+        const commentUser = await client.hGetAll(`${baseKey}:comments:${totalComments}:user`)
+        const commentTotal = await client.get(`${baseKey}:comments`)
+
+        expect(commentText).toBe(comment.comment)
+        expect(commentUser.id?.toString()).toBe(comment.user._id?.toString())
+        expect(commentTotal).toBe('1')
     })
 
     it('with non-matching user', async () => {
@@ -495,5 +503,13 @@ describe('test delete live comment', () => {
         await expect(services.deleteLiveComment(actionData.pointId, 1, 1, '')).rejects.toThrowError(
             new ApiError(Constants.UNAUTHENTICATED_USER, 401),
         )
+
+        const commentText = await client.get(`${baseKey}:comments:${totalComments}:text`)
+        const commentUser = await client.hGetAll(`${baseKey}:comments:${totalComments}:user`)
+        const commentTotal = await client.get(`${baseKey}:comments`)
+
+        expect(commentText).toBe(comment.comment)
+        expect(commentUser.id?.toString()).toBe(comment.user._id?.toString())
+        expect(commentTotal).toBe('1')
     })
 })

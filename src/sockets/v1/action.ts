@@ -35,6 +35,18 @@ const commentHandler = async (
     return await services.addLiveComment(pointId, actionNumber, { comment, jwt })
 }
 
+const deleteCommentHandler = async (
+    client: RedisClientType,
+    data: { pointId: string; actionNumber: number; commentNumber: number; jwt: string },
+) => {
+    const { pointId, actionNumber, commentNumber, jwt } = data
+    if (!pointId || !actionNumber || !commentNumber || !jwt) {
+        throw new ApiError(Constants.INVALID_DATA, 400)
+    }
+    const services = new ActionServices(client, process.env.ULTMT_API_URL as string, process.env.API_KEY as string)
+    return await services.deleteLiveComment(pointId, actionNumber, commentNumber, jwt)
+}
+
 const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
     socket.on('action', async (data) => {
         try {
@@ -71,6 +83,18 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
         try {
             const dataJson = JSON.parse(data)
             const action = await commentHandler(client, dataJson)
+            socket.emit('action:client', action)
+            socket.to('servers').emit('action:server', { pointId: action.pointId, number: action.actionNumber })
+        } catch (error) {
+            const response = handleSocketError(error)
+            socket.emit('action:error', response)
+        }
+    })
+
+    socket.on('action:comment:delete', async (data) => {
+        try {
+            const dataJson = JSON.parse(data)
+            const action = await deleteCommentHandler(client, dataJson)
             socket.emit('action:client', action)
             socket.to('servers').emit('action:server', { pointId: action.pointId, number: action.actionNumber })
         } catch (error) {

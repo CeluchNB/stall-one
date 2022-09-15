@@ -248,9 +248,6 @@ describe('test action comment', () => {
     })
 
     it('with missing data', (done) => {
-        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
-            return Promise.resolve({ data: userData, status: 200 })
-        })
         const actionData: ClientAction = {
             pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
@@ -340,5 +337,199 @@ describe('test action comment', () => {
                 }),
             )
         })
+    })
+})
+
+describe('test delete live action', () => {
+    const userData = {
+        _id: new Types.ObjectId(),
+        firstName: 'Noah',
+        lastName: 'Celuch',
+        email: 'noah@email.com',
+        username: 'noah',
+        private: false,
+        playerTeams: [],
+        managerTeams: [],
+        archiveTeams: [],
+        stats: [],
+        requests: [],
+        openToRequests: false,
+    }
+    it('with valid data', (done) => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: userData, status: 200 })
+        })
+        const actionData: ClientAction = {
+            pointId: new Types.ObjectId().toString(),
+            actionType: ActionType.PULL,
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Pittsburgh',
+                name: 'Temper',
+                teamname: 'pghtemper',
+                seasonStart: new Date('2022'),
+                seasonEnd: new Date('2022'),
+            },
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            tags: ['IB'],
+        }
+        Promise.resolve(
+            RedisUtils.saveRedisAction(client, {
+                ...actionData,
+                actionNumber: 1,
+                displayMessage: 'Pull',
+                comments: [],
+                pointId: new Types.ObjectId(actionData.pointId),
+            }),
+        )
+            .then(() => {
+                return RedisUtils.saveRedisComment(client, actionData.pointId, 1, {
+                    comment: 'Good huck',
+                    user: {
+                        _id: userData._id,
+                        firstName: userData.firstName,
+                        lastName: userData.lastName,
+                        username: userData.username,
+                    },
+                })
+            })
+            .then(() => {
+                clientSocket.on('action:client', (action) => {
+                    expect(action.pointId.toString()).toBe(actionData.pointId.toString())
+                    expect(action.actionType).toBe(actionData.actionType)
+                    expect(action.comments.length).toBe(0)
+                    done()
+                })
+                clientSocket.emit(
+                    'action:comment:delete',
+                    JSON.stringify({
+                        pointId: actionData.pointId,
+                        actionNumber: 1,
+                        commentNumber: 1,
+                        jwt: 'test.jwt.1234',
+                    }),
+                )
+            })
+    })
+
+    it('with wrong user', (done) => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: userData, status: 200 })
+        })
+        const actionData: ClientAction = {
+            pointId: new Types.ObjectId().toString(),
+            actionType: ActionType.PULL,
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Pittsburgh',
+                name: 'Temper',
+                teamname: 'pghtemper',
+                seasonStart: new Date('2022'),
+                seasonEnd: new Date('2022'),
+            },
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            tags: ['IB'],
+        }
+        Promise.resolve(
+            RedisUtils.saveRedisAction(client, {
+                ...actionData,
+                actionNumber: 1,
+                displayMessage: 'Pull',
+                comments: [],
+                pointId: new Types.ObjectId(actionData.pointId),
+            }),
+        )
+            .then(() => {
+                return RedisUtils.saveRedisComment(client, actionData.pointId, 1, {
+                    comment: 'Good huck',
+                    user: {
+                        _id: new Types.ObjectId(),
+                        firstName: 'Test First',
+                        lastName: 'Test Last',
+                        username: 'testuser',
+                    },
+                })
+            })
+            .then(() => {
+                clientSocket.on('action:error', (error) => {
+                    expect(error.message).toBe(Constants.UNAUTHENTICATED_USER)
+                    done()
+                })
+                clientSocket.emit(
+                    'action:comment:delete',
+                    JSON.stringify({
+                        pointId: actionData.pointId,
+                        actionNumber: 1,
+                        commentNumber: 1,
+                        jwt: 'test.jwt.1234',
+                    }),
+                )
+            })
+    })
+
+    it('with missing data', (done) => {
+        const actionData: ClientAction = {
+            pointId: new Types.ObjectId().toString(),
+            actionType: ActionType.PULL,
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Pittsburgh',
+                name: 'Temper',
+                teamname: 'pghtemper',
+                seasonStart: new Date('2022'),
+                seasonEnd: new Date('2022'),
+            },
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            tags: ['IB'],
+        }
+        Promise.resolve(
+            RedisUtils.saveRedisAction(client, {
+                ...actionData,
+                actionNumber: 1,
+                displayMessage: 'Pull',
+                comments: [],
+                pointId: new Types.ObjectId(actionData.pointId),
+            }),
+        )
+            .then(() => {
+                return RedisUtils.saveRedisComment(client, actionData.pointId, 1, {
+                    comment: 'Good huck',
+                    user: {
+                        _id: new Types.ObjectId(),
+                        firstName: 'Test First',
+                        lastName: 'Test Last',
+                        username: 'testuser',
+                    },
+                })
+            })
+            .then(() => {
+                clientSocket.on('action:error', (error) => {
+                    expect(error.message).toBe(Constants.INVALID_DATA)
+                    done()
+                })
+                clientSocket.emit(
+                    'action:comment:delete',
+                    JSON.stringify({
+                        pointId: actionData.pointId,
+                        actionNumber: 1,
+                        commentNumber: 1,
+                    }),
+                )
+            })
     })
 })
