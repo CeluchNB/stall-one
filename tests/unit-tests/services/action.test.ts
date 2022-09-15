@@ -3,7 +3,7 @@ import { Types } from 'mongoose'
 import Game from '../../../src/models/game'
 import Point from '../../../src/models/point'
 import ActionServices from '../../../src/services/v1/action'
-import { ActionType, ClientAction } from '../../../src/types/action'
+import { ActionType, ClientAction, Comment } from '../../../src/types/action'
 import { getActionBaseKey } from '../../../src/utils/utils'
 import {
     setUpDatabase,
@@ -216,7 +216,10 @@ describe('test add live comment', () => {
         }
 
         await saveRedisAction(client, parseActionData(actionData, 1))
-        const action = await services.addComment(actionData.pointId, 1, { jwt: '', comment: 'That was a good play' })
+        const action = await services.addLiveComment(actionData.pointId, 1, {
+            jwt: '',
+            comment: 'That was a good play',
+        })
         expect(action.pointId.toString()).toBe(actionData.pointId)
         expect(action.comments.length).toBe(1)
         expect(action.comments[0]).toMatchObject({
@@ -257,7 +260,7 @@ describe('test add live comment', () => {
 
         await saveRedisAction(client, parseActionData(actionData, 1))
         await expect(
-            services.addComment(actionData.pointId, 1, { jwt: '', comment: 'That was a good play' }),
+            services.addLiveComment(actionData.pointId, 1, { jwt: '', comment: 'That was a good play' }),
         ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
     })
 
@@ -287,7 +290,7 @@ describe('test add live comment', () => {
         }
 
         await expect(
-            services.addComment(actionData.pointId, 1, { jwt: '', comment: 'That was a good play' }),
+            services.addLiveComment(actionData.pointId, 1, { jwt: '', comment: 'That was a good play' }),
         ).rejects.toThrowError(new ApiError(Constants.INVALID_DATA, 404))
     })
 
@@ -318,7 +321,179 @@ describe('test add live comment', () => {
 
         await saveRedisAction(client, parseActionData(actionData, 1))
         await expect(
-            services.addComment(actionData.pointId, 1, { jwt: '', comment: 'That dude sucks ass' }),
+            services.addLiveComment(actionData.pointId, 1, { jwt: '', comment: 'That dude sucks ass' }),
         ).rejects.toThrowError(new ApiError(Constants.PROFANE_COMMENT, 400))
+    })
+})
+
+describe('test delete live comment', () => {
+    const userData = {
+        _id: new Types.ObjectId(),
+        firstName: 'Noah',
+        lastName: 'Celuch',
+        email: 'noah@email.com',
+        username: 'noah',
+        private: false,
+        playerTeams: [],
+        managerTeams: [],
+        archiveTeams: [],
+        stats: [],
+        requests: [],
+        openToRequests: false,
+    }
+    it('with valid data', async () => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: userData, status: 200 })
+        })
+        await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.CATCH,
+            team: createPointData.pullingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        const comment: Comment = {
+            comment: 'Good huck',
+            user: {
+                _id: userData._id,
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                username: userData.username,
+            },
+        }
+
+        await saveRedisAction(client, parseActionData(actionData, 1))
+        const baseKey = getActionBaseKey(actionData.pointId, 1)
+        const totalComments = await client.incr(`${baseKey}:comments`)
+        await client.set(`${baseKey}:comments:${totalComments}:text`, comment.comment)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'id', comment.user._id?.toString() || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'username', comment.user.username || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', comment.user.firstName)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', comment.user.lastName)
+
+        const action = await services.deleteLiveComment(actionData.pointId, 1, 1, '')
+        expect(action.pointId.toString()).toBe(actionData.pointId.toString())
+        expect(action.actionType).toBe(actionData.actionType)
+        expect(action.comments.length).toBe(0)
+
+        const commentText = await client.get(`${baseKey}:comments:${totalComments}:text`)
+        const commentUser = await client.hGetAll(`${baseKey}:comments:${totalComments}:user`)
+        const commentTotal = await client.get(`${baseKey}:comments`)
+
+        expect(commentText).toBeNull()
+        expect(commentUser).toMatchObject({})
+        expect(commentTotal).toBe('1')
+    })
+
+    it('with bad response', async () => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: {}, status: 401 })
+        })
+        await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.CATCH,
+            team: createPointData.pullingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        const comment: Comment = {
+            comment: 'Good huck',
+            user: {
+                _id: userData._id,
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                username: userData.username,
+            },
+        }
+
+        await saveRedisAction(client, parseActionData(actionData, 1))
+        const baseKey = getActionBaseKey(actionData.pointId, 1)
+        const totalComments = await client.incr(`${baseKey}:comments`)
+        await client.set(`${baseKey}:comments:${totalComments}:text`, comment.comment)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'id', comment.user._id?.toString() || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'username', comment.user.username || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', comment.user.firstName)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', comment.user.lastName)
+
+        await expect(services.deleteLiveComment(actionData.pointId, 1, 1, '')).rejects.toThrowError(
+            new ApiError(Constants.UNAUTHENTICATED_USER, 401),
+        )
+    })
+
+    it('with non-matching user', async () => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: { ...userData, _id: new Types.ObjectId() }, status: 200 })
+        })
+        await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.CATCH,
+            team: createPointData.pullingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        const comment: Comment = {
+            comment: 'Good huck',
+            user: {
+                _id: userData._id,
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                username: userData.username,
+            },
+        }
+
+        await saveRedisAction(client, parseActionData(actionData, 1))
+        const baseKey = getActionBaseKey(actionData.pointId, 1)
+        const totalComments = await client.incr(`${baseKey}:comments`)
+        await client.set(`${baseKey}:comments:${totalComments}:text`, comment.comment)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'id', comment.user._id?.toString() || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'username', comment.user.username || '')
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', comment.user.firstName)
+        await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', comment.user.lastName)
+
+        await expect(services.deleteLiveComment(actionData.pointId, 1, 1, '')).rejects.toThrowError(
+            new ApiError(Constants.UNAUTHENTICATED_USER, 401),
+        )
     })
 })

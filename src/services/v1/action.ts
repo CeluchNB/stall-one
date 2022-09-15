@@ -1,7 +1,14 @@
 import * as Constants from '../../utils/constants'
 import Action, { IActionModel } from '../../models/action'
 import IAction, { RedisClientType, ClientAction, ActionType, InputComment } from '../../types/action'
-import { saveRedisAction, getRedisAction, saveRedisComment, actionExists } from '../../utils/redis'
+import {
+    saveRedisAction,
+    getRedisAction,
+    saveRedisComment,
+    actionExists,
+    getRedisComment,
+    deleteRedisComment,
+} from '../../utils/redis'
 import { handleSubstitute, parseActionData, validateActionData } from '../../utils/action'
 import Point, { IPointModel } from '../../models/point'
 import Game, { IGameModel } from '../../models/game'
@@ -50,7 +57,7 @@ export default class ActionServices {
         return await getRedisAction(this.redisClient, pointId, actionNumber)
     }
 
-    addComment = async (pointId: string, actionNumber: number, data: InputComment): Promise<IAction> => {
+    addLiveComment = async (pointId: string, actionNumber: number, data: InputComment): Promise<IAction> => {
         const { jwt, comment } = data
         const response = await axios.get(`${this.ultmtUrl}/api/v1/user/me`, {
             headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${jwt}` },
@@ -70,6 +77,28 @@ export default class ActionServices {
             throw new ApiError(Constants.PROFANE_COMMENT, 400)
         }
         await saveRedisComment(this.redisClient, pointId, actionNumber, { comment, user })
+        return await getRedisAction(this.redisClient, pointId, actionNumber)
+    }
+
+    deleteLiveComment = async (
+        pointId: string,
+        actionNumber: number,
+        commentNumber: number,
+        jwt: string,
+    ): Promise<IAction> => {
+        const response = await axios.get(`${this.ultmtUrl}/api/v1/user/me`, {
+            headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${jwt}` },
+        })
+        if (response.status !== 200) {
+            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
+        }
+
+        const comment = await getRedisComment(this.redisClient, pointId, actionNumber, commentNumber)
+        if (!comment?.user._id?.equals(response.data._id)) {
+            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
+        }
+
+        await deleteRedisComment(this.redisClient, pointId, actionNumber, commentNumber)
         return await getRedisAction(this.redisClient, pointId, actionNumber)
     }
 

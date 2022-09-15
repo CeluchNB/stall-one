@@ -32,7 +32,7 @@ const commentHandler = async (
         throw new ApiError(Constants.INVALID_DATA, 400)
     }
     const services = new ActionServices(client, process.env.ULTMT_API_URL as string, process.env.API_KEY as string)
-    return await services.addComment(pointId, actionNumber, { comment, jwt })
+    return await services.addLiveComment(pointId, actionNumber, { comment, jwt })
 }
 
 const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
