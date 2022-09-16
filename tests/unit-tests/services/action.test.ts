@@ -174,6 +174,118 @@ describe('test get live action', () => {
     })
 })
 
+describe('test undo action', () => {
+    it('with valid, single action', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.CATCH,
+            team: createPointData.pullingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        await client.set(`${game._id.toString()}:${actionData.pointId}:actions`, 1)
+        await saveRedisAction(client, parseActionData(actionData, 1))
+        const action = await services.undoAction(
+            game._id.toString(),
+            point._id.toString(),
+            createPointData.pullingTeam._id?.toString() || '',
+        )
+        expect(action?.pointId.toString()).toBe(actionData.pointId)
+        expect(action?.actionType).toBe(actionData.actionType)
+        expect(action?.tags[0]).toBe(actionData.tags[0])
+
+        const key = getActionBaseKey(actionData.pointId, 1)
+        const oldType = await client.get(`${key}:type`)
+        const oldTeam = await client.hGetAll(`${key}:team`)
+        expect(oldType).toBeNull()
+        expect(oldTeam).toMatchObject({})
+        const keys = await client.keys('*')
+        expect(keys.length).toBe(1)
+    })
+
+    it('with valid action many behind other tema', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.CATCH,
+            team: createPointData.pullingTeam,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        await client.set(`${game._id.toString()}:${actionData.pointId}:actions`, 4)
+
+        await saveRedisAction(client, parseActionData(actionData, 2))
+        await saveRedisAction(client, parseActionData(actionData, 3))
+        actionData.actionType = ActionType.SUBSTITUTION
+        await saveRedisAction(client, parseActionData(actionData, 4))
+        actionData.actionType = ActionType.CATCH
+        const teamId = new Types.ObjectId()
+        actionData.team = { _id: teamId, ...createPointData.receivingTeam }
+        await saveRedisAction(client, parseActionData(actionData, 1))
+
+        const action = await services.undoAction(game._id.toString(), point._id.toString(), teamId.toString() || '')
+        expect(action?.actionNumber).toBe(1)
+        expect(action?.actionType).toBe(ActionType.CATCH)
+        expect(action?.pointId.toString()).toBe(actionData.pointId)
+        expect(action?.tags[0]).toBe(actionData.tags[0])
+
+        const key = getActionBaseKey(actionData.pointId, 1)
+        const oldType = await client.get(`${key}:type`)
+        const oldTeam = await client.hGetAll(`${key}:team`)
+        expect(oldType).toBeNull()
+        expect(oldTeam).toMatchObject({})
+
+        const twoKey = getActionBaseKey(actionData.pointId, 2)
+        const twoType = await client.get(`${twoKey}:type`)
+        expect(twoType).toBe(ActionType.CATCH)
+        const threeKey = getActionBaseKey(actionData.pointId, 3)
+        const threeType = await client.get(`${threeKey}:type`)
+        expect(threeType).toBe(ActionType.CATCH)
+        const fourKey = getActionBaseKey(actionData.pointId, 4)
+        const fourType = await client.get(`${fourKey}:type`)
+        expect(fourType).toBe(ActionType.SUBSTITUTION)
+    })
+
+    it('with no action', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 1)
+        const action = await services.undoAction(
+            game._id.toString(),
+            point._id.toString(),
+            createPointData.pullingTeam._id?.toString() || '',
+        )
+        expect(action).toBeUndefined()
+    })
+})
+
 describe('test add live comment', () => {
     const userData = {
         _id: new Types.ObjectId(),

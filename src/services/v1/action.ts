@@ -8,6 +8,7 @@ import {
     actionExists,
     getRedisComment,
     deleteRedisComment,
+    deleteRedisAction,
 } from '../../utils/redis'
 import { handleSubstitute, parseActionData, validateActionData } from '../../utils/action'
 import Point, { IPointModel } from '../../models/point'
@@ -55,6 +56,22 @@ export default class ActionServices {
 
     getLiveAction = async (pointId: string, actionNumber: number): Promise<IAction> => {
         return await getRedisAction(this.redisClient, pointId, actionNumber)
+    }
+
+    undoAction = async (gameId: string, pointId: string, teamId: string): Promise<IAction | undefined> => {
+        const totalActions = await this.redisClient.get(`${gameId}:${pointId}:actions`)
+        for (let i = Number(totalActions); i > 0; i--) {
+            const exists = await actionExists(this.redisClient, pointId, i)
+            if (!exists) {
+                continue
+            }
+            const action = await getRedisAction(this.redisClient, pointId, i)
+            if (action.team._id?.equals(teamId)) {
+                await deleteRedisAction(this.redisClient, pointId, i)
+                return action
+            }
+        }
+        return
     }
 
     addLiveComment = async (pointId: string, actionNumber: number, data: InputComment): Promise<IAction> => {

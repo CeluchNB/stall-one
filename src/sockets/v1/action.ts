@@ -11,6 +11,22 @@ const actionHandler = async (data: ClientAction, gameId: string, client: RedisCl
     return await services.createLiveAction(data, gameId)
 }
 
+const undoActionHandler = async (
+    client: RedisClientType,
+    data: {
+        gameId: string
+        pointId: string
+        teamId: string
+    },
+): Promise<IAction | undefined> => {
+    const { gameId, pointId, teamId } = data
+    if (!gameId || !pointId || !teamId) {
+        throw new ApiError(Constants.INVALID_DATA, 400)
+    }
+    const services = new ActionServices(client, process.env.ULTMT_API_URL as string, process.env.API_KEY as string)
+    return await services.undoAction(gameId, pointId, teamId)
+}
+
 const serverActionHandler = async (
     client: RedisClientType,
     data: { pointId: string; actionNumber: number },
@@ -61,6 +77,30 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
             // send action to client
             socket.emit('action:client', action)
             socket.to('servers').emit('action:server', { pointId: action.pointId, number: action.actionNumber })
+        } catch (error) {
+            const response = handleSocketError(error)
+            socket.emit('action:error', response)
+        }
+    })
+
+    socket.on('action:undo', async (data) => {
+        try {
+            gameAuth(socket, async (err) => {
+                if (err) {
+                    throw err
+                }
+                const { gameId, teamId } = socket.data
+                const dataJson = JSON.parse(data)
+                const { pointId } = dataJson
+
+                const action = await undoActionHandler(client, { gameId, teamId, pointId })
+                if (action) {
+                    socket.emit('action:undo:client', { pointId: action.pointId, number: action.actionNumber })
+                    socket.emit('action:undo:server', { pointId: action.pointId, number: action.actionNumber })
+                } else {
+                    socket.emit('action:undo:client', {})
+                }
+            })
         } catch (error) {
             const response = handleSocketError(error)
             socket.emit('action:error', response)
