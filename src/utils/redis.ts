@@ -2,6 +2,15 @@ import IAction, { RedisClientType, ActionType, Comment } from '../types/action'
 import { getActionBaseKey, parseRedisUser } from './utils'
 import { Types } from 'mongoose'
 import { Player, Team } from '../types/ultmt'
+import { createClient } from 'redis'
+
+const client = createClient({ url: process.env.REDIS_URL })
+export const getClient = async () => {
+    if (!client.isOpen) {
+        await client.connect()
+    }
+    return client
+}
 
 export const saveRedisAction = async (redisClient: RedisClientType, data: IAction) => {
     const { pointId, actionNumber: number, team, playerOne, playerTwo, displayMessage, tags, actionType } = data

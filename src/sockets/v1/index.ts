@@ -1,15 +1,13 @@
 import { Socket } from 'socket.io'
 import registerActionHandler from './action'
-import { createClient } from 'redis'
 import { RedisClientType } from '../../types/action'
 
-export let client: RedisClientType
-const socketHandler = async (socket: Socket) => {
-    client = createClient({ url: process.env.REDIS_URL })
-    await client.connect()
-    socket.join('servers')
+const socketHandler = (client: RedisClientType) => {
+    return (socket: Socket) => {
+        socket.join('servers')
 
-    registerActionHandler(socket, client)
+        registerActionHandler(socket, client)
+    }
 }
 
 export default socketHandler

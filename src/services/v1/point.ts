@@ -4,14 +4,17 @@ import { IGameModel } from '../../models/game'
 import { Player, TeamNumber } from '../../types/ultmt'
 import { ApiError } from '../../types/errors'
 import IPoint from '../../types/point'
+import { RedisClientType } from '../../types/action'
 
 export default class PointServices {
     pointModel: IPointModel
     gameModel: IGameModel
+    client?: RedisClientType
 
-    constructor(pointModel: IPointModel, gameModel: IGameModel) {
+    constructor(pointModel: IPointModel, gameModel: IGameModel, client?: RedisClientType) {
         this.pointModel = pointModel
         this.gameModel = gameModel
+        this.client = client
     }
 
     /**
@@ -101,6 +104,21 @@ export default class PointServices {
             point.teamTwoPlayers = players
         }
         await point.save()
+
+        return point
+    }
+
+    /**
+     * Method to finish a point. Moves all actions from redis to mongo, validates a
+     * score occurred, sets scoring team, updates score on point and game model.
+     * @param pointId id of point to finish
+     * @returns final point
+     */
+    finishPoint = async (pointId: string): Promise<IPoint> => {
+        const point = await this.pointModel.findById(pointId)
+        if (!point) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
+        }
 
         return point
     }

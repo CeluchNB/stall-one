@@ -7,6 +7,7 @@ import Point from '../../models/point'
 import PointServices from '../../services/v1/point'
 import { GameAuth } from '../../types/game'
 import { getMyTeamNumber } from '../../utils/utils'
+import { getClient } from '../../utils/redis'
 
 export const pointRouter = Router()
 
