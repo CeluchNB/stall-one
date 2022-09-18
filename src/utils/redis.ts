@@ -12,10 +12,10 @@ export const getClient = async () => {
     return client
 }
 
-export const saveRedisAction = async (redisClient: RedisClientType, data: IAction) => {
-    const { pointId, actionNumber: number, team, playerOne, playerTwo, displayMessage, tags, actionType } = data
+export const saveRedisAction = async (redisClient: RedisClientType, data: IAction, pointId: string) => {
+    const { actionNumber: number, team, playerOne, playerTwo, displayMessage, tags, actionType } = data
     const { _id, place, name, teamname, seasonStart, seasonEnd } = team
-    const baseKey = getActionBaseKey(pointId.toString(), number)
+    const baseKey = getActionBaseKey(pointId, number)
 
     await redisClient.hSet(`${baseKey}:team`, 'name', name)
     if (_id) {
@@ -114,7 +114,6 @@ export const getRedisAction = async (
     }
 
     const action: IAction = {
-        pointId: new Types.ObjectId(pointId),
         team,
         actionNumber: number,
         actionType: actionType as ActionType,

@@ -26,13 +26,14 @@ describe('test /POST first point route', () => {
             .expect(200)
 
         const { point } = response.body
-        expect(point.gameId.toString()).toBe(game._id.toString())
         expect(point.pullingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
 
         const points = await Point.find({})
         expect(points.length).toBe(1)
-        expect(points[0].gameId.toString()).toBe(game._id.toString())
         expect(points[0].pullingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
+        const gameRecord = await Game.findById(game._id)
+        expect(gameRecord?.points.length).toBe(1)
+        expect(gameRecord?.points[0].toString()).toBe(point._id.toString())
     })
 
     it('with bad game authentication', async () => {
@@ -46,7 +47,6 @@ describe('test /POST first point route', () => {
     it('with invalid data', async () => {
         const game = await Game.create(gameData)
         await Point.create({
-            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -70,7 +70,6 @@ describe('test /PUT set players', () => {
     it('with valid data', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
-            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -109,7 +108,6 @@ describe('test /PUT set players', () => {
     it('with bad token', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
-            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -139,7 +137,6 @@ describe('test /PUT set players', () => {
     it('with player error', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
-            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,

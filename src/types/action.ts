@@ -26,7 +26,6 @@ export interface Comment {
 }
 
 export interface ClientAction {
-    pointId: string
     actionType: ActionType
     team: Team
     playerOne?: Player
@@ -36,7 +35,6 @@ export interface ClientAction {
 
 interface IAction {
     _id?: Types.ObjectId
-    pointId: Types.ObjectId
     actionNumber: number
     actionType: ActionType
     displayMessage: string

@@ -25,6 +25,7 @@ afterAll(async () => {
     await tearDownDatabase()
 })
 
+const pointId = 'pointId'
 describe('test save redis action', () => {
     it('with all data', async () => {
         const actionData: IAction = {
@@ -49,7 +50,6 @@ describe('test save redis action', () => {
                 lastName: 'First',
                 username: 'lastfirst',
             },
-            pointId: new Types.ObjectId(),
             actionNumber: 1,
             actionType: ActionType.CATCH,
             displayMessage: 'First Last throws to Last First',
@@ -57,9 +57,9 @@ describe('test save redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        await saveRedisAction(client, actionData)
+        await saveRedisAction(client, actionData, pointId)
 
-        const baseKey = getActionBaseKey(actionData.pointId.toString(), actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
         const totalKeys = await client.keys('*')
         expect(totalKeys.length).toBe(6)
 
@@ -107,7 +107,6 @@ describe('test save redis action', () => {
                 seasonStart: new Date(2022),
                 seasonEnd: new Date(2022),
             },
-            pointId: new Types.ObjectId(),
             actionNumber: 1,
             actionType: ActionType.TIMEOUT,
             displayMessage: 'A timeout is called',
@@ -115,9 +114,9 @@ describe('test save redis action', () => {
             tags: ['veteran call'],
         }
 
-        await saveRedisAction(client, actionData)
+        await saveRedisAction(client, actionData, pointId)
 
-        const baseKey = getActionBaseKey(actionData.pointId.toString(), actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
         const totalKeys = await client.keys('*')
         expect(totalKeys.length).toBe(4)
 
@@ -161,7 +160,6 @@ describe('test save redis action', () => {
                 firstName: 'Last',
                 lastName: 'First',
             },
-            pointId: new Types.ObjectId(),
             actionNumber: 1,
             actionType: ActionType.CATCH,
             displayMessage: 'First Last throws to Last First',
@@ -169,9 +167,9 @@ describe('test save redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        await saveRedisAction(client, actionData)
+        await saveRedisAction(client, actionData, pointId)
 
-        const baseKey = getActionBaseKey(actionData.pointId.toString(), actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
         const totalKeys = await client.keys('*')
         expect(totalKeys.length).toBe(6)
 
@@ -233,7 +231,6 @@ describe('test get redis action', () => {
                 lastName: 'First',
                 username: 'lastfirst',
             },
-            pointId: new Types.ObjectId(),
             actionNumber: 1,
             actionType: ActionType.CATCH,
             displayMessage: 'First Last throws to Last First',
@@ -241,7 +238,7 @@ describe('test get redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        const baseKey = getActionBaseKey(actionData.pointId.toString(), actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
         await client.hSet(`${baseKey}:team`, 'name', actionData.team.name)
         await client.hSet(`${baseKey}:team`, 'id', actionData.team._id!.toString())
         await client.hSet(`${baseKey}:team`, 'place', actionData.team.place!)
@@ -268,9 +265,8 @@ describe('test get redis action', () => {
         await client.hSet(`${baseKey}:comments:1:user`, 'lastName', actionData.playerOne!.lastName)
         await client.hSet(`${baseKey}:comments:1:user`, 'username', actionData.playerOne!.username!)
 
-        const action = await getRedisAction(client, actionData.pointId.toString(), actionData.actionNumber)
+        const action = await getRedisAction(client, pointId, actionData.actionNumber)
         expect(action._id).toBeUndefined()
-        expect(action.pointId.toString()).toBe(actionData.pointId.toString())
         expect(action.actionType).toBe(actionData.actionType)
         expect(action.actionNumber).toBe(actionData.actionNumber)
         expect(action.displayMessage).toBe(actionData.displayMessage)
@@ -314,7 +310,6 @@ describe('test get redis action', () => {
                 seasonStart: new Date('2022'),
                 seasonEnd: new Date('2022'),
             },
-            pointId: new Types.ObjectId(),
             actionNumber: 1,
             actionType: ActionType.CATCH,
             displayMessage: 'First Last throws to Last First',
@@ -322,7 +317,7 @@ describe('test get redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        const baseKey = getActionBaseKey(actionData.pointId.toString(), actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
         await client.hSet(`${baseKey}:team`, 'name', actionData.team.name)
         await client.hSet(`${baseKey}:team`, 'id', actionData.team._id!.toString())
         await client.hSet(`${baseKey}:team`, 'place', actionData.team.place!)
@@ -335,9 +330,8 @@ describe('test get redis action', () => {
             await client.rPush(`${baseKey}:tags`, tag)
         }
 
-        const action = await getRedisAction(client, actionData.pointId.toString(), actionData.actionNumber)
+        const action = await getRedisAction(client, pointId, actionData.actionNumber)
         expect(action._id).toBeUndefined()
-        expect(action.pointId.toString()).toBe(actionData.pointId.toString())
         expect(action.actionType).toBe(actionData.actionType)
         expect(action.actionNumber).toBe(actionData.actionNumber)
         expect(action.displayMessage).toBe(actionData.displayMessage)
@@ -369,7 +363,6 @@ describe('test get redis action', () => {
                 firstName: 'Last',
                 lastName: 'First',
             },
-            pointId: new Types.ObjectId(),
             actionNumber: 1,
             actionType: ActionType.CATCH,
             displayMessage: 'First Last throws to Last First',
@@ -377,7 +370,7 @@ describe('test get redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        const baseKey = getActionBaseKey(actionData.pointId.toString(), actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
         await client.hSet(`${baseKey}:team`, 'name', actionData.team.name)
         await client.set(`${baseKey}:type`, actionData.actionType)
         await client.set(`${baseKey}:display`, actionData.displayMessage)
@@ -389,9 +382,8 @@ describe('test get redis action', () => {
             await client.rPush(`${baseKey}:tags`, tag)
         }
 
-        const action = await getRedisAction(client, actionData.pointId.toString(), actionData.actionNumber)
+        const action = await getRedisAction(client, pointId, actionData.actionNumber)
         expect(action._id).toBeUndefined()
-        expect(action.pointId.toString()).toBe(actionData.pointId.toString())
         expect(action.actionType).toBe(actionData.actionType)
         expect(action.actionNumber).toBe(actionData.actionNumber)
         expect(action.displayMessage).toBe(actionData.displayMessage)
@@ -440,7 +432,6 @@ describe('test delete redis action', () => {
                 lastName: 'First',
                 username: 'lastfirst',
             },
-            pointId: new Types.ObjectId(),
             actionNumber: 1,
             actionType: ActionType.CATCH,
             displayMessage: 'First Last throws to Last First',
@@ -448,7 +439,7 @@ describe('test delete redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        const baseKey = getActionBaseKey(actionData.pointId.toString(), actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
         await client.hSet(`${baseKey}:team`, 'name', actionData.team.name)
         await client.hSet(`${baseKey}:team`, 'id', actionData.team._id!.toString())
         await client.hSet(`${baseKey}:team`, 'place', actionData.team.place!)
@@ -469,7 +460,7 @@ describe('test delete redis action', () => {
             await client.rPush(`${baseKey}:tags`, tag)
         }
 
-        await deleteRedisAction(client, actionData.pointId.toString(), actionData.actionNumber)
+        await deleteRedisAction(client, pointId, actionData.actionNumber)
         const team = await client.hGetAll(`${baseKey}:team`)
         const type = await client.get(`${baseKey}:type`)
         const display = await client.get(`${baseKey}:display`)
@@ -505,16 +496,15 @@ describe('test delete redis action', () => {
                 lastName: 'First',
                 username: 'lastfirst',
             },
-            pointId: new Types.ObjectId(),
             actionNumber: 1,
             actionType: ActionType.CATCH,
             displayMessage: 'First Last throws to Last First',
             comments: [],
             tags: ['good', 'huck'],
         }
-        await deleteRedisAction(client, actionData.pointId.toString(), actionData.actionNumber)
+        await deleteRedisAction(client, pointId, actionData.actionNumber)
 
-        const baseKey = getActionBaseKey(actionData.pointId.toString(), actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
         const team = await client.hGetAll(`${baseKey}:team`)
         const type = await client.get(`${baseKey}:type`)
         const display = await client.get(`${baseKey}:display`)

@@ -68,6 +68,7 @@ const schema = new Schema<IGame>({
     resolveCode: String,
     timeoutPerHalf: Number,
     floaterTimeout: Boolean,
+    points: [SchemaTypes.ObjectId],
 })
 
 schema.pre('save', async function (next) {

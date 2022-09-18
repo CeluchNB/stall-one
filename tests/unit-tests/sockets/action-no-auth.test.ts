@@ -35,10 +35,10 @@ afterAll(async () => {
     app.close()
 })
 
+const pointId = 'pointid'
 describe('test client action error case', () => {
     it('should throw error with bad jwt', (done) => {
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -60,14 +60,13 @@ describe('test client action error case', () => {
             expect(error.message).toBe(Constants.UNAUTHENTICATED_USER)
             done()
         })
-        clientSocket.emit('action', JSON.stringify(actionData))
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }))
     })
 })
 
 describe('test server action', () => {
     it('with valid data', (done) => {
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -86,26 +85,28 @@ describe('test server action', () => {
             tags: ['IB'],
         }
         Promise.resolve(
-            RedisUtils.saveRedisAction(client, {
-                ...actionData,
-                actionNumber: 1,
-                displayMessage: 'Pull',
-                comments: [],
-                pointId: new Types.ObjectId(actionData.pointId),
-            }),
+            RedisUtils.saveRedisAction(
+                client,
+                {
+                    ...actionData,
+                    actionNumber: 1,
+                    displayMessage: 'Pull',
+                    comments: [],
+                },
+                pointId,
+            ),
         ).then(() => {
             clientSocket.on('action:client', (action) => {
-                expect(action.pointId.toString()).toBe(actionData.pointId.toString())
                 expect(action.actionType).toBe(actionData.actionType)
+                expect(action.tags[0]).toBe(actionData.tags[0])
                 done()
             })
-            clientSocket.emit('action:server', JSON.stringify({ pointId: actionData.pointId, actionNumber: 1 }))
+            clientSocket.emit('action:server', JSON.stringify({ pointId, actionNumber: 1 }))
         })
     })
 
     it('with invalid data', (done) => {
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -124,13 +125,16 @@ describe('test server action', () => {
             tags: ['IB'],
         }
         Promise.resolve(
-            RedisUtils.saveRedisAction(client, {
-                ...actionData,
-                actionNumber: 1,
-                displayMessage: 'Pull',
-                comments: [],
-                pointId: new Types.ObjectId(actionData.pointId),
-            }),
+            RedisUtils.saveRedisAction(
+                client,
+                {
+                    ...actionData,
+                    actionNumber: 1,
+                    displayMessage: 'Pull',
+                    comments: [],
+                },
+                pointId,
+            ),
         ).then(() => {
             clientSocket.on('action:error', (error) => {
                 expect(error.message).toBe(Constants.INVALID_DATA)
@@ -145,7 +149,6 @@ describe('test server action', () => {
             throw 7
         })
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -164,19 +167,22 @@ describe('test server action', () => {
             tags: ['IB'],
         }
         Promise.resolve(
-            RedisUtils.saveRedisAction(client, {
-                ...actionData,
-                actionNumber: 1,
-                displayMessage: 'Pull',
-                comments: [],
-                pointId: new Types.ObjectId(actionData.pointId),
-            }),
+            RedisUtils.saveRedisAction(
+                client,
+                {
+                    ...actionData,
+                    actionNumber: 1,
+                    displayMessage: 'Pull',
+                    comments: [],
+                },
+                pointId,
+            ),
         ).then(() => {
             clientSocket.on('action:error', (error) => {
                 expect(error.message).toBe(Constants.GENERIC_ERROR)
                 done()
             })
-            clientSocket.emit('action:server', JSON.stringify({ pointId: actionData.pointId, actionNumber: 1 }))
+            clientSocket.emit('action:server', JSON.stringify({ pointId, actionNumber: 1 }))
         })
     })
 })
@@ -202,7 +208,6 @@ describe('test action comment', () => {
             return Promise.resolve({ data: userData, status: 200 })
         })
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -221,16 +226,18 @@ describe('test action comment', () => {
             tags: ['IB'],
         }
         Promise.resolve(
-            RedisUtils.saveRedisAction(client, {
-                ...actionData,
-                actionNumber: 1,
-                displayMessage: 'Pull',
-                comments: [],
-                pointId: new Types.ObjectId(actionData.pointId),
-            }),
+            RedisUtils.saveRedisAction(
+                client,
+                {
+                    ...actionData,
+                    actionNumber: 1,
+                    displayMessage: 'Pull',
+                    comments: [],
+                },
+                pointId,
+            ),
         ).then(() => {
             clientSocket.on('action:client', (action) => {
-                expect(action.pointId.toString()).toBe(actionData.pointId.toString())
                 expect(action.actionType).toBe(actionData.actionType)
                 expect(action.comments.length).toBe(1)
                 done()
@@ -238,7 +245,7 @@ describe('test action comment', () => {
             clientSocket.emit(
                 'action:comment',
                 JSON.stringify({
-                    pointId: actionData.pointId,
+                    pointId: pointId,
                     actionNumber: 1,
                     jwt: 'test.jwt.1234',
                     comment: 'That was a nice huck',
@@ -249,7 +256,6 @@ describe('test action comment', () => {
 
     it('with missing data', (done) => {
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -268,13 +274,16 @@ describe('test action comment', () => {
             tags: ['IB'],
         }
         Promise.resolve(
-            RedisUtils.saveRedisAction(client, {
-                ...actionData,
-                actionNumber: 1,
-                displayMessage: 'Pull',
-                comments: [],
-                pointId: new Types.ObjectId(actionData.pointId),
-            }),
+            RedisUtils.saveRedisAction(
+                client,
+                {
+                    ...actionData,
+                    actionNumber: 1,
+                    displayMessage: 'Pull',
+                    comments: [],
+                },
+                pointId,
+            ),
         ).then(() => {
             clientSocket.on('action:error', (action) => {
                 expect(action.message).toBe(Constants.INVALID_DATA)
@@ -283,7 +292,7 @@ describe('test action comment', () => {
             clientSocket.emit(
                 'action:comment',
                 JSON.stringify({
-                    pointId: actionData.pointId,
+                    pointId,
                     actionNumber: 1,
                     comment: 'That was a nice huck',
                 }),
@@ -296,7 +305,6 @@ describe('test action comment', () => {
             return Promise.resolve({ data: userData, status: 200 })
         })
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -315,13 +323,16 @@ describe('test action comment', () => {
             tags: ['IB'],
         }
         Promise.resolve(
-            RedisUtils.saveRedisAction(client, {
-                ...actionData,
-                actionNumber: 1,
-                displayMessage: 'Pull',
-                comments: [],
-                pointId: new Types.ObjectId(actionData.pointId),
-            }),
+            RedisUtils.saveRedisAction(
+                client,
+                {
+                    ...actionData,
+                    actionNumber: 1,
+                    displayMessage: 'Pull',
+                    comments: [],
+                },
+                pointId,
+            ),
         ).then(() => {
             clientSocket.on('action:error', (action) => {
                 expect(action.message).toBe(Constants.PROFANE_COMMENT)
@@ -330,7 +341,7 @@ describe('test action comment', () => {
             clientSocket.emit(
                 'action:comment',
                 JSON.stringify({
-                    pointId: actionData.pointId,
+                    pointId,
                     actionNumber: 1,
                     jwt: 'test.jwt.1234',
                     comment: 'Profane shit comment',
@@ -360,7 +371,6 @@ describe('test delete live action', () => {
             return Promise.resolve({ data: userData, status: 200 })
         })
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -379,16 +389,19 @@ describe('test delete live action', () => {
             tags: ['IB'],
         }
         Promise.resolve(
-            RedisUtils.saveRedisAction(client, {
-                ...actionData,
-                actionNumber: 1,
-                displayMessage: 'Pull',
-                comments: [],
-                pointId: new Types.ObjectId(actionData.pointId),
-            }),
+            RedisUtils.saveRedisAction(
+                client,
+                {
+                    ...actionData,
+                    actionNumber: 1,
+                    displayMessage: 'Pull',
+                    comments: [],
+                },
+                pointId,
+            ),
         )
             .then(() => {
-                return RedisUtils.saveRedisComment(client, actionData.pointId, 1, {
+                return RedisUtils.saveRedisComment(client, pointId, 1, {
                     comment: 'Good huck',
                     user: {
                         _id: userData._id,
@@ -400,7 +413,6 @@ describe('test delete live action', () => {
             })
             .then(() => {
                 clientSocket.on('action:client', (action) => {
-                    expect(action.pointId.toString()).toBe(actionData.pointId.toString())
                     expect(action.actionType).toBe(actionData.actionType)
                     expect(action.comments.length).toBe(0)
                     done()
@@ -408,7 +420,7 @@ describe('test delete live action', () => {
                 clientSocket.emit(
                     'action:comment:delete',
                     JSON.stringify({
-                        pointId: actionData.pointId,
+                        pointId,
                         actionNumber: 1,
                         commentNumber: 1,
                         jwt: 'test.jwt.1234',
@@ -422,7 +434,6 @@ describe('test delete live action', () => {
             return Promise.resolve({ data: userData, status: 200 })
         })
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -441,16 +452,19 @@ describe('test delete live action', () => {
             tags: ['IB'],
         }
         Promise.resolve(
-            RedisUtils.saveRedisAction(client, {
-                ...actionData,
-                actionNumber: 1,
-                displayMessage: 'Pull',
-                comments: [],
-                pointId: new Types.ObjectId(actionData.pointId),
-            }),
+            RedisUtils.saveRedisAction(
+                client,
+                {
+                    ...actionData,
+                    actionNumber: 1,
+                    displayMessage: 'Pull',
+                    comments: [],
+                },
+                pointId,
+            ),
         )
             .then(() => {
-                return RedisUtils.saveRedisComment(client, actionData.pointId, 1, {
+                return RedisUtils.saveRedisComment(client, pointId, 1, {
                     comment: 'Good huck',
                     user: {
                         _id: new Types.ObjectId(),
@@ -468,7 +482,7 @@ describe('test delete live action', () => {
                 clientSocket.emit(
                     'action:comment:delete',
                     JSON.stringify({
-                        pointId: actionData.pointId,
+                        pointId,
                         actionNumber: 1,
                         commentNumber: 1,
                         jwt: 'test.jwt.1234',
@@ -479,7 +493,6 @@ describe('test delete live action', () => {
 
     it('with missing data', (done) => {
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -498,16 +511,19 @@ describe('test delete live action', () => {
             tags: ['IB'],
         }
         Promise.resolve(
-            RedisUtils.saveRedisAction(client, {
-                ...actionData,
-                actionNumber: 1,
-                displayMessage: 'Pull',
-                comments: [],
-                pointId: new Types.ObjectId(actionData.pointId),
-            }),
+            RedisUtils.saveRedisAction(
+                client,
+                {
+                    ...actionData,
+                    actionNumber: 1,
+                    displayMessage: 'Pull',
+                    comments: [],
+                },
+                pointId,
+            ),
         )
             .then(() => {
-                return RedisUtils.saveRedisComment(client, actionData.pointId, 1, {
+                return RedisUtils.saveRedisComment(client, pointId, 1, {
                     comment: 'Good huck',
                     user: {
                         _id: new Types.ObjectId(),
@@ -525,7 +541,7 @@ describe('test delete live action', () => {
                 clientSocket.emit(
                     'action:comment:delete',
                     JSON.stringify({
-                        pointId: actionData.pointId,
+                        pointId,
                         actionNumber: 1,
                         commentNumber: 1,
                     }),

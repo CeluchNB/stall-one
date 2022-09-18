@@ -42,14 +42,14 @@ export default class ActionServices {
         this.gameModel = gameModel
     }
 
-    createLiveAction = async (data: ClientAction, gameId: string): Promise<IAction> => {
+    createLiveAction = async (data: ClientAction, gameId: string, pointId: string): Promise<IAction> => {
         validateActionData(data)
-        const actionNumber = await this.redisClient.incr(`${gameId}:${data.pointId}:actions`)
+        const actionNumber = await this.redisClient.incr(`${gameId}:${pointId}:actions`)
         const actionData = parseActionData(data, actionNumber)
-        await saveRedisAction(this.redisClient, actionData)
-        await this.handleSideEffects(data)
+        await saveRedisAction(this.redisClient, actionData, pointId)
+        await this.handleSideEffects(data, gameId, pointId)
         // treat redis as source of truth always
-        const action = await getRedisAction(this.redisClient, actionData.pointId.toString(), actionData.actionNumber)
+        const action = await getRedisAction(this.redisClient, pointId, actionData.actionNumber)
 
         return action
     }
@@ -128,9 +128,9 @@ export default class ActionServices {
         return await getRedisAction(this.redisClient, pointId, actionNumber)
     }
 
-    private handleSideEffects = async (data: ClientAction) => {
+    private handleSideEffects = async (data: ClientAction, gameId: string, pointId: string) => {
         if (data.actionType === ActionType.SUBSTITUTION) {
-            await handleSubstitute(data, this.pointModel, this.gameModel)
+            await handleSubstitute(data, gameId, pointId, this.pointModel, this.gameModel)
         }
     }
 }

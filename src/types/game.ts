@@ -57,6 +57,7 @@ interface IGame extends CreateGame {
     teamOnePlayers: Player[]
     teamTwoPlayers: Player[]
     resolveCode: string
+    points: Types.ObjectId[]
 }
 
 export interface GameAuth {

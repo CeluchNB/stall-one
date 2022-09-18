@@ -3,7 +3,6 @@ import { Player, Team } from './ultmt'
 
 interface IPoint {
     _id: Types.ObjectId
-    gameId: Types.ObjectId
     pointNumber: number
     teamOnePlayers: Player[]
     teamTwoPlayers: Player[]
@@ -12,6 +11,7 @@ interface IPoint {
     pullingTeam: Team
     receivingTeam: Team
     scoringTeam?: Team
+    actions: Types.ObjectId[]
 }
 
 export default IPoint

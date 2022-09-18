@@ -60,7 +60,6 @@ afterAll(async () => {
 describe('test client action sent', () => {
     it('with valid data', (done) => {
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -79,14 +78,13 @@ describe('test client action sent', () => {
             tags: ['IB'],
         }
         clientSocket.on('action:client', (action) => {
-            expect(action.pointId).toBe(actionData.pointId)
             expect(action.actionNumber).toBe(1)
             expect(action.actionType).toBe(ActionType.PULL)
             expect(action.team.teamname).toBe(actionData.team.teamname)
             expect(action.playerOne.username).toBe(actionData.playerOne?.username)
             done()
         })
-        clientSocket.emit('action', JSON.stringify(actionData))
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId: '' }))
     })
 
     it('with bad data', (done) => {
@@ -112,7 +110,7 @@ describe('test client action sent', () => {
             expect(error.message).toBe(Constants.INVALID_DATA)
             done()
         })
-        clientSocket.emit('action', JSON.stringify(actionData))
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId: '' }))
     })
 
     it('with non object exception', (done) => {
@@ -120,7 +118,6 @@ describe('test client action sent', () => {
             throw 7
         })
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.PULL,
             team: {
                 _id: new Types.ObjectId(),
@@ -142,7 +139,7 @@ describe('test client action sent', () => {
             expect(error.message).toBe(Constants.GENERIC_ERROR)
             done()
         })
-        clientSocket.emit('action', JSON.stringify(actionData))
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId: '' }))
     })
 })
 
@@ -150,7 +147,6 @@ describe('test client undo action', () => {
     let game: IGame | null
     let point: IPoint
     const actionData: ClientAction = {
-        pointId: '',
         actionType: ActionType.PULL,
         team: {
             _id: new Types.ObjectId(),
@@ -170,17 +166,16 @@ describe('test client undo action', () => {
     }
     beforeAll(async () => {
         game = await Game.findOne({})
-        point = await Point.create({ ...createPointData, gameId: game?._id })
+        point = await Point.create({ ...createPointData })
 
-        actionData.pointId = point._id.toString()
         actionData.team = (game as IGame).teamOne
         await client.set(`${game?._id.toString()}:${point._id.toString()}:actions`, '1')
-        await RedisUtils.saveRedisAction(client, parseActionData(actionData, 1))
+        await RedisUtils.saveRedisAction(client, parseActionData(actionData, 1), point._id.toString())
     })
 
     it('with valid data', (done) => {
         clientSocket.on('action:undo:client', (data) => {
-            expect(data.pointId).toBe(actionData.pointId)
+            expect(data.pointId).toBe(point._id.toString())
             expect(data.actionNumber).toBe(1)
             done()
         })

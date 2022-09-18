@@ -2,7 +2,6 @@ import { Schema, SchemaTypes, model } from 'mongoose'
 import IAction, { ActionType } from '../types/action'
 
 const schema = new Schema<IAction>({
-    pointId: { type: SchemaTypes.ObjectId, required: true },
     actionNumber: { type: Number, required: true },
     actionType: { type: String, enum: Object.values(ActionType) },
     displayMessage: String,

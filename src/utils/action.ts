@@ -1,6 +1,5 @@
 import * as Constants from './constants'
 import IAction, { ClientAction, ActionType } from '../types/action'
-import { Types } from 'mongoose'
 import { Player } from '../types/ultmt'
 import { ApiError } from '../types/errors'
 import { IPointModel } from '../models/point'
@@ -34,7 +33,6 @@ export const validateActionData = (data: ClientAction) => {
 export const parseActionData = (data: ClientAction, actionNumber: number): IAction => {
     return {
         ...data,
-        pointId: new Types.ObjectId(data.pointId),
         actionNumber,
         displayMessage: getDisplayMessage(data.actionType, data.playerOne, data.playerTwo),
         comments: [],
@@ -52,12 +50,18 @@ export const getDisplayMessage = (type: ActionType, playerOne?: Player, playerTw
     }
 }
 
-export const handleSubstitute = async (data: ClientAction, pointModel: IPointModel, gameModel: IGameModel) => {
-    const point = await pointModel.findById(data.pointId)
+export const handleSubstitute = async (
+    data: ClientAction,
+    gameId: string,
+    pointId: string,
+    pointModel: IPointModel,
+    gameModel: IGameModel,
+) => {
+    const point = await pointModel.findById(pointId)
     if (!point) {
         throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
     }
-    const game = await gameModel.findById(point.gameId)
+    const game = await gameModel.findById(gameId)
     if (!game) {
         throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
     }

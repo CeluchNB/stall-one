@@ -61,7 +61,6 @@ describe('test parse action data', () => {
         const action = parseActionData(
             {
                 actionType: ActionType.PULL,
-                pointId: '123456acdeb847392ed0947a',
                 team: {
                     name: 'test name',
                 },
@@ -69,7 +68,6 @@ describe('test parse action data', () => {
             },
             2,
         )
-        expect(action.pointId.toString()).toBe('123456acdeb847392ed0947a')
         expect(action.tags[0]).toBe('good')
         expect(action.actionType).toBe(ActionType.PULL)
         expect(action.comments.length).toBe(0)
@@ -78,7 +76,6 @@ describe('test parse action data', () => {
 })
 
 const action: ClientAction = {
-    pointId: new Types.ObjectId().toString(),
     playerOne: {
         firstName: 'First 1',
         lastName: 'Last 1',
@@ -337,7 +334,6 @@ describe('test handle substitute', () => {
         await game.save()
 
         const actionData: ClientAction = {
-            pointId: point._id.toString(),
             actionType: ActionType.SUBSTITUTION,
             team: createPointData.pullingTeam,
             playerOne: {
@@ -354,7 +350,7 @@ describe('test handle substitute', () => {
             },
             tags: ['good'],
         }
-        await handleSubstitute(actionData, Point, Game)
+        await handleSubstitute(actionData, game._id.toString(), point._id.toString(), Point, Game)
 
         const updatedPoint = await Point.findById(point._id)
         expect(updatedPoint?.teamOnePlayers.length).toBe(1)
@@ -369,7 +365,6 @@ describe('test handle substitute', () => {
         await game.save()
 
         const actionData: ClientAction = {
-            pointId: point._id.toString(),
             actionType: ActionType.SUBSTITUTION,
             team: createPointData.receivingTeam,
             playerOne: {
@@ -386,7 +381,7 @@ describe('test handle substitute', () => {
             },
             tags: ['good'],
         }
-        await handleSubstitute(actionData, Point, Game)
+        await handleSubstitute(actionData, game._id.toString(), point._id.toString(), Point, Game)
 
         const updatedPoint = await Point.findById(point._id)
         expect(updatedPoint?.teamTwoPlayers.length).toBe(1)
@@ -400,7 +395,6 @@ describe('test handle substitute', () => {
         game.teamOne = createPointData.pullingTeam
         await game.save()
         const actionData: ClientAction = {
-            pointId: new Types.ObjectId().toString(),
             actionType: ActionType.SUBSTITUTION,
             team: createPointData.receivingTeam,
             playerOne: {
@@ -417,9 +411,9 @@ describe('test handle substitute', () => {
             },
             tags: ['good'],
         }
-        await expect(handleSubstitute(actionData, Point, Game)).rejects.toThrowError(
-            new ApiError(Constants.UNABLE_TO_FIND_POINT, 404),
-        )
+        await expect(
+            handleSubstitute(actionData, game._id.toString(), new Types.ObjectId().toString(), Point, Game),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_POINT, 404))
     })
 
     it('with unfound game error', async () => {
@@ -428,7 +422,6 @@ describe('test handle substitute', () => {
         game.teamOne = createPointData.pullingTeam
         await game.save()
         const actionData: ClientAction = {
-            pointId: point._id.toString(),
             actionType: ActionType.SUBSTITUTION,
             team: createPointData.receivingTeam,
             playerOne: {
@@ -446,8 +439,8 @@ describe('test handle substitute', () => {
             tags: ['good'],
         }
 
-        await expect(handleSubstitute(actionData, Point, Game)).rejects.toThrowError(
-            new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
-        )
+        await expect(
+            handleSubstitute(actionData, new Types.ObjectId().toString(), point._id.toString(), Point, Game),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
     })
 })

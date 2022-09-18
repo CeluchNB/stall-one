@@ -6,9 +6,14 @@ import { ApiError } from '../../types/errors'
 import { handleSocketError } from '../../utils/utils'
 import { gameAuth } from '../../middlware/socket-game-auth'
 
-const actionHandler = async (data: ClientAction, gameId: string, client: RedisClientType): Promise<IAction> => {
+const actionHandler = async (
+    data: ClientAction,
+    gameId: string,
+    pointId: string,
+    client: RedisClientType,
+): Promise<IAction> => {
     const services = new ActionServices(client, process.env.ULTMT_API_URL as string, process.env.API_KEY as string)
-    return await services.createLiveAction(data, gameId)
+    return await services.createLiveAction(data, gameId, pointId)
 }
 
 const undoActionHandler = async (
@@ -68,10 +73,11 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
         try {
             const { gameId } = await gameAuth(socket)
             const dataJson = JSON.parse(data)
-            const action = await actionHandler(dataJson, gameId, client)
+            const { action: clientAction, pointId } = dataJson
+            const action = await actionHandler(clientAction, gameId, pointId, client)
             // send action to client
             socket.emit('action:client', action)
-            socket.to('servers').emit('action:server', { pointId: action.pointId, number: action.actionNumber })
+            socket.to('servers').emit('action:server', { pointId, number: action.actionNumber })
         } catch (error) {
             const response = handleSocketError(error)
             socket.emit('action:error', response)
@@ -86,8 +92,8 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
 
             const action = await undoActionHandler(client, { gameId, team, pointId })
             if (action) {
-                socket.emit('action:undo:client', { pointId: action.pointId, actionNumber: action.actionNumber })
-                socket.emit('action:undo:server', { pointId: action.pointId, actionNumber: action.actionNumber })
+                socket.emit('action:undo:client', { pointId, actionNumber: action.actionNumber })
+                socket.emit('action:undo:server', { pointId, actionNumber: action.actionNumber })
             } else {
                 throw new ApiError(Constants.INVALID_DATA, 400)
             }
@@ -116,9 +122,10 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
     socket.on('action:comment', async (data) => {
         try {
             const dataJson = JSON.parse(data)
+            const { pointId, actionNumber } = dataJson
             const action = await commentHandler(client, dataJson)
             socket.emit('action:client', action)
-            socket.to('servers').emit('action:server', { pointId: action.pointId, number: action.actionNumber })
+            socket.to('servers').emit('action:server', { pointId, actionNumber })
         } catch (error) {
             const response = handleSocketError(error)
             socket.emit('action:error', response)
@@ -128,9 +135,10 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
     socket.on('action:comment:delete', async (data) => {
         try {
             const dataJson = JSON.parse(data)
+            const { pointId, actionNumber } = dataJson
             const action = await deleteCommentHandler(client, dataJson)
             socket.emit('action:client', action)
-            socket.to('servers').emit('action:server', { pointId: action.pointId, number: action.actionNumber })
+            socket.to('servers').emit('action:server', { pointId, actionNumber })
         } catch (error) {
             const response = handleSocketError(error)
             socket.emit('action:error', response)

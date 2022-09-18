@@ -39,7 +39,12 @@ pointRouter.put(
             const data = req.user as GameAuth
             const teamNumber = getMyTeamNumber(true, data.team)
             const services = new PointServices(Point, Game)
-            const point = await services.setPlayers(req.params.id, teamNumber, req.body.players)
+            const point = await services.setPlayers(
+                data.game._id.toString(),
+                req.params.id,
+                teamNumber,
+                req.body.players,
+            )
             return res.json({ point })
         } catch (error) {
             next(error)

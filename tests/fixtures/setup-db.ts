@@ -71,12 +71,12 @@ export const gameData: IGame = {
     teamTwoResolved: false,
     resolveCode: '123456',
     completeGame: false,
+    points: [],
 }
 
 const pointId = new Types.ObjectId()
 export const createPointData: IPoint = {
     _id: pointId,
-    gameId: gameId,
     pointNumber: 1,
     teamOnePlayers: [],
     teamTwoPlayers: [],
@@ -93,6 +93,7 @@ export const createPointData: IPoint = {
     receivingTeam: {
         name: 'Name2',
     },
+    actions: [],
 }
 
 export const getMock = jest.fn((url) => {

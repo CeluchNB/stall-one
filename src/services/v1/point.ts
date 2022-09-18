@@ -73,6 +73,9 @@ export default class PointServices {
             receivingTeam: pullingTeam === TeamNumber.ONE ? game.teamTwo : game.teamOne,
         })
 
+        game.points.push(point._id)
+        await game.save()
+
         return point
     }
 
@@ -83,13 +86,13 @@ export default class PointServices {
      * @param players array of players
      * @returns updated point
      */
-    setPlayers = async (pointId: string, team: TeamNumber, players: Player[]): Promise<IPoint> => {
+    setPlayers = async (gameId: string, pointId: string, team: TeamNumber, players: Player[]): Promise<IPoint> => {
         const point = await this.pointModel.findById(pointId)
         if (!point) {
             throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
         }
 
-        const game = await this.gameModel.findById(point.gameId)
+        const game = await this.gameModel.findById(gameId)
         if (!game) {
             throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
         }
