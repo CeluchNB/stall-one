@@ -2,6 +2,7 @@ import * as Constants from '../../../src/utils/constants'
 import { gameAuth } from '../../../src/middlware/socket-game-auth'
 import { setUpDatabase, tearDownDatabase, resetDatabase, createData } from '../../fixtures/setup-db'
 import Game from '../../../src/models/game'
+import { ApiError } from '../../../src/types/errors'
 import { Socket } from 'socket.io'
 import jwt from 'jsonwebtoken'
 
@@ -22,23 +23,19 @@ describe('test game auth method', () => {
         const game = await Game.create(createData)
         const token = game.teamOneToken
 
-        const next = jest.fn()
         const socket = { data: {}, request: { headers: { authorization: `Bearer ${token}` } } } as Socket
-        await gameAuth(socket, next)
-        expect(socket.data.gameId).toBe(game._id.toString())
-        expect(next).toHaveBeenCalled()
+        const { gameId, team } = await gameAuth(socket)
+        expect(gameId).toBe(game._id.toString())
+        expect(team).toBe('one')
     })
 
     it('should fail with unfound token', async () => {
-        const next = jest.fn()
         const socket = { data: {}, request: { headers: {} } } as Socket
-        await gameAuth(socket, next)
-        expect(next).toHaveBeenCalledWith(new Error(Constants.UNAUTHENTICATED_USER))
+        await expect(gameAuth(socket)).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
     })
 
     it('should fail with unfound game', async () => {
         const badToken = jwt.sign({ testId: '1234' }, process.env.JWT_SECRET as string)
-        const next = jest.fn()
         const socket = {
             data: {},
             request: {
@@ -47,12 +44,10 @@ describe('test game auth method', () => {
                 },
             },
         } as Socket
-        await gameAuth(socket, next)
-        expect(next).toHaveBeenCalledWith(new Error(Constants.UNABLE_TO_FIND_GAME))
+        await expect(gameAuth(socket)).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
     })
 
     it('should fail with bad token', async () => {
-        const next = jest.fn()
         const socket = {
             data: {},
             request: {
@@ -62,12 +57,10 @@ describe('test game auth method', () => {
                 },
             },
         } as Socket
-        await gameAuth(socket, next)
-        expect(next).toHaveBeenCalledWith(new Error(Constants.UNAUTHENTICATED_USER))
+        await expect(gameAuth(socket)).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
     })
 
     it('should fail with malformed token', async () => {
-        const next = jest.fn()
         const socket = {
             data: {},
             request: {
@@ -76,7 +69,6 @@ describe('test game auth method', () => {
                 },
             },
         } as Socket
-        await gameAuth(socket, next)
-        expect(next).toHaveBeenCalledWith(new Error(Constants.UNAUTHENTICATED_USER))
+        await expect(gameAuth(socket)).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
     })
 })

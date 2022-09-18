@@ -16,15 +16,15 @@ const undoActionHandler = async (
     data: {
         gameId: string
         pointId: string
-        teamId: string
+        team: 'one' | 'two'
     },
 ): Promise<IAction | undefined> => {
-    const { gameId, pointId, teamId } = data
-    if (!gameId || !pointId || !teamId) {
+    const { gameId, pointId, team } = data
+    if (!gameId || !pointId || !team) {
         throw new ApiError(Constants.INVALID_DATA, 400)
     }
     const services = new ActionServices(client, process.env.ULTMT_API_URL as string, process.env.API_KEY as string)
-    return await services.undoAction(gameId, pointId, teamId)
+    return await services.undoAction(gameId, pointId, team)
 }
 
 const serverActionHandler = async (
@@ -66,12 +66,7 @@ const deleteCommentHandler = async (
 const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
     socket.on('action', async (data) => {
         try {
-            gameAuth(socket, (err) => {
-                if (err) {
-                    throw err
-                }
-            })
-            const { gameId } = socket.data
+            const { gameId } = await gameAuth(socket)
             const dataJson = JSON.parse(data)
             const action = await actionHandler(dataJson, gameId, client)
             // send action to client
@@ -85,22 +80,17 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
 
     socket.on('action:undo', async (data) => {
         try {
-            gameAuth(socket, async (err) => {
-                if (err) {
-                    throw err
-                }
-                const { gameId, teamId } = socket.data
-                const dataJson = JSON.parse(data)
-                const { pointId } = dataJson
+            const { gameId, team } = await gameAuth(socket)
+            const dataJson = JSON.parse(data)
+            const { pointId } = dataJson
 
-                const action = await undoActionHandler(client, { gameId, teamId, pointId })
-                if (action) {
-                    socket.emit('action:undo:client', { pointId: action.pointId, number: action.actionNumber })
-                    socket.emit('action:undo:server', { pointId: action.pointId, number: action.actionNumber })
-                } else {
-                    socket.emit('action:undo:client', {})
-                }
-            })
+            const action = await undoActionHandler(client, { gameId, team, pointId })
+            if (action) {
+                socket.emit('action:undo:client', { pointId: action.pointId, actionNumber: action.actionNumber })
+                socket.emit('action:undo:server', { pointId: action.pointId, actionNumber: action.actionNumber })
+            } else {
+                throw new ApiError(Constants.INVALID_DATA, 400)
+            }
         } catch (error) {
             const response = handleSocketError(error)
             socket.emit('action:error', response)

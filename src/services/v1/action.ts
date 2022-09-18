@@ -58,8 +58,17 @@ export default class ActionServices {
         return await getRedisAction(this.redisClient, pointId, actionNumber)
     }
 
-    undoAction = async (gameId: string, pointId: string, teamId: string): Promise<IAction | undefined> => {
+    undoAction = async (gameId: string, pointId: string, team: 'one' | 'two'): Promise<IAction | undefined> => {
         const totalActions = await this.redisClient.get(`${gameId}:${pointId}:actions`)
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+        const teamId = team === 'one' ? game.teamOne._id : game.teamTwo._id
+        if (!teamId) {
+            throw new ApiError(Constants.INVALID_DATA, 400)
+        }
+
         for (let i = Number(totalActions); i > 0; i--) {
             const exists = await actionExists(this.redisClient, pointId, i)
             if (!exists) {

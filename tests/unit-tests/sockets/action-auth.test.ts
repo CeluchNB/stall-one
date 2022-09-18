@@ -1,11 +1,31 @@
 import * as Constants from '../../../src/utils/constants'
 import * as RedisUtils from '../../../src/utils/redis'
 import app, { close } from '../../../src/app'
-import { resetDatabase, createData, setUpDatabase, tearDownDatabase } from '../../fixtures/setup-db'
+import {
+    resetDatabase,
+    createData,
+    setUpDatabase,
+    tearDownDatabase,
+    createPointData,
+    client,
+} from '../../fixtures/setup-db'
 import ioClient from 'socket.io-client'
 import { ActionType, ClientAction } from '../../../src/types/action'
 import { Types } from 'mongoose'
 import Game from '../../../src/models/game'
+import IGame from '../../../src/types/game'
+import Point from '../../../src/models/point'
+import IPoint from '../../../src/types/point'
+import { parseActionData } from '../../../src/utils/action'
+
+/*
+    The current socket testing setup is less than ideal. Ideally, a new
+    connection would be established beforeEach test.  However, jest continually
+    detects open handles when trying the open the connection beforeEach test,
+    and I have not figured out a fix for this.  If this situation is resolved,
+    recheck the beforeEach/beforeAll/afterEach/afterAll setup for potential improvements
+    such as resetting the mongo DB between each test.
+*/
 
 let clientSocket: ReturnType<typeof ioClient>
 beforeAll((done) => {
@@ -25,11 +45,12 @@ beforeAll(async () => {
 })
 
 afterEach(async () => {
-    await resetDatabase()
     clientSocket.removeAllListeners()
+    await client.flushAll()
 })
 
 afterAll(async () => {
+    await resetDatabase()
     await close()
     await tearDownDatabase()
     clientSocket.close()
@@ -122,5 +143,64 @@ describe('test client action sent', () => {
             done()
         })
         clientSocket.emit('action', JSON.stringify(actionData))
+    })
+})
+
+describe('test client undo action', () => {
+    let game: IGame | null
+    let point: IPoint
+    const actionData: ClientAction = {
+        pointId: '',
+        actionType: ActionType.PULL,
+        team: {
+            _id: new Types.ObjectId(),
+            place: 'Pittsburgh',
+            name: 'Temper',
+            teamname: 'pghtemper',
+            seasonStart: new Date('2022'),
+            seasonEnd: new Date('2022'),
+        },
+        playerOne: {
+            _id: new Types.ObjectId(),
+            firstName: 'Noah',
+            lastName: 'Celuch',
+            username: 'noah',
+        },
+        tags: ['IB'],
+    }
+    beforeAll(async () => {
+        game = await Game.findOne({})
+        point = await Point.create({ ...createPointData, gameId: game?._id })
+
+        actionData.pointId = point._id.toString()
+        actionData.team = (game as IGame).teamOne
+        await client.set(`${game?._id.toString()}:${point._id.toString()}:actions`, '1')
+        await RedisUtils.saveRedisAction(client, parseActionData(actionData, 1))
+    })
+
+    it('with valid data', (done) => {
+        clientSocket.on('action:undo:client', (data) => {
+            expect(data.pointId).toBe(actionData.pointId)
+            expect(data.actionNumber).toBe(1)
+            done()
+        })
+        clientSocket.emit('action:undo', JSON.stringify({ pointId: point._id }))
+    })
+
+    it('with bad data', (done) => {
+        clientSocket.on('action:error', (error) => {
+            expect(error.message).toBe(Constants.INVALID_DATA)
+            done()
+        })
+        clientSocket.emit('action:undo', JSON.stringify({}))
+    })
+
+    it('with unfound action', (done) => {
+        expect(client.set(`${game?._id.toString()}:${point._id.toString()}:actions`, '0')).resolves.toBe('OK')
+        clientSocket.on('action:error', (error) => {
+            expect(error.message).toBe(Constants.INVALID_DATA)
+            done()
+        })
+        clientSocket.emit('action:undo', JSON.stringify({ pointId: point._id }))
     })
 })

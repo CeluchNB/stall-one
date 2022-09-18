@@ -1,23 +1,24 @@
 import * as Constants from '../utils/constants'
 import { Socket } from 'socket.io'
-import jwt from 'jsonwebtoken'
+import jwt, { JwtPayload } from 'jsonwebtoken'
+import { ApiError } from '../types/errors'
 
-export const gameAuth = (socket: Socket, next: (error?: Error) => void) => {
+export const gameAuth = async (socket: Socket): Promise<{ gameId: string; team: 'one' | 'two' }> => {
     try {
         const token = socket.request.headers.authorization?.replace('Bearer ', '')
         if (!token) {
-            return next(new Error(Constants.UNAUTHENTICATED_USER))
+            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
         }
 
         const payload = jwt.verify(token, process.env.JWT_SECRET as string)
         const gameId = payload.sub as string
-        if (!gameId) {
-            return next(new Error(Constants.UNABLE_TO_FIND_GAME))
+        const team = (payload as JwtPayload).team
+        if (!gameId || !team) {
+            throw new Error()
         }
 
-        socket.data = { ...socket.data, gameId }
-        next()
-    } catch (error) {
-        next(new Error(Constants.UNAUTHENTICATED_USER))
+        return { gameId, team }
+    } catch {
+        throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
     }
 }

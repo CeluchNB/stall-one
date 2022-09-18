@@ -13,6 +13,7 @@ const opts: StrategyOptions = {
 
 passport.use(
     new JwtStrategy(opts, async (jwtPayload, done) => {
+        // TODO: refactor to return gameId instead of full game
         const game = await Game.findById(jwtPayload.sub)
         if (!game) {
             return done(null, false, { message: Constants.UNABLE_TO_FIND_GAME })

@@ -181,7 +181,7 @@ describe('test undo action', () => {
         const actionData: ClientAction = {
             pointId: point._id.toString(),
             actionType: ActionType.CATCH,
-            team: createPointData.pullingTeam,
+            team: game.teamOne,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -199,11 +199,7 @@ describe('test undo action', () => {
 
         await client.set(`${game._id.toString()}:${actionData.pointId}:actions`, 1)
         await saveRedisAction(client, parseActionData(actionData, 1))
-        const action = await services.undoAction(
-            game._id.toString(),
-            point._id.toString(),
-            createPointData.pullingTeam._id?.toString() || '',
-        )
+        const action = await services.undoAction(game._id.toString(), point._id.toString(), 'one')
         expect(action?.pointId.toString()).toBe(actionData.pointId)
         expect(action?.actionType).toBe(actionData.actionType)
         expect(action?.tags[0]).toBe(actionData.tags[0])
@@ -219,11 +215,18 @@ describe('test undo action', () => {
 
     it('with valid action many behind other tema', async () => {
         const game = await Game.create(gameData)
+        game.teamTwo = {
+            _id: new Types.ObjectId(),
+            name: 'Team 2',
+            place: 'Place 2',
+            teamname: '2',
+        }
+        await game.save()
         const point = await Point.create(createPointData)
         const actionData: ClientAction = {
             pointId: point._id.toString(),
             actionType: ActionType.CATCH,
-            team: createPointData.pullingTeam,
+            team: game.teamOne,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -246,11 +249,10 @@ describe('test undo action', () => {
         actionData.actionType = ActionType.SUBSTITUTION
         await saveRedisAction(client, parseActionData(actionData, 4))
         actionData.actionType = ActionType.CATCH
-        const teamId = new Types.ObjectId()
-        actionData.team = { _id: teamId, ...createPointData.receivingTeam }
+        actionData.team = game.teamTwo
         await saveRedisAction(client, parseActionData(actionData, 1))
 
-        const action = await services.undoAction(game._id.toString(), point._id.toString(), teamId.toString() || '')
+        const action = await services.undoAction(game._id.toString(), point._id.toString(), 'two')
         expect(action?.actionNumber).toBe(1)
         expect(action?.actionType).toBe(ActionType.CATCH)
         expect(action?.pointId.toString()).toBe(actionData.pointId)
@@ -273,15 +275,44 @@ describe('test undo action', () => {
         expect(fourType).toBe(ActionType.SUBSTITUTION)
     })
 
+    it('with unfound game', async () => {
+        await expect(
+            services.undoAction(new Types.ObjectId().toString(), new Types.ObjectId().toString(), 'one'),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
+    })
+
+    it('with invalid team two', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            pointId: point._id.toString(),
+            actionType: ActionType.CATCH,
+            team: game.teamOne,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        await expect(services.undoAction(game._id.toString(), actionData.pointId, 'two')).rejects.toThrowError(
+            new ApiError(Constants.INVALID_DATA, 404),
+        )
+    })
+
     it('with no action', async () => {
         const game = await Game.create(gameData)
         const point = await Point.create(createPointData)
         await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 1)
-        const action = await services.undoAction(
-            game._id.toString(),
-            point._id.toString(),
-            createPointData.pullingTeam._id?.toString() || '',
-        )
+        const action = await services.undoAction(game._id.toString(), point._id.toString(), 'one')
         expect(action).toBeUndefined()
     })
 })

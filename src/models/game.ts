@@ -74,6 +74,7 @@ schema.pre('save', async function (next) {
     if (!this.teamOneToken) {
         const payload = {
             sub: this._id.toString(),
+            team: 'one',
             iat: Date.now(),
         }
 
