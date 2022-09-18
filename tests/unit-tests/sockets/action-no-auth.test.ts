@@ -533,3 +533,14 @@ describe('test delete live action', () => {
             })
     })
 })
+
+describe('test action undo server', () => {
+    it('with data', (done) => {
+        clientSocket.on('action:undo:client', (data) => {
+            expect(data.pointId).toBe('pointid')
+            expect(data.actionNumber).toBe(2)
+            done()
+        })
+        clientSocket.emit('action:undo:server', { pointId: 'pointid', actionNumber: 2 })
+    })
+})

@@ -109,6 +109,10 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
         }
     })
 
+    socket.on('action:undo:server', async (data) => {
+        socket.emit('action:undo:client', data)
+    })
+
     socket.on('action:comment', async (data) => {
         try {
             const dataJson = JSON.parse(data)
