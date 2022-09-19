@@ -74,10 +74,15 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
-
     it('with profanity error', () => {
         expect(userErrorResponse(`Extra Error: ${Constants.PROFANE_COMMENT}`)).toEqual({
             message: Constants.PROFANE_COMMENT,
+            code: 400,
+        })
+    })
+    it('with score required error', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.SCORE_REQUIRED}`)).toEqual({
+            message: Constants.SCORE_REQUIRED,
             code: 400,
         })
     })

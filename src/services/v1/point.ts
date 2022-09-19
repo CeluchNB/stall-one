@@ -4,17 +4,21 @@ import { IGameModel } from '../../models/game'
 import { Player, TeamNumber } from '../../types/ultmt'
 import { ApiError } from '../../types/errors'
 import IPoint from '../../types/point'
-import { RedisClientType } from '../../types/action'
+import IAction, { ActionType, RedisClientType } from '../../types/action'
+import { IActionModel } from '../../models/action'
+import { actionExists, deleteRedisAction, getRedisAction } from '../../utils/redis'
 
 export default class PointServices {
     pointModel: IPointModel
     gameModel: IGameModel
-    client?: RedisClientType
+    actionModel: IActionModel
+    redisClient: RedisClientType
 
-    constructor(pointModel: IPointModel, gameModel: IGameModel, client?: RedisClientType) {
+    constructor(pointModel: IPointModel, gameModel: IGameModel, actionModel: IActionModel, client: RedisClientType) {
         this.pointModel = pointModel
         this.gameModel = gameModel
-        this.client = client
+        this.actionModel = actionModel
+        this.redisClient = client
     }
 
     /**
@@ -117,10 +121,68 @@ export default class PointServices {
      * @param pointId id of point to finish
      * @returns final point
      */
-    finishPoint = async (pointId: string): Promise<IPoint> => {
+    finishPoint = async (gameId: string, pointId: string): Promise<IPoint> => {
         const point = await this.pointModel.findById(pointId)
         if (!point) {
             throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
+        }
+
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        if (!game.points.includes(point._id)) {
+            throw new ApiError(Constants.INVALID_DATA, 400)
+        }
+
+        // Change to an 'active' boolean in model
+        if (point.scoringTeam) {
+            return point
+        }
+
+        const actions: IAction[] = []
+        // move redis actions to mongo
+        const totalActions = await this.redisClient.get(`${gameId}:${pointId}:actions`)
+        for (let i = 1; i <= Number(totalActions); i++) {
+            const exists = await actionExists(this.redisClient, pointId, i)
+            if (!exists) {
+                continue
+            }
+            const action = await getRedisAction(this.redisClient, pointId, i)
+            if (action.actionType === ActionType.WE_SCORE) {
+                point.scoringTeam = action.team
+            } else if (action.actionType === ActionType.THEY_SCORE) {
+                const scoringTeam = action.team._id?.equals(game.teamOne._id || '') ? game.teamTwo : game.teamOne
+                point.scoringTeam = scoringTeam
+            }
+            actions.push(action)
+        }
+
+        // Must have a scoring team to finish a point
+        if (!point.scoringTeam) {
+            throw new ApiError(Constants.SCORE_REQUIRED, 400)
+        }
+
+        // create all actions at once
+        const createdActions = await this.actionModel.create(actions)
+        point.actions = createdActions.map((a) => a._id)
+
+        // update score
+        if (point.scoringTeam._id?.equals(game.teamOne._id || '')) {
+            point.teamOneScore += 1
+            game.teamOneScore += 1
+        } else {
+            point.teamTwoScore += 1
+            game.teamTwoScore += 1
+        }
+        // update point and game once
+        await point.save()
+        await game.save()
+
+        // delete actions from redis
+        for (let i = 1; i <= Number(totalActions); i++) {
+            await deleteRedisAction(this.redisClient, pointId, i)
         }
 
         return point

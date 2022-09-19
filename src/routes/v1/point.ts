@@ -8,6 +8,7 @@ import PointServices from '../../services/v1/point'
 import { GameAuth } from '../../types/game'
 import { getMyTeamNumber } from '../../utils/utils'
 import { getClient } from '../../utils/redis'
+import Action from '../../models/action'
 
 export const pointRouter = Router()
 
@@ -20,7 +21,8 @@ pointRouter.post(
         try {
             const data = req.user as GameAuth
             const pullingTeam = getMyTeamNumber(req.query.pulling === 'true', data.team)
-            const services = new PointServices(Point, Game)
+            const redisClient = await getClient()
+            const services = new PointServices(Point, Game, Action, redisClient)
             const point = await services.createPoint(data.game._id.toString(), pullingTeam, Number(req.query.number))
             return res.json({ point })
         } catch (error) {
@@ -38,7 +40,8 @@ pointRouter.put(
         try {
             const data = req.user as GameAuth
             const teamNumber = getMyTeamNumber(true, data.team)
-            const services = new PointServices(Point, Game)
+            const redisClient = await getClient()
+            const services = new PointServices(Point, Game, Action, redisClient)
             const point = await services.setPlayers(
                 data.game._id.toString(),
                 req.params.id,
