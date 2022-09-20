@@ -11,6 +11,8 @@ interface IPoint {
     pullingTeam: Team
     receivingTeam: Team
     scoringTeam?: Team
+    teamOneActive: boolean
+    teamTwoActive: boolean
     actions: Types.ObjectId[]
 }
 

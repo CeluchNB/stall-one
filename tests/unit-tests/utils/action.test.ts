@@ -267,7 +267,7 @@ describe('test validate action data', () => {
     })
 
     it('score with player one and two', () => {
-        action.actionType = ActionType.SCORE
+        action.actionType = ActionType.TEAM_ONE_SCORE
         action.playerOne = playerOne
         action.playerTwo = playerTwo
         expect(() => {
@@ -276,14 +276,14 @@ describe('test validate action data', () => {
     })
 
     it('score with player one or two', () => {
-        action.actionType = ActionType.SCORE
+        action.actionType = ActionType.TEAM_ONE_SCORE
         action.playerOne = playerOne
         action.playerTwo = undefined
         expect(() => {
             validateActionData(action)
         }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
 
-        action.actionType = ActionType.SCORE
+        action.actionType = ActionType.TEAM_ONE_SCORE
         action.playerOne = undefined
         action.playerTwo = playerTwo
         expect(() => {

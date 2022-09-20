@@ -53,6 +53,16 @@ const schema = new Schema<IPoint>({
             seasonEnd: Date,
         },
     },
+    teamOneActive: {
+        type: Boolean,
+        required: true,
+        default: true,
+    },
+    teamTwoActive: {
+        type: Boolean,
+        required: true,
+        default: true,
+    },
     actions: [SchemaTypes.ObjectId],
 })
 

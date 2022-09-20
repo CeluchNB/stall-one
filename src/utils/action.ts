@@ -21,7 +21,7 @@ export const validateActionData = (data: ClientAction) => {
             break
         case ActionType.CATCH:
         case ActionType.DROP:
-        case ActionType.WE_SCORE:
+        case ActionType.TEAM_ONE_SCORE:
         case ActionType.SUBSTITUTION:
             if (!playerOne || !playerTwo) {
                 throw new ApiError(Constants.INVALID_DATA, 400)

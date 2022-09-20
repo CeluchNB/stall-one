@@ -93,6 +93,8 @@ export const createPointData: IPoint = {
     receivingTeam: {
         name: 'Name2',
     },
+    teamOneActive: true,
+    teamTwoActive: true,
     actions: [],
 }
 
