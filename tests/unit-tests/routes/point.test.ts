@@ -2,13 +2,28 @@ import * as Constants from '../../../src/utils/constants'
 import app, { close } from '../../../src/app'
 import request from 'supertest'
 import Game from '../../../src/models/game'
-import { gameData, resetDatabase } from '../../fixtures/setup-db'
+import {
+    gameData,
+    resetDatabase,
+    client,
+    createData,
+    createPointData,
+    setUpDatabase,
+    tearDownDatabase,
+} from '../../fixtures/setup-db'
 import Point from '../../../src/models/point'
 import { Types } from 'mongoose'
 import { Player } from '../../../src/types/ultmt'
+import IAction, { ActionType } from '../../../src/types/action'
+import { saveRedisAction } from '../../../src/utils/redis'
+
+beforeAll(async () => {
+    await setUpDatabase()
+})
 
 afterAll(async () => {
     await close()
+    await tearDownDatabase()
 })
 
 afterEach(async () => {
@@ -163,5 +178,113 @@ describe('test /PUT set players', () => {
             .expect(400)
 
         expect(response.body.message).toBe(Constants.WRONG_NUMBER_OF_PLAYERS)
+    })
+})
+
+describe('test /PUT finish point', () => {
+    it('with valid team one data', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        point.teamTwoActive = false
+        game.points.push(point._id)
+        await game.save()
+        await point.save()
+
+        const action1: IAction = {
+            actionNumber: 1,
+            actionType: ActionType.CATCH,
+            team: game.teamOne,
+            displayMessage: 'Throw from Noah to Connor',
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Connor',
+                lastName: 'Tipping',
+                username: 'connor',
+            },
+            comments: [],
+            tags: ['Huck'],
+        }
+
+        const action2: IAction = {
+            actionNumber: 2,
+            actionType: ActionType.TEAM_ONE_SCORE,
+            team: game.teamOne,
+            displayMessage: 'Score from Noah to Connor',
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Connor',
+                lastName: 'Tipping',
+                username: 'connor',
+            },
+            comments: [],
+            tags: ['Break'],
+        }
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 2)
+        await saveRedisAction(client, action1, point._id.toString())
+        await saveRedisAction(client, action2, point._id.toString())
+
+        const response = await request(app)
+            .put(`/api/v1/point/${point._id.toString()}/finish`)
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .expect(200)
+
+        const { point: pointResponse } = response.body
+        expect(pointResponse._id.toString()).toBe(point._id.toString())
+        expect(pointResponse.actions.length).toBe(2)
+        expect(pointResponse.teamOneScore).toBe(1)
+        expect(pointResponse.teamTwoScore).toBe(0)
+        expect(pointResponse.teamOneActive).toBe(false)
+        expect(pointResponse.teamTwoActive).toBe(false)
+
+        const pointRecord = await Point.findById(pointResponse._id)
+        expect(pointRecord?.teamOneScore).toBe(1)
+        expect(pointRecord?.teamTwoScore).toBe(0)
+        expect(pointRecord?.teamOneActive).toBe(false)
+        expect(pointRecord?.teamTwoActive).toBe(false)
+
+        const keys = await client.keys('*')
+        expect(keys.length).toBe(0)
+    })
+
+    it('with service error', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        point.teamTwoActive = false
+        game.points.push(point._id)
+        await game.save()
+        await point.save()
+
+        const response = await request(app)
+            .put(`/api/v1/point/${new Types.ObjectId()}/finish`)
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .expect(404)
+        expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_POINT)
+    })
+
+    it('with bad authentication', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        point.teamTwoActive = false
+        game.points.push(point._id)
+        await game.save()
+        await point.save()
+
+        await request(app)
+            .put(`/api/v1/point/${point._id.toString()}/finish`)
+            .set('Authorization', 'Bearer badf345.asdf432gsf.1324asdf1')
+            .expect(401)
     })
 })

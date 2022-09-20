@@ -55,4 +55,22 @@ pointRouter.put(
     },
 )
 
+pointRouter.put(
+    '/point/:id/finish',
+    param('id').isString(),
+    passport.authenticate('jwt', { session: false }),
+    async (req: Request, res: Response, next) => {
+        try {
+            const data = req.user as GameAuth
+            const teamNumber = getMyTeamNumber(true, data.team)
+            const redisClient = await getClient()
+            const services = new PointServices(Point, Game, Action, redisClient)
+            const point = await services.finishPoint(data.game._id.toString(), req.params.id, teamNumber)
+            return res.json({ point })
+        } catch (error) {
+            next(error)
+        }
+    },
+)
+
 pointRouter.use(errorMiddleware)
