@@ -468,3 +468,54 @@ describe('test add guest player to team', () => {
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400))
     })
 })
+
+describe('test finish game', () => {
+    it('with only team one', async () => {
+        const gameData = await Game.create(createData)
+
+        const game = await services.finishGame(gameData._id.toString(), TeamNumber.ONE)
+
+        expect(game.teamOneActive).toBe(false)
+        expect(game.teamTwoActive).toBe(false)
+        expect(game.scoreLimit).toBe(gameData.scoreLimit)
+
+        const gameRecord = await Game.findById(gameData._id)
+        expect(gameRecord?.teamOneActive).toBe(false)
+        expect(gameRecord?.teamTwoActive).toBe(false)
+    })
+
+    it('with only team two', async () => {
+        const gameData = await Game.create({ ...createData, teamTwoActive: true })
+
+        const game = await services.finishGame(gameData._id.toString(), TeamNumber.TWO)
+
+        expect(game.teamOneActive).toBe(true)
+        expect(game.teamTwoActive).toBe(false)
+        expect(game.scoreLimit).toBe(gameData.scoreLimit)
+
+        const gameRecord = await Game.findById(gameData._id)
+        expect(gameRecord?.teamOneActive).toBe(true)
+        expect(gameRecord?.teamTwoActive).toBe(false)
+    })
+
+    it('with both teams', async () => {
+        const gameData = await Game.create({ ...createData, teamTwoActive: true })
+
+        await services.finishGame(gameData._id.toString(), TeamNumber.ONE)
+        const game = await services.finishGame(gameData._id.toString(), TeamNumber.TWO)
+
+        expect(game.teamOneActive).toBe(false)
+        expect(game.teamTwoActive).toBe(false)
+        expect(game.scoreLimit).toBe(gameData.scoreLimit)
+
+        const gameRecord = await Game.findById(gameData._id)
+        expect(gameRecord?.teamOneActive).toBe(false)
+        expect(gameRecord?.teamTwoActive).toBe(false)
+    })
+
+    it('with unfound game', async () => {
+        await expect(services.finishGame(new Types.ObjectId().toString(), TeamNumber.ONE)).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
+        )
+    })
+})

@@ -224,16 +224,20 @@ export default class GameServices {
      * @param team team requesting finish
      * @returns updated game
      */
-    // finishGame = async (gameId: string, team: TeamNumber): Promise<IGame> => {
-    //     const game = await this.gameModel.findById(gameId)
-    //     if (!game) {
-    //         throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-    //     }
+    finishGame = async (gameId: string, team: TeamNumber): Promise<IGame> => {
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
 
-    //     if (team === TeamNumber.ONE) {
-    //         game.teamOne
-    //     }
+        if (team === TeamNumber.ONE) {
+            game.teamOneActive = false
+        } else if (team === TeamNumber.TWO) {
+            game.teamTwoActive = false
+        }
 
-    //     return game
-    // }
+        await game.save()
+
+        return game
+    }
 }
