@@ -54,7 +54,7 @@ describe('test create point', () => {
     })
 
     it('with valid first point data and team two', async () => {
-        const game = await Game.create({ ...gameData, teamTwoResolved: true })
+        const game = await Game.create({ ...gameData, teamTwoActive: true })
 
         const point = await services.createPoint(game._id.toString(), TeamNumber.TWO, 1)
         expect(point.pointNumber).toBe(1)

@@ -73,7 +73,7 @@ export default class PointServices {
             teamTwoPlayers: [],
             teamOneScore: 0,
             teamTwoScore: 0,
-            teamTwoActive: game.teamTwoResolved,
+            teamTwoActive: game.teamTwoActive,
             pullingTeam: pullingTeam === TeamNumber.ONE ? game.teamOne : game.teamTwo,
             receivingTeam: pullingTeam === TeamNumber.ONE ? game.teamTwo : game.teamOne,
         })

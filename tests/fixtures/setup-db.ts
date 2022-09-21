@@ -51,7 +51,6 @@ export const createData: CreateGame = {
     startTime: new Date(),
     softcapMins: 75,
     hardcapMins: 90,
-    liveGame: true,
     playersPerPoint: 7,
     timeoutPerHalf: 1,
     floaterTimeout: true,
@@ -68,9 +67,9 @@ export const gameData: IGame = {
     teamTwoToken: undefined,
     teamOneScore: 0,
     teamTwoScore: 0,
-    teamTwoResolved: false,
     resolveCode: '123456',
-    completeGame: false,
+    teamOneActive: true,
+    teamTwoActive: false,
     points: [],
 }
 

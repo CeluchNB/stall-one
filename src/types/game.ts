@@ -9,7 +9,6 @@ export interface UpdateGame {
     startTime?: Date
     softcapMins?: number
     hardcapMins?: number
-    liveGame?: boolean
     playersPerPoint?: number
     timeoutPerHalf?: number
     floaterTimeout?: boolean
@@ -24,7 +23,6 @@ export const updateGameKeys: UpdateGameKey[] = [
     'startTime',
     'softcapMins',
     'hardcapMins',
-    'liveGame',
     'playersPerPoint',
     'timeoutPerHalf',
     'floaterTimeout',
@@ -40,7 +38,6 @@ export interface CreateGame extends UpdateGame {
     startTime: Date
     softcapMins: number
     hardcapMins: number
-    liveGame: boolean
     playersPerPoint: number
     timeoutPerHalf: number
     floaterTimeout: boolean
@@ -52,8 +49,8 @@ interface IGame extends CreateGame {
     teamTwoToken?: string
     teamOneScore: number
     teamTwoScore: number
-    teamTwoResolved: boolean
-    completeGame: boolean
+    teamOneActive: boolean
+    teamTwoActive: boolean
     teamOnePlayers: Player[]
     teamTwoPlayers: Player[]
     resolveCode: string

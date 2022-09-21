@@ -34,10 +34,11 @@ describe('test create game', () => {
         expect(game._id.toString()).toBe(gameRecord?._id.toString())
         expect(game.teamOneScore).toBe(0)
         expect(game.teamTwoScore).toBe(0)
-        expect(game.teamTwoResolved).toBe(false)
+        expect(game.teamTwoActive).toBe(false)
         expect(game.teamTwoDefined).toBe(false)
         expect(token.length).toBeGreaterThan(20)
-        expect(gameRecord?.completeGame).toBe(false)
+        expect(gameRecord?.teamOneActive).toBe(true)
+        expect(gameRecord?.teamTwoActive).toBe(false)
         expect(gameRecord?.creator.username).toBe('firstlast')
         expect(gameRecord?.teamOnePlayers.length).toBe(2)
         expect(gameRecord?.teamTwoPlayers.length).toBe(0)
@@ -50,10 +51,11 @@ describe('test create game', () => {
         expect(game._id.toString()).toBe(gameRecord?._id.toString())
         expect(game.teamOneScore).toBe(0)
         expect(game.teamTwoScore).toBe(0)
-        expect(game.teamTwoResolved).toBe(false)
+        expect(game.teamTwoActive).toBe(false)
         expect(game.teamTwoDefined).toBe(true)
         expect(token.length).toBeGreaterThan(20)
-        expect(gameRecord?.completeGame).toBe(false)
+        expect(gameRecord?.teamOneActive).toBe(true)
+        expect(gameRecord?.teamTwoActive).toBe(false)
         expect(gameRecord?.creator.username).toBe('firstlast')
         expect(gameRecord?.teamOnePlayers.length).toBe(2)
         expect(gameRecord?.teamTwoPlayers.length).toBe(2)
@@ -160,7 +162,7 @@ describe('test create game', () => {
                 token: 'token1',
                 teamOneScore: 21,
                 teamTwoScore: -99,
-                teamTwoResolved: true,
+                teamTwoActive: true,
             } as CreateGame,
             '',
         )
@@ -169,9 +171,9 @@ describe('test create game', () => {
         expect(game._id.toString()).toBe(gameRecord?._id.toString())
         expect(game.teamOneScore).toBe(0)
         expect(game.teamTwoScore).toBe(0)
-        expect(game.teamTwoResolved).toBe(false)
+        expect(game.teamTwoActive).toBe(false)
         expect(token.length).toBeGreaterThan(20)
-        expect(gameRecord?.completeGame).toBe(false)
+        expect(gameRecord?.teamOneActive).toBe(true)
         expect(gameRecord?.creator.username).toBe('firstlast')
         expect(gameRecord?.teamOnePlayers.length).toBe(2)
         expect(gameRecord?.teamTwoPlayers.length).toBe(0)
@@ -194,20 +196,19 @@ describe('test edit game', () => {
 
         const updatedGame = await services.updateGame(game._id.toString(), {
             timeoutPerHalf: 10,
-            liveGame: false,
             floaterTimeout: false,
         })
 
-        expect(updatedGame.liveGame).toBe(false)
         expect(updatedGame.floaterTimeout).toBe(false)
-        expect(updatedGame.teamTwoResolved).toBe(false)
+        expect(updatedGame.teamOneActive).toBe(true)
+        expect(updatedGame.teamTwoActive).toBe(false)
 
         const gameRecord = await Game.findById(game._id)
-        expect(gameRecord?.liveGame).toBe(false)
         expect(gameRecord?.floaterTimeout).toBe(false)
         expect(gameRecord?.timeoutPerHalf).toBe(10)
-        expect(gameRecord?.teamTwoResolved).toBe(false)
         expect(gameRecord?.teamTwoDefined).toBe(false)
+        expect(gameRecord?.teamOneActive).toBe(true)
+        expect(gameRecord?.teamTwoActive).toBe(false)
     })
 
     it('should update with valid data and team 2', async () => {
@@ -220,17 +221,19 @@ describe('test edit game', () => {
             teamTwoDefined: true,
         })
 
-        expect(updatedGame.teamTwoResolved).toBe(false)
+        expect(updatedGame.teamTwoActive).toBe(false)
         expect(updatedGame.teamTwoDefined).toBe(true)
         expect(updatedGame.teamTwo?.place).toBe('Place 2')
         expect(updatedGame.teamTwoPlayers.length).toBe(2)
-        expect(updatedGame.liveGame).toBe(true)
+        expect(updatedGame.teamOneActive).toBe(true)
+        expect(updatedGame.teamTwoActive).toBe(false)
 
         const gameRecord = await Game.findById(updatedGame._id)
-        expect(gameRecord?.teamTwoResolved).toBe(false)
+        expect(gameRecord?.teamTwoActive).toBe(false)
         expect(gameRecord?.teamTwoDefined).toBe(true)
         expect(gameRecord?.teamTwoPlayers.length).toBe(2)
-        expect(gameRecord?.liveGame).toBe(true)
+        expect(gameRecord?.teamOneActive).toBe(true)
+        expect(gameRecord?.teamTwoActive).toBe(false)
     })
 
     it('with unfound game', async () => {
@@ -281,7 +284,7 @@ describe('test team two join', () => {
         const gameRecord = await Game.findById(initialGame._id)
         expect(token).toBe(gameRecord?.teamTwoToken)
         expect(game._id).toEqual(initialGame._id)
-        expect(gameRecord?.teamTwoResolved).toBe(true)
+        expect(gameRecord?.teamTwoActive).toBe(true)
     })
 
     it('with unfound game', async () => {
@@ -304,7 +307,7 @@ describe('test team two join', () => {
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
 
         const gameRecord = await Game.findById(initialGame._id)
-        expect(gameRecord?.teamTwoResolved).toBe(false)
+        expect(gameRecord?.teamTwoActive).toBe(false)
         expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 
@@ -333,7 +336,7 @@ describe('test team two join', () => {
         ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
 
         const gameRecord = await Game.findById(initialGame._id)
-        expect(gameRecord?.teamTwoResolved).toBe(false)
+        expect(gameRecord?.teamTwoActive).toBe(false)
         expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 
@@ -362,7 +365,7 @@ describe('test team two join', () => {
         ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
 
         const gameRecord = await Game.findById(initialGame._id)
-        expect(gameRecord?.teamTwoResolved).toBe(false)
+        expect(gameRecord?.teamTwoActive).toBe(false)
         expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 
@@ -390,7 +393,7 @@ describe('test team two join', () => {
         ).rejects.toThrowError(new ApiError(Constants.WRONG_RESOLVE_CODE, 401))
 
         const gameRecord = await Game.findById(initialGame._id)
-        expect(gameRecord?.teamTwoResolved).toBe(false)
+        expect(gameRecord?.teamTwoActive).toBe(false)
         expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 })
@@ -420,7 +423,7 @@ describe('test add guest player to team', () => {
 
     it('with valid data for team two', async () => {
         const game = await Game.create(gameData)
-        game.teamTwoResolved = true
+        game.teamTwoActive = true
         game.teamTwoDefined = true
         await game.save()
 

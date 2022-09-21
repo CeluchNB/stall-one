@@ -136,7 +136,7 @@ describe('test /PUT game join', () => {
         expect(game._id.toString()).toBe(initialGame._id.toString())
         const gameRecord = await Game.findById(game._id)
         expect(token).toBe(gameRecord?.teamTwoToken)
-        expect(gameRecord?.teamTwoResolved).toBe(true)
+        expect(gameRecord?.teamTwoActive).toBe(true)
     })
 
     it('with unfound game', async () => {
