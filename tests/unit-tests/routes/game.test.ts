@@ -6,6 +6,7 @@ import { createData, gameData, getMock, resetDatabase } from '../../fixtures/set
 import axios from 'axios'
 import { Types } from 'mongoose'
 import jwt from 'jsonwebtoken'
+import { ApiError } from '../../../src/types/errors'
 
 afterAll(async () => {
     await close()
@@ -52,7 +53,7 @@ describe('test /POST game', () => {
     })
 })
 
-describe('test /PUT game', () => {
+describe('test /PUT update game', () => {
     it('with valid data', async () => {
         const game = await Game.create(gameData)
         const response = await request(app)
@@ -212,5 +213,48 @@ describe('test /PUT add guest player', () => {
             .expect(400)
 
         expect(response.body.message).toBe(Constants.UNABLE_TO_ADD_PLAYER)
+    })
+})
+
+describe('test /PUT finish game', () => {
+    it('with valid data for single team', async () => {
+        const game = await Game.create(createData)
+
+        const response = await request(app)
+            .put('/api/v1/game/finish')
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .send()
+            .expect(200)
+
+        const { game: gameResponse } = response.body
+        expect(gameResponse._id.toString()).toBe(game._id.toString())
+        expect(gameResponse.teamOneActive).toBe(false)
+        expect(gameResponse.teamTwoActive).toBe(false)
+    })
+
+    it('with bad token', async () => {
+        await Game.create(createData)
+
+        await request(app)
+            .put('/api/v1/game/finish')
+            .set('Authorization', 'Bearer adsf43.sdfaiu4323f.adgoai832rjka')
+            .send()
+            .expect(401)
+    })
+
+    it('with service error', async () => {
+        jest.spyOn(Game.prototype, 'save').mockImplementationOnce(() => {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        })
+
+        const game = await Game.create(createData)
+
+        const response = await request(app)
+            .put('/api/v1/game/finish')
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .send()
+            .expect(404)
+
+        expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_GAME)
     })
 })

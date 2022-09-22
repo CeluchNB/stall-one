@@ -64,8 +64,23 @@ gameRouter.put(
     async (req: Request, res: Response, next) => {
         try {
             const services = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
-            const { game: gameLogin, team } = req.user as GameAuth
-            const game = await services.addGuestPlayer(gameLogin._id.toString(), team as TeamNumber, req.body.player)
+            const { game: gameAuth, team } = req.user as GameAuth
+            const game = await services.addGuestPlayer(gameAuth._id.toString(), team as TeamNumber, req.body.player)
+            return res.json({ game })
+        } catch (error) {
+            next(error)
+        }
+    },
+)
+
+gameRouter.put(
+    '/game/finish',
+    passport.authenticate('jwt', { session: false }),
+    async (req: Request, res: Response, next) => {
+        try {
+            const services = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
+            const { game: gameAuth, team } = req.user as GameAuth
+            const game = await services.finishGame(gameAuth._id.toString(), team as TeamNumber)
             return res.json({ game })
         } catch (error) {
             next(error)
