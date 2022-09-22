@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken'
 import Point from '../../src/models/point'
 import Action from '../../src/models/action'
 
-export const client = createClient()
+export const client = createClient({ url: process.env.REDIS_URL })
 export const setUpDatabase = async () => {
     await connect(process.env.MONGOOSE_URL as string)
     await client.connect()
