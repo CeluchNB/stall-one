@@ -13,3 +13,4 @@ export const PROFANE_COMMENT =
     'In an effort to keep this app appropriate for all ages. We have prevented \
 certain profane words from being used. Please edit your comment and resubmit.'
 export const SCORE_REQUIRED = 'A point must contain a score to be finished.'
+export const CANNOT_DELETE_POINT = 'This point has live data associated with it. It cannot be deleted.'

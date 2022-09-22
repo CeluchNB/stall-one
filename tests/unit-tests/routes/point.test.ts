@@ -239,6 +239,7 @@ describe('test /PUT finish point', () => {
         const response = await request(app)
             .put(`/api/v1/point/${point._id.toString()}/finish`)
             .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .send()
             .expect(200)
 
         const { point: pointResponse } = response.body
@@ -270,6 +271,7 @@ describe('test /PUT finish point', () => {
         const response = await request(app)
             .put(`/api/v1/point/${new Types.ObjectId()}/finish`)
             .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .send()
             .expect(404)
         expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_POINT)
     })
@@ -285,6 +287,66 @@ describe('test /PUT finish point', () => {
         await request(app)
             .put(`/api/v1/point/${point._id.toString()}/finish`)
             .set('Authorization', 'Bearer badf345.asdf432gsf.1324asdf1')
+            .send()
             .expect(401)
+    })
+})
+
+describe('test /DELETE point', () => {
+    it('with valid data', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
+
+        await request(app)
+            .delete(`/api/v1/point/${point._id.toString()}`)
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .send()
+            .expect(200)
+
+        const pointRecord = await Point.findOne({})
+        expect(pointRecord).toBeNull()
+        const gameRecord = await Game.findOne({})
+        expect(gameRecord?.points.length).toBe(0)
+
+        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:actions`)
+        expect(totalActions).toBeNull()
+    })
+
+    it('with bad token', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
+
+        await request(app)
+            .delete(`/api/v1/point/${point._id.toString()}`)
+            .set('Authorization', `Bearer bad.ar43efwsdaf4rt.token1324radsf`)
+            .send()
+            .expect(401)
+    })
+
+    it('with service error', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+        point.actions.push(new Types.ObjectId())
+        await point.save()
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
+
+        const response = await request(app)
+            .delete(`/api/v1/point/${point._id.toString()}`)
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .send()
+            .expect(400)
+
+        expect(response.body.message).toBe(Constants.CANNOT_DELETE_POINT)
     })
 })

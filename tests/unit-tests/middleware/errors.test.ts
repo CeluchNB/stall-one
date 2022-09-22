@@ -86,4 +86,10 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
+    it('with cannot delete point error', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.CANNOT_DELETE_POINT}`)).toEqual({
+            message: Constants.CANNOT_DELETE_POINT,
+            code: 400,
+        })
+    })
 })

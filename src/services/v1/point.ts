@@ -205,4 +205,48 @@ export default class PointServices {
 
         return point
     }
+
+    /**
+     * Method to delete point. This only allows point deletion in the case of an accidentally
+     * created last point. i.e. 'Next Point' was pressed instead of 'Finish Game' on the front end.
+     * @param gameId id of game
+     * @param pointId id of point
+     * @param team one or two
+     */
+    deletePoint = async (gameId: string, pointId: string, team: TeamNumber): Promise<void> => {
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        const point = await this.pointModel.findById(pointId)
+        if (!point) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
+        }
+
+        // cannot delete if other team could be editing point
+        if ((team === TeamNumber.ONE && game.teamTwoActive) || (team === TeamNumber.TWO && game.teamOneActive)) {
+            throw new ApiError(Constants.CANNOT_DELETE_POINT, 400)
+        }
+
+        // cannot delete if any live actions
+        if (point.actions.length > 0) {
+            throw new ApiError(Constants.CANNOT_DELETE_POINT, 400)
+        }
+
+        // cannot delete point if any actions exist in redis
+        const totalActions = await this.redisClient.get(`${gameId}:${pointId}:actions`)
+        for (let i = 1; i <= Number(totalActions); i++) {
+            const exists = await actionExists(this.redisClient, pointId, i)
+            if (exists) {
+                throw new ApiError(Constants.CANNOT_DELETE_POINT, 404)
+            }
+        }
+
+        // delete actions count and point
+        await this.redisClient.del(`${gameId}:${pointId}:actions`)
+        game.points = game.points.filter((id) => !id.equals(point._id))
+        await game.save()
+        await point.delete()
+    }
 }

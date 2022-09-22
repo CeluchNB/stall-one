@@ -17,6 +17,7 @@ import { Types } from 'mongoose'
 import Action from '../../../src/models/action'
 import { saveRedisAction } from '../../../src/utils/redis'
 import IAction, { ActionType } from '../../../src/types/action'
+import { getActionBaseKey } from '../../../src/utils/utils'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -648,5 +649,96 @@ describe('test finish point', () => {
 
         const keys = await client.keys('*')
         expect(keys.length).toBe(1)
+    })
+})
+
+describe('test delete point', () => {
+    it('with valid data', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
+        await services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE)
+
+        const pointRecord = await Point.findOne({})
+        expect(pointRecord).toBeNull()
+        const gameRecord = await Game.findOne({})
+        expect(gameRecord?.points.length).toBe(0)
+
+        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:actions`)
+        expect(totalActions).toBeNull()
+    })
+
+    it('with unfound game', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await expect(
+            services.deletePoint(new Types.ObjectId().toString(), point._id.toString(), TeamNumber.ONE),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
+    })
+
+    it('with unfound point', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await expect(
+            services.deletePoint(game._id.toString(), new Types.ObjectId().toString(), TeamNumber.ONE),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_POINT, 404))
+    })
+
+    it('with active team two', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        game.teamTwoActive = true
+        await game.save()
+
+        await expect(
+            services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE),
+        ).rejects.toThrowError(new ApiError(Constants.CANNOT_DELETE_POINT, 400))
+    })
+
+    it('with active team one', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await expect(
+            services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.TWO),
+        ).rejects.toThrowError(new ApiError(Constants.CANNOT_DELETE_POINT, 400))
+    })
+
+    it('with existing mongo actions', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+        point.actions.push(new Types.ObjectId(), new Types.ObjectId())
+        await point.save()
+
+        await expect(
+            services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE),
+        ).rejects.toThrowError(new ApiError(Constants.CANNOT_DELETE_POINT, 400))
+    })
+
+    it('with existing actions in redis', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
+        await client.set(`${getActionBaseKey(point._id.toString(), 3)}:type`, 'Score')
+        await expect(
+            services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE),
+        ).rejects.toThrowError(new ApiError(Constants.CANNOT_DELETE_POINT, 400))
     })
 })

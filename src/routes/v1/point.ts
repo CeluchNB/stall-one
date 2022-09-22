@@ -73,4 +73,22 @@ pointRouter.put(
     },
 )
 
+pointRouter.delete(
+    '/point/:id',
+    param('id').isString(),
+    passport.authenticate('jwt', { session: false }),
+    async (req: Request, res: Response, next) => {
+        try {
+            const data = req.user as GameAuth
+            const teamNumber = getMyTeamNumber(true, data.team)
+            const redisClient = await getClient()
+            const services = new PointServices(Point, Game, Action, redisClient)
+            await services.deletePoint(data.game._id.toString(), req.params.id, teamNumber)
+            return res.send()
+        } catch (error) {
+            next(error)
+        }
+    },
+)
+
 pointRouter.use(errorMiddleware)
