@@ -1,4 +1,6 @@
-import { TeamNumber } from '../types/ultmt'
+import { Player, TeamNumber } from '../types/ultmt'
+import { userErrorResponse } from '../middlware/errors'
+import { Types } from 'mongoose'
 
 export const getMyTeamNumber = (isMyTeam: boolean, myTeam: 'one' | 'two'): TeamNumber => {
     if (isMyTeam) {
@@ -14,4 +16,36 @@ export const getMyTeamNumber = (isMyTeam: boolean, myTeam: 'one' | 'two'): TeamN
             return TeamNumber.ONE
         }
     }
+}
+
+export const getActionBaseKey = (pointId: string, number: number): string => {
+    return `${pointId}:${number}`
+}
+
+export const handleSocketError = (error: unknown): { message: string; code: number } => {
+    if (error && typeof error === 'object') {
+        const errorData = userErrorResponse(error.toString())
+        return errorData
+    }
+    const errorData = userErrorResponse('')
+    return errorData
+}
+
+export const parseRedisUser = (redisUser: { [x: string]: string }): Player | undefined => {
+    if (Object.keys(redisUser).length > 0) {
+        const { id, firstName, lastName, username } = redisUser
+        const player: Player = {
+            firstName: firstName,
+            lastName: lastName,
+        }
+        if (id) {
+            player._id = new Types.ObjectId(id)
+        }
+        if (username) {
+            player.username = username
+        }
+
+        return player
+    }
+    return undefined
 }

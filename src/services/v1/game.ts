@@ -46,7 +46,6 @@ export default class GameServices {
             startTime: new Date(gameData.startTime),
             softcapMins: gameData.softcapMins,
             hardcapMins: gameData.hardcapMins,
-            liveGame: gameData.liveGame,
             playersPerPoint: gameData.playersPerPoint,
             timeoutPerHalf: gameData.timeoutPerHalf,
             floaterTimeout: gameData.floaterTimeout,
@@ -111,7 +110,6 @@ export default class GameServices {
             startTime: gameData.startTime,
             softcapMins: gameData.softcapMins,
             hardcapMins: gameData.hardcapMins,
-            liveGame: gameData.liveGame,
             playersPerPoint: gameData.playersPerPoint,
             timeoutPerHalf: gameData.timeoutPerHalf,
             floaterTimeout: gameData.floaterTimeout,
@@ -182,7 +180,7 @@ export default class GameServices {
 
         const token = jwt.sign(payload, process.env.JWT_SECRET as string)
         game.teamTwoToken = token
-        game.teamTwoResolved = true
+        game.teamTwoActive = true
         await game.save()
 
         return { game, token }
@@ -209,10 +207,33 @@ export default class GameServices {
         }
         if (team === TeamNumber.ONE) {
             game.teamOnePlayers.push(playerData)
-        } else if (game.teamTwoResolved) {
+        } else if (game.teamTwoActive) {
             game.teamTwoPlayers.push(playerData)
         } else {
             throw new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400)
+        }
+
+        await game.save()
+
+        return game
+    }
+
+    /**
+     * Method to finish a game
+     * @param gameId id of game to finish
+     * @param team team requesting finish
+     * @returns updated game
+     */
+    finishGame = async (gameId: string, team: TeamNumber): Promise<IGame> => {
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        if (team === TeamNumber.ONE) {
+            game.teamOneActive = false
+        } else if (team === TeamNumber.TWO) {
+            game.teamTwoActive = false
         }
 
         await game.save()

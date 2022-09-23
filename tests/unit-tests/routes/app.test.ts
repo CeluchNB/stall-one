@@ -1,6 +1,10 @@
 import request from 'supertest'
-import app from '../../../src/app'
+import app, { close } from '../../../src/app'
 import axios from 'axios'
+
+afterAll(async () => {
+    await close()
+})
 
 describe('GET /stall-one', () => {
     it('should return a message', async () => {

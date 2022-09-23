@@ -62,4 +62,34 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
+    it('with invalid data case one', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.INVALID_DATA}`)).toEqual({
+            message: Constants.INVALID_DATA,
+            code: 400,
+        })
+    })
+    it('with invalid data case two', () => {
+        expect(userErrorResponse('Extra Error: Invalid argument type')).toEqual({
+            message: Constants.INVALID_DATA,
+            code: 400,
+        })
+    })
+    it('with profanity error', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.PROFANE_COMMENT}`)).toEqual({
+            message: Constants.PROFANE_COMMENT,
+            code: 400,
+        })
+    })
+    it('with score required error', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.SCORE_REQUIRED}`)).toEqual({
+            message: Constants.SCORE_REQUIRED,
+            code: 400,
+        })
+    })
+    it('with cannot delete point error', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.CANNOT_DELETE_POINT}`)).toEqual({
+            message: Constants.CANNOT_DELETE_POINT,
+            code: 400,
+        })
+    })
 })

@@ -2,7 +2,6 @@ import { Schema, model, SchemaTypes } from 'mongoose'
 import IPoint from '../types/point'
 
 const schema = new Schema<IPoint>({
-    gameId: { type: SchemaTypes.ObjectId, ref: 'Game', required: true },
     pointNumber: Number,
     teamOnePlayers: [
         {
@@ -54,6 +53,17 @@ const schema = new Schema<IPoint>({
             seasonEnd: Date,
         },
     },
+    teamOneActive: {
+        type: Boolean,
+        required: true,
+        default: true,
+    },
+    teamTwoActive: {
+        type: Boolean,
+        required: true,
+        default: true,
+    },
+    actions: [SchemaTypes.ObjectId],
 })
 
 const Point = model<IPoint>('Point', schema)

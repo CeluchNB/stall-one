@@ -1,20 +1,30 @@
 import { connect, connection, Types } from 'mongoose'
+import { createClient } from 'redis'
 import IGame, { CreateGame } from '../../src/types/game'
+import IPoint from '../../src/types/point'
 import Game from '../../src/models/game'
 import jwt from 'jsonwebtoken'
 import Point from '../../src/models/point'
+import Action from '../../src/models/action'
 
+export const client = createClient({ url: process.env.REDIS_URL })
 export const setUpDatabase = async () => {
     await connect(process.env.MONGOOSE_URL as string)
+    await client.connect()
 }
 
 export const resetDatabase = async () => {
     await Game.deleteMany({})
     await Point.deleteMany({})
+    await Action.deleteMany({})
+    if (client.isOpen) {
+        await client.flushAll()
+    }
 }
 
 export const tearDownDatabase = () => {
     connection.close()
+    client.quit()
 }
 
 export const createData: CreateGame = {
@@ -41,7 +51,6 @@ export const createData: CreateGame = {
     startTime: new Date(),
     softcapMins: 75,
     hardcapMins: 90,
-    liveGame: true,
     playersPerPoint: 7,
     timeoutPerHalf: 1,
     floaterTimeout: true,
@@ -58,9 +67,34 @@ export const gameData: IGame = {
     teamTwoToken: undefined,
     teamOneScore: 0,
     teamTwoScore: 0,
-    teamTwoResolved: false,
     resolveCode: '123456',
-    completeGame: false,
+    teamOneActive: true,
+    teamTwoActive: false,
+    points: [],
+}
+
+const pointId = new Types.ObjectId()
+export const createPointData: IPoint = {
+    _id: pointId,
+    pointNumber: 1,
+    teamOnePlayers: [],
+    teamTwoPlayers: [],
+    teamOneScore: 0,
+    teamTwoScore: 0,
+    pullingTeam: {
+        _id: new Types.ObjectId(),
+        place: 'Place1',
+        name: 'Name1',
+        teamname: 'Place1Name1',
+        seasonStart: new Date(),
+        seasonEnd: new Date(),
+    },
+    receivingTeam: {
+        name: 'Name2',
+    },
+    teamOneActive: true,
+    teamTwoActive: true,
+    actions: [],
 }
 
 export const getMock = jest.fn((url) => {

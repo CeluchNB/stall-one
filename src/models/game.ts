@@ -27,7 +27,6 @@ const schema = new Schema<IGame>({
         },
         required: false,
     },
-    teamTwoResolved: { type: Boolean, required: true, default: false },
     teamTwoDefined: { type: Boolean, required: true, default: false },
     creator: {
         type: {
@@ -46,8 +45,8 @@ const schema = new Schema<IGame>({
     startTime: Date,
     softcapMins: Number,
     hardcapMins: Number,
-    liveGame: Boolean,
-    completeGame: { type: Boolean, default: false },
+    teamOneActive: { type: Boolean, required: true, default: true },
+    teamTwoActive: { type: Boolean, required: true, default: false },
     playersPerPoint: { type: Number, default: 7 },
     teamOnePlayers: [
         {
@@ -68,12 +67,14 @@ const schema = new Schema<IGame>({
     resolveCode: String,
     timeoutPerHalf: Number,
     floaterTimeout: Boolean,
+    points: [SchemaTypes.ObjectId],
 })
 
 schema.pre('save', async function (next) {
     if (!this.teamOneToken) {
         const payload = {
             sub: this._id.toString(),
+            team: 'one',
             iat: Date.now(),
         }
 

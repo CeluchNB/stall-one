@@ -71,6 +71,7 @@ jobs:
           echo JWT_SECRET=${{ secrets.JWT_SECRET }} >> .env
           echo ULTMT_API_URL=${{ secrets.ULTMT_API_URL }} >> .env
           echo API_KEY=${{ secrets.API_KEY }}
+          echo REDIS_URL=${{ secrets.REDIS_URL }}
           cd ..
       
       - name: Run Docker CI container

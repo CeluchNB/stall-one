@@ -1,10 +1,9 @@
 import { Schema, SchemaTypes, model } from 'mongoose'
-import IPointEvent, { EventType } from '../types/pointevent'
+import IAction, { ActionType } from '../types/action'
 
-const schema = new Schema<IPointEvent>({
-    pointId: { type: SchemaTypes.ObjectId, required: true },
-    eventNumber: { type: Number, required: true },
-    eventType: { type: String, enum: Object.values(EventType) },
+const schema = new Schema<IAction>({
+    actionNumber: { type: Number, required: true },
+    actionType: { type: String, enum: Object.values(ActionType) },
     displayMessage: String,
     comments: [
         {
@@ -17,7 +16,17 @@ const schema = new Schema<IPointEvent>({
             comment: String,
         },
     ],
-    team: SchemaTypes.ObjectId,
+    team: {
+        type: {
+            _id: SchemaTypes.ObjectId,
+            place: String,
+            name: String,
+            teamname: String,
+            seasonStart: Date,
+            seasonEnd: Date,
+        },
+        required: true,
+    },
     playerOne: {
         type: {
             _id: SchemaTypes.ObjectId,
@@ -37,6 +46,6 @@ const schema = new Schema<IPointEvent>({
     tags: [String],
 })
 
-const PointEvent = model<IPointEvent>('PointEvent', schema)
-export type IPointEventModel = typeof PointEvent
-export default PointEvent
+const Action = model<IAction>('Action', schema)
+export type IActionModel = typeof Action
+export default Action
