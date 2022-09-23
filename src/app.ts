@@ -29,6 +29,7 @@ app.get('/stall-one', async (req, res) => {
 })
 
 const httpServer = createServer(app)
+httpServer.setTimeout(0)
 const io = new Server<ClientToServerEvents>(httpServer, {})
 
 Promise.resolve(createRedisAdapter()).then(async (adapter) => {
