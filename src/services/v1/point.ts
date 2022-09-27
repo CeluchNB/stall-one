@@ -137,6 +137,10 @@ export default class PointServices {
             throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
+        if ((!point.teamOneActive && team === TeamNumber.ONE) || (!point.teamTwoActive && team === TeamNumber.TWO)) {
+            return point
+        }
+
         // For first finishing team, just update boolean and return point
         if (point.teamTwoActive && team === TeamNumber.ONE) {
             point.teamOneActive = false
