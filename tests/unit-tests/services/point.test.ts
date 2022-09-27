@@ -226,6 +226,82 @@ describe('test create point', () => {
     })
 })
 
+describe('test switch pulling team', () => {
+    it('with valid data changing the pulling team', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        const result = await services.setPullingTeam(game._id.toString(), point._id.toString(), TeamNumber.TWO)
+        expect(result.pullingTeam.name).toBe(game.teamTwo.name)
+        expect(result.receivingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
+
+        const pointRecord = await Point.findById(point._id)
+        expect(pointRecord?.pullingTeam.name).toBe(game.teamTwo.name)
+        expect(pointRecord?.receivingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
+    })
+
+    it('with valid data keeping the same pulling team', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        const result = await services.setPullingTeam(game._id.toString(), point._id.toString(), TeamNumber.ONE)
+        expect(result.pullingTeam.name).toBe(game.teamOne.name)
+        expect(result.receivingTeam._id?.toString()).toBe(game.teamTwo._id?.toString())
+
+        const pointRecord = await Point.findById(point._id)
+        expect(pointRecord?.pullingTeam.name).toBe(game.teamOne.name)
+        expect(pointRecord?.receivingTeam._id?.toString()).toBe(game.teamTwo._id?.toString())
+    })
+
+    it('with unfound game', async () => {
+        const point = await Point.create(createPointData)
+        await expect(
+            services.setPullingTeam(new Types.ObjectId().toString(), point._id.toString(), TeamNumber.TWO),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
+    })
+
+    it('with unfound point', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await expect(
+            services.setPullingTeam(game._id.toString(), new Types.ObjectId().toString(), TeamNumber.TWO),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_POINT, 404))
+    })
+
+    it('with point with mongo actions', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        point.actions.push(new Types.ObjectId())
+        await point.save()
+        game.points.push(point._id)
+        await game.save()
+
+        await expect(
+            services.setPullingTeam(game._id.toString(), point._id.toString(), TeamNumber.TWO),
+        ).rejects.toThrowError(new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400))
+    })
+
+    it('with point with redis actions', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
+        await client.set(`${getActionBaseKey(point._id.toString(), 3)}:type`, 'Score')
+        await expect(
+            services.setPullingTeam(game._id.toString(), point._id.toString(), TeamNumber.TWO),
+        ).rejects.toThrowError(new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400))
+    })
+})
+
 describe('test add players to point', () => {
     it('with valid data for team one', async () => {
         const game = await Game.create(gameData)
@@ -817,6 +893,23 @@ describe('test delete point', () => {
         expect(totalActions).toBeNull()
     })
 
+    it('with unfound redis total actions', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE)
+
+        const pointRecord = await Point.findOne({})
+        expect(pointRecord).toBeNull()
+        const gameRecord = await Game.findOne({})
+        expect(gameRecord?.points.length).toBe(0)
+
+        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:actions`)
+        expect(totalActions).toBeNull()
+    })
+
     it('with unfound game', async () => {
         const game = await Game.create(createData)
         const point = await Point.create(createPointData)
@@ -848,7 +941,7 @@ describe('test delete point', () => {
 
         await expect(
             services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE),
-        ).rejects.toThrowError(new ApiError(Constants.CANNOT_DELETE_POINT, 400))
+        ).rejects.toThrowError(new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400))
     })
 
     it('with active team one', async () => {
@@ -859,7 +952,7 @@ describe('test delete point', () => {
 
         await expect(
             services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.TWO),
-        ).rejects.toThrowError(new ApiError(Constants.CANNOT_DELETE_POINT, 400))
+        ).rejects.toThrowError(new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400))
     })
 
     it('with existing mongo actions', async () => {
@@ -872,7 +965,7 @@ describe('test delete point', () => {
 
         await expect(
             services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE),
-        ).rejects.toThrowError(new ApiError(Constants.CANNOT_DELETE_POINT, 400))
+        ).rejects.toThrowError(new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400))
     })
 
     it('with existing actions in redis', async () => {
@@ -885,6 +978,6 @@ describe('test delete point', () => {
         await client.set(`${getActionBaseKey(point._id.toString(), 3)}:type`, 'Score')
         await expect(
             services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE),
-        ).rejects.toThrowError(new ApiError(Constants.CANNOT_DELETE_POINT, 400))
+        ).rejects.toThrowError(new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400))
     })
 })

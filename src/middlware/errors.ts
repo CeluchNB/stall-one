@@ -24,8 +24,8 @@ export const userErrorResponse = (error: string): { message: string; code: numbe
         return { message: Constants.PROFANE_COMMENT, code: 400 }
     } else if (error.includes(Constants.SCORE_REQUIRED)) {
         return { message: Constants.SCORE_REQUIRED, code: 400 }
-    } else if (error.includes(Constants.CANNOT_DELETE_POINT)) {
-        return { message: Constants.CANNOT_DELETE_POINT, code: 400 }
+    } else if (error.includes(Constants.MODIFY_LIVE_POINT_ERROR)) {
+        return { message: Constants.MODIFY_LIVE_POINT_ERROR, code: 400 }
     } else {
         return { message: Constants.GENERIC_ERROR, code: 500 }
     }

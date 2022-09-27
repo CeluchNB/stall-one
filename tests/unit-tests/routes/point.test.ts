@@ -347,6 +347,6 @@ describe('test /DELETE point', () => {
             .send()
             .expect(400)
 
-        expect(response.body.message).toBe(Constants.CANNOT_DELETE_POINT)
+        expect(response.body.message).toBe(Constants.MODIFY_LIVE_POINT_ERROR)
     })
 })

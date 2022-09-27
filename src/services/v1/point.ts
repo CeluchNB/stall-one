@@ -55,9 +55,11 @@ export default class PointServices {
         })
 
         if (pointRecord) {
+            // checking name because it is only guaranteed field available
+            // since it is set from the game teams' names, it should be safe
             if (
-                (pullingTeam === TeamNumber.ONE && pointRecord.pullingTeam._id?.equals(game.teamOne._id || '')) ||
-                (pullingTeam === TeamNumber.TWO && pointRecord.pullingTeam._id?.equals(game.teamTwo._id || ''))
+                (pullingTeam === TeamNumber.ONE && pointRecord.pullingTeam.name === game.teamOne.name) ||
+                (pullingTeam === TeamNumber.TWO && pointRecord.pullingTeam.name === game.teamTwo.name)
             ) {
                 return pointRecord
             } else {
@@ -80,6 +82,52 @@ export default class PointServices {
 
         game.points.push(point._id)
         await game.save()
+
+        return point
+    }
+
+    /**
+     * Method to edit a previously created point's pulling/receiving teams. The motivation
+     * for this method is to allow user's to fix a point that has been created with the wrong pulling configuration
+     * without, since they cannot delete a point in an active game.
+     * @param gameId id of game
+     * @param pointId id of point
+     * @param pullingTeam pulling team
+     * @returns updated point
+     */
+    setPullingTeam = async (gameId: string, pointId: string, pullingTeam: TeamNumber): Promise<IPoint> => {
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        const point = await this.pointModel.findById(pointId)
+        if (!point) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
+        }
+
+        // if no change, skip further validation and return point
+        const newPullingTeam = pullingTeam === TeamNumber.ONE ? game.teamOne : game.teamTwo
+        const newReceivingTeam = pullingTeam === TeamNumber.ONE ? game.teamTwo : game.teamOne
+        if (point.pullingTeam.name === newPullingTeam.name) {
+            return point
+        }
+
+        if (point.actions.length > 0) {
+            throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
+        }
+
+        const totalActions = await this.redisClient.get(`${gameId}:${pointId}:actions`)
+        for (let i = 1; i <= Number(totalActions); i++) {
+            const exists = await actionExists(this.redisClient, pointId, i)
+            if (exists) {
+                throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
+            }
+        }
+
+        point.pullingTeam = newPullingTeam
+        point.receivingTeam = newReceivingTeam
+        await point.save()
 
         return point
     }
@@ -230,12 +278,12 @@ export default class PointServices {
 
         // cannot delete if other team could be editing point
         if ((team === TeamNumber.ONE && game.teamTwoActive) || (team === TeamNumber.TWO && game.teamOneActive)) {
-            throw new ApiError(Constants.CANNOT_DELETE_POINT, 400)
+            throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400)
         }
 
         // cannot delete if any live actions
         if (point.actions.length > 0) {
-            throw new ApiError(Constants.CANNOT_DELETE_POINT, 400)
+            throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400)
         }
 
         // cannot delete point if any actions exist in redis
@@ -243,7 +291,7 @@ export default class PointServices {
         for (let i = 1; i <= Number(totalActions); i++) {
             const exists = await actionExists(this.redisClient, pointId, i)
             if (exists) {
-                throw new ApiError(Constants.CANNOT_DELETE_POINT, 404)
+                throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
             }
         }
 
