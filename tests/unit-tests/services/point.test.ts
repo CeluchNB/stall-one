@@ -116,22 +116,24 @@ describe('test create point', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
             teamOneScore: 0,
-            teamTwoScore: 0,
+            teamTwoScore: 1,
         })
         const point2 = await Point.create({
             pointNumber: 2,
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
             teamOneScore: 1,
-            teamTwoScore: 0,
+            teamTwoScore: 1,
         })
         game.points = [point1._id, point2._id]
+        game.teamOneScore = 1
+        game.teamTwoScore = 1
         await game.save()
 
         const point = await services.createPoint(game._id.toString(), TeamNumber.ONE, 3)
         expect(point.pointNumber).toBe(3)
-        expect(point.teamOneScore).toBe(0)
-        expect(point.teamTwoScore).toBe(0)
+        expect(point.teamOneScore).toBe(1)
+        expect(point.teamTwoScore).toBe(1)
         expect(point.pullingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
         expect(point.receivingTeam._id?.toString()).toBe(game.teamTwo._id?.toString())
 
