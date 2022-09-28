@@ -81,6 +81,102 @@ describe('test /POST first point route', () => {
     })
 })
 
+describe('test /PUT pulling team', () => {
+    it('with valid data for team one', async () => {
+        const game = await Game.create(gameData)
+        const initialPoint = await Point.create({
+            pointNumber: 1,
+            teamOneScore: 0,
+            teamTwoScore: 0,
+            teamOnePlayers: [],
+            teamTwoPlayers: [],
+            pullingTeam: game.teamTwo,
+            receivingTeam: game.teamOne,
+        })
+
+        const response = await request(app)
+            .put(`/api/v1/point/${initialPoint._id.toString()}/pulling?team=one`)
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .send()
+            .expect(200)
+
+        const { point } = response.body
+        expect(point.pullingTeam.name).toBe(game.teamOne.name)
+        expect(point.receivingTeam.name).toBe(game.teamTwo.name)
+
+        const pointRecord = await Point.findById(initialPoint._id)
+        expect(pointRecord?.pullingTeam.name).toBe(game.teamOne.name)
+        expect(pointRecord?.receivingTeam.name).toBe(game.teamTwo.name)
+    })
+
+    it('with valid data for team two', async () => {
+        const game = await Game.create(gameData)
+        const initialPoint = await Point.create({
+            pointNumber: 1,
+            teamOneScore: 0,
+            teamTwoScore: 0,
+            teamOnePlayers: [],
+            teamTwoPlayers: [],
+            pullingTeam: game.teamOne,
+            receivingTeam: game.teamTwo,
+        })
+
+        const response = await request(app)
+            .put(`/api/v1/point/${initialPoint._id.toString()}/pulling?team=two`)
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .send()
+            .expect(200)
+
+        const { point } = response.body
+        expect(point.pullingTeam.name).toBe(game.teamTwo.name)
+        expect(point.receivingTeam.name).toBe(game.teamOne.name)
+
+        const pointRecord = await Point.findById(initialPoint._id)
+        expect(pointRecord?.pullingTeam.name).toBe(game.teamTwo.name)
+        expect(pointRecord?.receivingTeam.name).toBe(game.teamOne.name)
+    })
+
+    it('with invalid team value', async () => {
+        const game = await Game.create(gameData)
+        const initialPoint = await Point.create({
+            pointNumber: 1,
+            teamOneScore: 0,
+            teamTwoScore: 0,
+            teamOnePlayers: [],
+            teamTwoPlayers: [],
+            pullingTeam: game.teamOne,
+            receivingTeam: game.teamTwo,
+        })
+
+        const response = await request(app)
+            .put(`/api/v1/point/${initialPoint._id.toString()}/pulling?team=three`)
+            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .send()
+            .expect(500)
+
+        expect(response.body.message).toBe(Constants.GENERIC_ERROR)
+    })
+
+    it('with bad authentication', async () => {
+        const game = await Game.create(gameData)
+        const initialPoint = await Point.create({
+            pointNumber: 1,
+            teamOneScore: 0,
+            teamTwoScore: 0,
+            teamOnePlayers: [],
+            teamTwoPlayers: [],
+            pullingTeam: game.teamOne,
+            receivingTeam: game.teamTwo,
+        })
+
+        await request(app)
+            .put(`/api/v1/point/${initialPoint._id.toString()}/pulling?team=three`)
+            .set('Authorization', `Bearer badsf2345.adsf435rrsga.4354esdf43`)
+            .send()
+            .expect(401)
+    })
+})
+
 describe('test /PUT set players', () => {
     it('with valid data', async () => {
         const game = await Game.create(gameData)
