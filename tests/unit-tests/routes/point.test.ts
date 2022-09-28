@@ -61,7 +61,7 @@ describe('test /POST first point route', () => {
 
     it('with invalid data', async () => {
         const game = await Game.create(gameData)
-        await Point.create({
+        const point = await Point.create({
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -70,6 +70,8 @@ describe('test /POST first point route', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(point._id)
+        await game.save()
 
         const response = await request(app)
             .post('/api/v1/point?pulling=false&number=1')
@@ -93,6 +95,8 @@ describe('test /PUT pulling team', () => {
             pullingTeam: game.teamTwo,
             receivingTeam: game.teamOne,
         })
+        game.points.push(initialPoint._id)
+        await game.save()
 
         const response = await request(app)
             .put(`/api/v1/point/${initialPoint._id.toString()}/pulling?team=one`)
@@ -120,6 +124,8 @@ describe('test /PUT pulling team', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(initialPoint._id)
+        await game.save()
 
         const response = await request(app)
             .put(`/api/v1/point/${initialPoint._id.toString()}/pulling?team=two`)
@@ -147,6 +153,8 @@ describe('test /PUT pulling team', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(initialPoint._id)
+        await game.save()
 
         const response = await request(app)
             .put(`/api/v1/point/${initialPoint._id.toString()}/pulling?team=three`)
@@ -168,6 +176,8 @@ describe('test /PUT pulling team', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(initialPoint._id)
+        await game.save()
 
         await request(app)
             .put(`/api/v1/point/${initialPoint._id.toString()}/pulling?team=three`)
@@ -189,6 +199,8 @@ describe('test /PUT set players', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(initialPoint._id)
+        await game.save()
 
         const players: Player[] = []
         for (let i = 0; i < 7; i++) {
@@ -227,6 +239,8 @@ describe('test /PUT set players', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(initialPoint._id)
+        await game.save()
 
         const players: Player[] = []
         for (let i = 0; i < 7; i++) {
@@ -256,6 +270,8 @@ describe('test /PUT set players', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(initialPoint._id)
+        await game.save()
 
         const players: Player[] = []
         for (let i = 0; i < 8; i++) {

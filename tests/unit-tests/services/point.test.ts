@@ -151,7 +151,7 @@ describe('test create point', () => {
 
     it('with team two conflicting possession', async () => {
         const game = await Game.create(gameData)
-        await Point.create({
+        const point = await Point.create({
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -160,6 +160,8 @@ describe('test create point', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(point._id)
+        await game.save()
 
         await expect(services.createPoint(game._id.toString(), TeamNumber.TWO, 1)).rejects.toThrowError(
             new ApiError(Constants.CONFLICTING_POSSESSION, 400),
@@ -168,7 +170,7 @@ describe('test create point', () => {
 
     it('with team one conflicting posession', async () => {
         const game = await Game.create(gameData)
-        await Point.create({
+        const point = await Point.create({
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -177,6 +179,8 @@ describe('test create point', () => {
             pullingTeam: game.teamTwo,
             receivingTeam: game.teamOne,
         })
+        game.points.push(point._id)
+        await game.save()
 
         await expect(services.createPoint(game._id.toString(), TeamNumber.ONE, 1)).rejects.toThrowError(
             new ApiError(Constants.CONFLICTING_POSSESSION, 400),
@@ -185,7 +189,7 @@ describe('test create point', () => {
 
     it('with null team one id', async () => {
         const game = await Game.create({ ...gameData, teamOne: { name: 'Test Team One' } })
-        await Point.create({
+        const point = await Point.create({
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -194,6 +198,8 @@ describe('test create point', () => {
             pullingTeam: gameData.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(point._id)
+        await game.save()
 
         await expect(services.createPoint(game._id.toString(), TeamNumber.ONE, 1)).rejects.toThrowError(
             new ApiError(Constants.CONFLICTING_POSSESSION, 400),
@@ -275,6 +281,15 @@ describe('test switch pulling team', () => {
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_POINT, 404))
     })
 
+    it('with point not in game', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+
+        await expect(
+            services.setPullingTeam(game._id.toString(), point._id.toString(), TeamNumber.TWO),
+        ).rejects.toThrowError(new ApiError(Constants.INVALID_DATA, 400))
+    })
+
     it('with point with mongo actions', async () => {
         const game = await Game.create(createData)
         const point = await Point.create(createPointData)
@@ -314,6 +329,8 @@ describe('test add players to point', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(initialPoint._id)
+        await game.save()
 
         const players: Player[] = []
         for (let i = 0; i < 7; i++) {
@@ -353,6 +370,8 @@ describe('test add players to point', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(initialPoint._id)
+        await game.save()
 
         const players: Player[] = []
         for (let i = 0; i < 7; i++) {
@@ -402,6 +421,23 @@ describe('test add players to point', () => {
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
     })
 
+    it('with non point not on game', async () => {
+        const game = await Game.create(gameData)
+        const initialPoint = await Point.create({
+            pointNumber: 1,
+            teamOneScore: 0,
+            teamTwoScore: 0,
+            teamOnePlayers: [],
+            teamTwoPlayers: [],
+            pullingTeam: game.teamOne,
+            receivingTeam: game.teamTwo,
+        })
+
+        await expect(
+            services.setPlayers(game._id.toString(), initialPoint._id.toString(), TeamNumber.ONE, []),
+        ).rejects.toThrowError(new ApiError(Constants.INVALID_DATA, 400))
+    })
+
     it('with wrong number of players', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
@@ -413,6 +449,8 @@ describe('test add players to point', () => {
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
         })
+        game.points.push(initialPoint._id)
+        await game.save()
 
         const players: Player[] = []
         for (let i = 0; i < 9; i++) {
@@ -930,6 +968,15 @@ describe('test delete point', () => {
         await expect(
             services.deletePoint(game._id.toString(), new Types.ObjectId().toString(), TeamNumber.ONE),
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_POINT, 404))
+    })
+
+    it('with point not on game', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+
+        await expect(
+            services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE),
+        ).rejects.toThrowError(new ApiError(Constants.INVALID_DATA, 400))
     })
 
     it('with active team two', async () => {

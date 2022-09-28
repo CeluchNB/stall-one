@@ -38,21 +38,25 @@ export default class PointServices {
         }
 
         if (pointNumber > 1) {
-            const prevPoint = await this.pointModel.findOne({
-                gameId: game._id,
-                pointNumber: pointNumber - 1,
-            })
+            const prevPoint = await this.pointModel
+                .findOne({
+                    pointNumber: pointNumber - 1,
+                })
+                .where('_id')
+                .in(game.points)
 
             if (!prevPoint) {
                 throw new ApiError(Constants.INVALID_DATA, 400)
             }
         }
 
-        // check if the first point has already been verified
-        const pointRecord = await this.pointModel.findOne({
-            gameId: game._id,
-            pointNumber,
-        })
+        // check if this point has already been created
+        const pointRecord = await this.pointModel
+            .findOne({
+                pointNumber,
+            })
+            .where('_id')
+            .in(game.points)
 
         if (pointRecord) {
             // checking name because it is only guaranteed field available
@@ -69,7 +73,6 @@ export default class PointServices {
 
         // create the first point if it hasn't been created yet
         const point = await this.pointModel.create({
-            gameId: game._id,
             pointNumber: pointNumber,
             teamOnePlayers: [],
             teamTwoPlayers: [],
@@ -104,6 +107,10 @@ export default class PointServices {
         const point = await this.pointModel.findById(pointId)
         if (!point) {
             throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
+        }
+
+        if (!game.points.includes(point._id)) {
+            throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
         // if no change, skip further validation and return point
@@ -148,6 +155,10 @@ export default class PointServices {
         const game = await this.gameModel.findById(gameId)
         if (!game) {
             throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        if (!game.points.includes(point._id)) {
+            throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
         if (players.length !== game.playersPerPoint) {
@@ -274,6 +285,10 @@ export default class PointServices {
         const point = await this.pointModel.findById(pointId)
         if (!point) {
             throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
+        }
+
+        if (!game.points.includes(point._id)) {
+            throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
         // cannot delete if other team could be editing point
