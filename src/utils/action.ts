@@ -1,14 +1,34 @@
 import * as Constants from './constants'
-import IAction, { ClientAction, ActionType } from '../types/action'
+import IAction, { ClientAction, ActionType, VALID_ACTIONS } from '../types/action'
 import { Player } from '../types/ultmt'
 import { ApiError } from '../types/errors'
 import { IPointModel } from '../models/point'
 import { IGameModel } from '../models/game'
 
-export const validateActionData = (data: ClientAction) => {
-    const { playerOne, playerTwo } = data
+export const validateActionData = (
+    action: ClientAction,
+    isPullingTeam?: boolean,
+    prevAction?: ClientAction,
+): boolean => {
+    // Ensure current action is valid in this sequence
+    if (!prevAction) {
+        if (isPullingTeam && action.actionType !== ActionType.PULL) {
+            throw new ApiError(Constants.INVALID_ACTION_TYPE, 400)
+        } else if (
+            !isPullingTeam &&
+            ![ActionType.CATCH, ActionType.DROP, ActionType.PICKUP].includes(action.actionType)
+        ) {
+            throw new ApiError(Constants.INVALID_ACTION_TYPE, 400)
+        }
+    } else {
+        if (!VALID_ACTIONS[action.actionType].includes(prevAction.actionType)) {
+            throw new ApiError(Constants.INVALID_ACTION_TYPE, 400)
+        }
+    }
 
-    switch (data.actionType) {
+    const { playerOne, playerTwo, actionType } = action
+    // ensure required data exists
+    switch (actionType) {
         case ActionType.PULL:
         case ActionType.THROWAWAY:
         case ActionType.BLOCK:
@@ -28,8 +48,9 @@ export const validateActionData = (data: ClientAction) => {
             }
             break
     }
-}
 
+    return true
+}
 export const parseActionData = (data: ClientAction, actionNumber: number): IAction => {
     return {
         ...data,

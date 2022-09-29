@@ -86,6 +86,10 @@ export default class PointServices {
         game.points.push(point._id)
         await game.save()
 
+        // set actions to 0 when creating point
+        // allows for validation on key existence later
+        await this.redisClient.set(`${gameId}:${point._id.toString()}:actions`, 0)
+
         return point
     }
 

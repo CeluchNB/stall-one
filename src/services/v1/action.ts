@@ -43,7 +43,7 @@ export default class ActionServices {
     }
 
     createLiveAction = async (data: ClientAction, gameId: string, pointId: string): Promise<IAction> => {
-        validateActionData(data)
+        await validateActionData(data)
         const actionNumber = await this.redisClient.incr(`${gameId}:${pointId}:actions`)
         const actionData = parseActionData(data, actionNumber)
         await saveRedisAction(this.redisClient, actionData, pointId)

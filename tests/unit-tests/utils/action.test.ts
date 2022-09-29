@@ -90,6 +90,23 @@ const action: ClientAction = {
     actionType: ActionType.PULL,
     tags: [],
 }
+
+const prevAction: ClientAction = {
+    playerOne: {
+        firstName: 'First 1',
+        lastName: 'Last 1',
+    },
+    playerTwo: {
+        firstName: 'First 2',
+        lastName: 'Last 2',
+    },
+    team: {
+        name: 'Team 1',
+    },
+    actionType: ActionType.CATCH,
+    tags: [],
+}
+
 const playerOne: Player = {
     firstName: 'First 1',
     lastName: 'Last 1',
@@ -99,230 +116,108 @@ const playerTwo: Player = {
     lastName: 'Last 2',
 }
 describe('test validate action data', () => {
-    it('pull with player one and two', () => {
-        expect(() => {
-            action.actionType = ActionType.PULL
-            action.playerOne = playerOne
-            action.playerTwo = playerTwo
-            validateActionData(action)
-        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
+    it('test valid initial action for pulling team', () => {
+        action.playerTwo = undefined
+        const result = validateActionData(action, true)
+        expect(result).toBe(true)
     })
 
-    it('pull with player one and not player two', () => {
+    it('test invalid initial action for pulling team', () => {
+        action.actionType = ActionType.DROP
+        expect(() => {
+            validateActionData(action, true)
+        }).toThrowError(new ApiError(Constants.INVALID_ACTION_TYPE, 400))
+    })
+
+    it('test valid initial data for receiving team', () => {
+        action.actionType = ActionType.CATCH
+        action.playerOne = playerOne
+        action.playerTwo = playerTwo
+        const result = validateActionData(action, false)
+        expect(result).toBe(true)
+    })
+
+    it('test invalid initial data for receiving team', () => {
         action.actionType = ActionType.PULL
         action.playerOne = playerOne
         action.playerTwo = undefined
         expect(() => {
-            validateActionData(action)
-        }).not.toThrow()
+            validateActionData(action, false)
+        }).toThrowError(new ApiError(Constants.INVALID_ACTION_TYPE, 400))
     })
 
-    it('pull with neither player', () => {
+    it('test valid offensive action', () => {
+        action.actionType = ActionType.CATCH
+        action.playerOne = playerOne
+        action.playerTwo = playerTwo
+        const result = validateActionData(action, true, prevAction)
+        expect(result).toBe(true)
+    })
+
+    it('test invalid offensive action', () => {
+        action.actionType = ActionType.CATCH
+        action.playerOne = playerOne
+        action.playerTwo = playerTwo
+        prevAction.actionType = ActionType.PULL
+        expect(() => {
+            validateActionData(action, true, prevAction)
+        }).toThrowError(new ApiError(Constants.INVALID_ACTION_TYPE, 400))
+    })
+
+    it('test valid defensive action', () => {
+        action.actionType = ActionType.BLOCK
+        action.playerOne = playerOne
+        action.playerTwo = undefined
+        prevAction.actionType = ActionType.PULL
+        const result = validateActionData(action, true, prevAction)
+        expect(result).toBe(true)
+    })
+
+    it('test invalid defensive action', () => {
+        action.actionType = ActionType.PICKUP
+        action.playerOne = playerOne
+        prevAction.actionType = ActionType.CATCH
+        expect(() => {
+            validateActionData(action, true, prevAction)
+        }).toThrowError(new ApiError(Constants.INVALID_ACTION_TYPE, 400))
+    })
+
+    it('with missing player on pull', () => {
         action.actionType = ActionType.PULL
         action.playerOne = undefined
-        action.playerTwo = undefined
         expect(() => {
-            validateActionData(action)
+            validateActionData(action, true)
         }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
     })
 
-    it('throwaway with player one and two', () => {
-        action.actionType = ActionType.THROWAWAY
-        action.playerOne = playerOne
-        action.playerTwo = playerTwo
-        expect(() => {
-            validateActionData(action)
-        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
-    })
-
-    it('throwaway with player one', () => {
-        action.actionType = ActionType.THROWAWAY
-        action.playerOne = playerOne
-        action.playerTwo = undefined
-        expect(() => {
-            validateActionData(action)
-        }).not.toThrow()
-    })
-
-    it('block with player one and two', () => {
+    it('with extra player on block', () => {
         action.actionType = ActionType.BLOCK
         action.playerOne = playerOne
         action.playerTwo = playerTwo
+        prevAction.actionType = ActionType.PULL
         expect(() => {
-            validateActionData(action)
+            validateActionData(action, true, prevAction)
         }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
     })
 
-    it('block with player one', () => {
-        action.actionType = ActionType.BLOCK
-        action.playerOne = playerOne
-        action.playerTwo = undefined
-        expect(() => {
-            validateActionData(action)
-        }).not.toThrow()
-    })
-
-    it('pickup with player one and two', () => {
-        action.actionType = ActionType.PICKUP
-        action.playerOne = playerOne
-        action.playerTwo = playerTwo
-        expect(() => {
-            validateActionData(action)
-        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
-    })
-
-    it('pickup with player one', () => {
-        action.actionType = ActionType.PICKUP
-        action.playerOne = playerOne
-        action.playerTwo = undefined
-        expect(() => {
-            validateActionData(action)
-        }).not.toThrow()
-    })
-
-    it('timeout with player one and two', () => {
-        action.actionType = ActionType.TIMEOUT
-        action.playerOne = playerOne
-        action.playerTwo = playerTwo
-        expect(() => {
-            validateActionData(action)
-        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
-    })
-
-    it('timeout with player one', () => {
-        action.actionType = ActionType.TIMEOUT
-        action.playerOne = playerOne
-        action.playerTwo = undefined
-        expect(() => {
-            validateActionData(action)
-        }).not.toThrow()
-    })
-
-    it('call on field with player one and two', () => {
-        action.actionType = ActionType.CALL_ON_FIELD
-        action.playerOne = playerOne
-        action.playerTwo = playerTwo
-        expect(() => {
-            validateActionData(action)
-        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
-    })
-
-    it('call on field with player one', () => {
-        action.actionType = ActionType.CALL_ON_FIELD
-        action.playerOne = playerOne
-        action.playerTwo = undefined
-        expect(() => {
-            validateActionData(action)
-        }).not.toThrow()
-    })
-
-    it('catch with player one and two', () => {
-        action.actionType = ActionType.CATCH
-        action.playerOne = playerOne
-        action.playerTwo = playerTwo
-        expect(() => {
-            validateActionData(action)
-        }).not.toThrow()
-    })
-
-    it('catch with player one or two', () => {
-        action.actionType = ActionType.CATCH
-        action.playerOne = playerOne
-        action.playerTwo = undefined
-        expect(() => {
-            validateActionData(action)
-        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
-
+    it('with missing player on catch', () => {
         action.actionType = ActionType.CATCH
         action.playerOne = undefined
         action.playerTwo = playerTwo
+        prevAction.actionType = ActionType.CATCH
         expect(() => {
-            validateActionData(action)
+            validateActionData(action, true, prevAction)
         }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
     })
 
-    it('drop with player one and two', () => {
-        action.actionType = ActionType.DROP
-        action.playerOne = playerOne
-        action.playerTwo = playerTwo
-        expect(() => {
-            validateActionData(action)
-        }).not.toThrow()
-    })
-
-    it('drop with player one or two', () => {
+    it('with missing player two on drop', () => {
         action.actionType = ActionType.DROP
         action.playerOne = playerOne
         action.playerTwo = undefined
+        prevAction.actionType = ActionType.PICKUP
         expect(() => {
-            validateActionData(action)
+            validateActionData(action, true, prevAction)
         }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
-
-        action.actionType = ActionType.DROP
-        action.playerOne = undefined
-        action.playerTwo = playerTwo
-        expect(() => {
-            validateActionData(action)
-        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
-    })
-
-    it('score with player one and two', () => {
-        action.actionType = ActionType.TEAM_ONE_SCORE
-        action.playerOne = playerOne
-        action.playerTwo = playerTwo
-        expect(() => {
-            validateActionData(action)
-        }).not.toThrow()
-    })
-
-    it('score with player one or two', () => {
-        action.actionType = ActionType.TEAM_ONE_SCORE
-        action.playerOne = playerOne
-        action.playerTwo = undefined
-        expect(() => {
-            validateActionData(action)
-        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
-
-        action.actionType = ActionType.TEAM_ONE_SCORE
-        action.playerOne = undefined
-        action.playerTwo = playerTwo
-        expect(() => {
-            validateActionData(action)
-        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
-    })
-
-    it('substitution with player one and two', () => {
-        action.actionType = ActionType.SUBSTITUTION
-        action.playerOne = playerOne
-        action.playerTwo = playerTwo
-        expect(() => {
-            validateActionData(action)
-        }).not.toThrow()
-    })
-
-    it('substitution with player one or two', () => {
-        action.actionType = ActionType.SUBSTITUTION
-        action.playerOne = playerOne
-        action.playerTwo = undefined
-        expect(() => {
-            validateActionData(action)
-        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
-
-        action.actionType = ActionType.SUBSTITUTION
-        action.playerOne = undefined
-        action.playerTwo = playerTwo
-        expect(() => {
-            validateActionData(action)
-        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
-    })
-
-    it('finish game with no players', () => {
-        action.actionType = ActionType.FINISH_GAME
-        action.playerOne = undefined
-        action.playerTwo = undefined
-        expect(() => {
-            validateActionData(action)
-        }).not.toThrow()
     })
 })
 

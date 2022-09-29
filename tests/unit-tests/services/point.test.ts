@@ -52,6 +52,9 @@ describe('test create point', () => {
         const gameRecord = await Game.findById(game._id)
         expect(gameRecord?.points.length).toBe(1)
         expect(gameRecord?.points[0].toString()).toBe(point._id.toString())
+
+        const actionsValue = await client.get(`${game._id.toString()}:${point._id.toString()}:actions`)
+        expect(actionsValue).toBe('0')
     })
 
     it('with valid first point data and team two', async () => {
@@ -74,6 +77,8 @@ describe('test create point', () => {
         const gameRecord = await Game.findById(game._id)
         expect(gameRecord?.points.length).toBe(1)
         expect(gameRecord?.points[0].toString()).toBe(point._id.toString())
+        const actionsValue = await client.get(`${game._id.toString()}:${point._id.toString()}:actions`)
+        expect(actionsValue).toBe('0')
     })
 
     it('with valid first point data and previous creation', async () => {

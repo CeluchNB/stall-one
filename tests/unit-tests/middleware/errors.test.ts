@@ -92,4 +92,10 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
+    it('with invalid action type', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.INVALID_ACTION_TYPE}`)).toEqual({
+            message: Constants.INVALID_ACTION_TYPE,
+            code: 400,
+        })
+    })
 })

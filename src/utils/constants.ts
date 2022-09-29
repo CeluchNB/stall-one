@@ -15,3 +15,4 @@ certain profane words from being used. Please edit your comment and resubmit.'
 export const SCORE_REQUIRED = 'A point must contain a score to be finished.'
 export const MODIFY_LIVE_POINT_ERROR =
     'This point has live data associated with it. Please remove live actions and try again.'
+export const INVALID_ACTION_TYPE = 'This action type cannot be submitted based on the previous action.'
