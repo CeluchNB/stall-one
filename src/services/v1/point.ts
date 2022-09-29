@@ -88,7 +88,8 @@ export default class PointServices {
 
         // set actions to 0 when creating point
         // allows for validation on key existence later
-        await this.redisClient.set(`${gameId}:${point._id.toString()}:actions`, 0)
+        await this.redisClient.set(`${gameId}:${point._id.toString()}:one:actions`, 0)
+        await this.redisClient.set(`${gameId}:${point._id.toString()}:two:actions`, 0)
 
         return point
     }
@@ -128,9 +129,17 @@ export default class PointServices {
             throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
         }
 
-        const totalActions = await this.redisClient.get(`${gameId}:${pointId}:actions`)
-        for (let i = 1; i <= Number(totalActions); i++) {
-            const exists = await actionExists(this.redisClient, pointId, i)
+        const teamOneActions = await this.redisClient.get(`${gameId}:${pointId}:one:actions`)
+        for (let i = 1; i <= Number(teamOneActions); i++) {
+            const exists = await actionExists(this.redisClient, pointId, i, 'one')
+            if (exists) {
+                throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
+            }
+        }
+
+        const teamTwoActions = await this.redisClient.get(`${gameId}:${pointId}:two:actions`)
+        for (let i = 1; i <= Number(teamTwoActions); i++) {
+            const exists = await actionExists(this.redisClient, pointId, i, 'one')
             if (exists) {
                 throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
             }
@@ -200,6 +209,7 @@ export default class PointServices {
             throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
+        // return point if team already marked as finished
         if ((!point.teamOneActive && team === TeamNumber.ONE) || (!point.teamTwoActive && team === TeamNumber.TWO)) {
             return point
         }
@@ -217,16 +227,33 @@ export default class PointServices {
             return point
         }
 
+        // TODO: rework this
         let teamOneScore = false
         const actions: IAction[] = []
-        // move redis actions to mongo
-        const totalActions = await this.redisClient.get(`${gameId}:${pointId}:actions`)
-        for (let i = 1; i <= Number(totalActions); i++) {
-            const exists = await actionExists(this.redisClient, pointId, i)
+        // move teams' redis actions to mongo
+        const teamOneActions = await this.redisClient.get(`${gameId}:${pointId}:one:actions`)
+        for (let i = 1; i <= Number(teamOneActions); i++) {
+            const exists = await actionExists(this.redisClient, pointId, i, 'one')
             if (!exists) {
                 continue
             }
-            const action = await getRedisAction(this.redisClient, pointId, i)
+            const action = await getRedisAction(this.redisClient, pointId, i, 'one')
+            if (action.actionType === ActionType.TEAM_ONE_SCORE) {
+                point.scoringTeam = game.teamOne
+                teamOneScore = true
+            } else if (action.actionType === ActionType.TEAM_TWO_SCORE) {
+                point.scoringTeam = game.teamTwo
+            }
+            actions.push(action)
+        }
+
+        const teamTwoActions = await this.redisClient.get(`${gameId}:${pointId}:two:actions`)
+        for (let i = 1; i <= Number(teamTwoActions); i++) {
+            const exists = await actionExists(this.redisClient, pointId, i, 'two')
+            if (!exists) {
+                continue
+            }
+            const action = await getRedisAction(this.redisClient, pointId, i, 'two')
             if (action.actionType === ActionType.TEAM_ONE_SCORE) {
                 point.scoringTeam = game.teamOne
                 teamOneScore = true
@@ -256,19 +283,21 @@ export default class PointServices {
 
         if (team === TeamNumber.ONE) {
             point.teamOneActive = false
+            // delete actions from redis
+            for (let i = 1; i <= Number(teamOneActions); i++) {
+                await deleteRedisAction(this.redisClient, pointId, i, 'one')
+            }
         } else if (team === TeamNumber.TWO) {
             point.teamTwoActive = false
+            for (let i = 1; i <= Number(teamTwoActions); i++) {
+                await deleteRedisAction(this.redisClient, pointId, i, 'two')
+            }
         }
 
         // update point and game once
         await point.save()
         await game.save()
-
-        // delete actions from redis
-        for (let i = 1; i <= Number(totalActions); i++) {
-            await deleteRedisAction(this.redisClient, pointId, i)
-        }
-        await this.redisClient.del(`${gameId}:${pointId}:actions`)
+        await this.redisClient.del(`${gameId}:${pointId}:${team}:actions`)
 
         return point
     }
@@ -306,16 +335,26 @@ export default class PointServices {
         }
 
         // cannot delete point if any actions exist in redis
-        const totalActions = await this.redisClient.get(`${gameId}:${pointId}:actions`)
-        for (let i = 1; i <= Number(totalActions); i++) {
-            const exists = await actionExists(this.redisClient, pointId, i)
+        const teamOneActions = await this.redisClient.get(`${gameId}:${pointId}:one:actions`)
+        for (let i = 1; i <= Number(teamOneActions); i++) {
+            const exists = await actionExists(this.redisClient, pointId, i, 'one')
+            if (exists) {
+                throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
+            }
+        }
+
+        // cannot delete point if any actions exist in redis
+        const teamTwoActions = await this.redisClient.get(`${gameId}:${pointId}:two:actions`)
+        for (let i = 1; i <= Number(teamTwoActions); i++) {
+            const exists = await actionExists(this.redisClient, pointId, i, 'two')
             if (exists) {
                 throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
             }
         }
 
         // delete actions count and point
-        await this.redisClient.del(`${gameId}:${pointId}:actions`)
+        await this.redisClient.del(`${gameId}:${pointId}:one:actions`)
+        await this.redisClient.del(`${gameId}:${pointId}:two:actions`)
         game.points = game.points.filter((id) => !id.equals(point._id))
         await game.save()
         await point.delete()

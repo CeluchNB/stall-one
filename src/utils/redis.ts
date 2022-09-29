@@ -1,7 +1,7 @@
 import IAction, { RedisClientType, ActionType, Comment } from '../types/action'
 import { getActionBaseKey, parseRedisUser } from './utils'
 import { Types } from 'mongoose'
-import { Player, Team } from '../types/ultmt'
+import { Player, Team, TeamNumberString } from '../types/ultmt'
 import { createClient } from 'redis'
 
 const client = createClient({ url: process.env.REDIS_URL })
@@ -12,10 +12,15 @@ export const getClient = async () => {
     return client
 }
 
-export const saveRedisAction = async (redisClient: RedisClientType, data: IAction, pointId: string) => {
+export const saveRedisAction = async (
+    redisClient: RedisClientType,
+    data: IAction,
+    pointId: string,
+    teamNumber: TeamNumberString,
+) => {
     const { actionNumber: number, team, playerOne, playerTwo, displayMessage, tags, actionType } = data
     const { _id, place, name, teamname, seasonStart, seasonEnd } = team
-    const baseKey = getActionBaseKey(pointId, number)
+    const baseKey = getActionBaseKey(pointId, number, teamNumber)
 
     await redisClient.hSet(`${baseKey}:team`, 'name', name)
     if (_id) {
@@ -65,8 +70,9 @@ export const getRedisAction = async (
     redisClient: RedisClientType,
     pointId: string,
     number: number,
+    teamNumber: TeamNumberString,
 ): Promise<IAction> => {
-    const baseKey = getActionBaseKey(pointId, number)
+    const baseKey = getActionBaseKey(pointId, number, teamNumber)
     const teamId = await redisClient.hGet(`${baseKey}:team`, 'id')
     const teamPlace = await redisClient.hGet(`${baseKey}:team`, 'place')
     const teamName = (await redisClient.hGet(`${baseKey}:team`, 'name')) as string
@@ -128,8 +134,13 @@ export const getRedisAction = async (
     return action
 }
 
-export const deleteRedisAction = async (redisClient: RedisClientType, pointId: string, number: number) => {
-    const baseKey = getActionBaseKey(pointId, number)
+export const deleteRedisAction = async (
+    redisClient: RedisClientType,
+    pointId: string,
+    number: number,
+    teamNumber: TeamNumberString,
+) => {
+    const baseKey = getActionBaseKey(pointId, number, teamNumber)
     await redisClient.del(`${baseKey}:team`)
     await redisClient.del(`${baseKey}:type`)
     await redisClient.del(`${baseKey}:display`)
@@ -144,8 +155,9 @@ export const saveRedisComment = async (
     pointId: string,
     actionNumber: number,
     data: Comment,
+    teamNumber: TeamNumberString,
 ) => {
-    const baseKey = getActionBaseKey(pointId, actionNumber)
+    const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
     const totalComments = await redisClient.incr(`${baseKey}:comments`)
     await redisClient.set(`${baseKey}:comments:${totalComments}:text`, data.comment)
     if (data.user._id) {
@@ -163,8 +175,9 @@ export const getRedisComment = async (
     pointId: string,
     actionNumber: number,
     commentNumber: number,
+    teamNumber: TeamNumberString,
 ): Promise<Comment | undefined> => {
-    const baseKey = getActionBaseKey(pointId, actionNumber)
+    const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
     const comment = await redisClient.get(`${baseKey}:comments:${commentNumber}:text`)
     const userData = await redisClient.hGetAll(`${baseKey}:comments:${commentNumber}:user`)
     const user = parseRedisUser(userData)
@@ -180,8 +193,9 @@ export const deleteRedisComment = async (
     pointId: string,
     actionNumber: number,
     commentNumber: number,
+    teamNumber: TeamNumberString,
 ) => {
-    const baseKey = getActionBaseKey(pointId, actionNumber)
+    const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
     await redisClient.del(`${baseKey}:comments:${commentNumber}:text`)
     await redisClient.del(`${baseKey}:comments:${commentNumber}:user`)
 }
@@ -190,8 +204,9 @@ export const actionExists = async (
     redisClient: RedisClientType,
     pointId: string,
     actionNumber: number,
+    teamNumber: TeamNumberString,
 ): Promise<boolean> => {
-    const baseKey = getActionBaseKey(pointId, actionNumber)
+    const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
     const type = await redisClient.get(`${baseKey}:type`)
     return !!type
 }

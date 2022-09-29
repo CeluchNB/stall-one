@@ -28,7 +28,7 @@ describe('test get my team number', () => {
 
 describe('test get action base key', () => {
     it('gets correct base key', () => {
-        expect(getActionBaseKey('1234', 5)).toBe('1234:5')
+        expect(getActionBaseKey('1234', 5, 'one')).toBe('1234:5:one')
     })
 })
 

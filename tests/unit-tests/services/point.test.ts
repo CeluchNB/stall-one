@@ -53,8 +53,10 @@ describe('test create point', () => {
         expect(gameRecord?.points.length).toBe(1)
         expect(gameRecord?.points[0].toString()).toBe(point._id.toString())
 
-        const actionsValue = await client.get(`${game._id.toString()}:${point._id.toString()}:actions`)
-        expect(actionsValue).toBe('0')
+        const oneActionsValue = await client.get(`${game._id.toString()}:${point._id.toString()}:one:actions`)
+        expect(oneActionsValue).toBe('0')
+        const twoActionsValue = await client.get(`${game._id.toString()}:${point._id.toString()}:two:actions`)
+        expect(twoActionsValue).toBe('0')
     })
 
     it('with valid first point data and team two', async () => {
@@ -77,8 +79,10 @@ describe('test create point', () => {
         const gameRecord = await Game.findById(game._id)
         expect(gameRecord?.points.length).toBe(1)
         expect(gameRecord?.points[0].toString()).toBe(point._id.toString())
-        const actionsValue = await client.get(`${game._id.toString()}:${point._id.toString()}:actions`)
-        expect(actionsValue).toBe('0')
+        const oneActionsValue = await client.get(`${game._id.toString()}:${point._id.toString()}:one:actions`)
+        expect(oneActionsValue).toBe('0')
+        const twoActionsValue = await client.get(`${game._id.toString()}:${point._id.toString()}:two:actions`)
+        expect(twoActionsValue).toBe('0')
     })
 
     it('with valid first point data and previous creation', async () => {
@@ -316,8 +320,8 @@ describe('test switch pulling team', () => {
         game.points.push(point._id)
         await game.save()
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
-        await client.set(`${getActionBaseKey(point._id.toString(), 3)}:type`, 'Score')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 5)
+        await client.set(`${getActionBaseKey(point._id.toString(), 3, 'one')}:type`, 'Score')
         await expect(
             services.setPullingTeam(game._id.toString(), point._id.toString(), TeamNumber.TWO),
         ).rejects.toThrowError(new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400))
@@ -482,7 +486,7 @@ describe('test finish point', () => {
         game.points.push(point._id)
         await game.save()
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 2)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.ONE)
         expect(result.teamOneActive).toBe(false)
         expect(result.teamTwoActive).toBe(true)
@@ -497,7 +501,7 @@ describe('test finish point', () => {
         game.points.push(point._id)
         await game.save()
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 2)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.TWO)
         expect(result.teamOneActive).toBe(true)
         expect(result.teamTwoActive).toBe(false)
@@ -556,9 +560,9 @@ describe('test finish point', () => {
             tags: ['Break'],
         }
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 2)
-        await saveRedisAction(client, action1, point._id.toString())
-        await saveRedisAction(client, action2, point._id.toString())
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
+        await saveRedisAction(client, action1, point._id.toString(), 'one')
+        await saveRedisAction(client, action2, point._id.toString(), 'one')
 
         // check point actions and score update
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.ONE)
@@ -621,9 +625,9 @@ describe('test finish point', () => {
             tags: ['Break'],
         }
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 2)
-        await saveRedisAction(client, action1, point._id.toString())
-        await saveRedisAction(client, action2, point._id.toString())
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
+        await saveRedisAction(client, action1, point._id.toString(), 'one')
+        await saveRedisAction(client, action2, point._id.toString(), 'one')
 
         // check point actions and score update
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.TWO)
@@ -651,7 +655,8 @@ describe('test finish point', () => {
 
         // check redis action deletion
         const keys = await client.keys('*')
-        expect(keys.length).toBe(0)
+        expect(keys.length).toBe(1)
+        expect(keys[0]).toBe(`${game._id.toString()}:${point._id.toString()}:two:actions`)
     })
 
     it('with team one already finished', async () => {
@@ -705,9 +710,9 @@ describe('test finish point', () => {
             tags: ['Break'],
         }
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 2)
-        await saveRedisAction(client, action1, point._id.toString())
-        await saveRedisAction(client, action2, point._id.toString())
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
+        await saveRedisAction(client, action1, point._id.toString(), 'one')
+        await saveRedisAction(client, action2, point._id.toString(), 'one')
 
         // check point actions and score update
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.ONE)
@@ -778,9 +783,9 @@ describe('test finish point', () => {
             tags: ['Break'],
         }
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 2)
-        await saveRedisAction(client, action1, point._id.toString())
-        await saveRedisAction(client, action2, point._id.toString())
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
+        await saveRedisAction(client, action1, point._id.toString(), 'one')
+        await saveRedisAction(client, action2, point._id.toString(), 'one')
 
         // check point actions and score update
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.TWO)
@@ -871,9 +876,9 @@ describe('test finish point', () => {
             tags: ['Break'],
         }
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 3)
-        await saveRedisAction(client, action1, point._id.toString())
-        await saveRedisAction(client, action2, point._id.toString())
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 3)
+        await saveRedisAction(client, action1, point._id.toString(), 'one')
+        await saveRedisAction(client, action2, point._id.toString(), 'one')
 
         await expect(
             services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.ONE),
@@ -886,7 +891,7 @@ describe('test finish point', () => {
         game.points.push(point._id)
         await game.save()
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 2)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
         await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.ONE)
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.ONE)
         expect(result.actions.length).toBe(0)
@@ -905,7 +910,7 @@ describe('test finish point', () => {
         game.points.push(point._id)
         await game.save()
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 2)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
         await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.TWO)
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.TWO)
         expect(result.actions.length).toBe(0)
@@ -926,7 +931,7 @@ describe('test delete point', () => {
         game.points.push(point._id)
         await game.save()
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 5)
         await services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE)
 
         const pointRecord = await Point.findOne({})
@@ -934,8 +939,10 @@ describe('test delete point', () => {
         const gameRecord = await Game.findOne({})
         expect(gameRecord?.points.length).toBe(0)
 
-        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:actions`)
-        expect(totalActions).toBeNull()
+        const oneTotalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:one:actions`)
+        expect(oneTotalActions).toBeNull()
+        const twoTotalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:two:actions`)
+        expect(twoTotalActions).toBeNull()
     })
 
     it('with unfound redis total actions', async () => {
@@ -951,7 +958,7 @@ describe('test delete point', () => {
         const gameRecord = await Game.findOne({})
         expect(gameRecord?.points.length).toBe(0)
 
-        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:actions`)
+        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:one:actions`)
         expect(totalActions).toBeNull()
     })
 
@@ -1028,8 +1035,8 @@ describe('test delete point', () => {
         game.points.push(point._id)
         await game.save()
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
-        await client.set(`${getActionBaseKey(point._id.toString(), 3)}:type`, 'Score')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 5)
+        await client.set(`${getActionBaseKey(point._id.toString(), 3, 'one')}:type`, 'Score')
         await expect(
             services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE),
         ).rejects.toThrowError(new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400))

@@ -57,9 +57,9 @@ describe('test save redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        await saveRedisAction(client, actionData, pointId)
+        await saveRedisAction(client, actionData, pointId, 'one')
 
-        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber, 'one')
         const totalKeys = await client.keys('*')
         expect(totalKeys.length).toBe(6)
 
@@ -114,9 +114,9 @@ describe('test save redis action', () => {
             tags: ['veteran call'],
         }
 
-        await saveRedisAction(client, actionData, pointId)
+        await saveRedisAction(client, actionData, pointId, 'one')
 
-        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber, 'one')
         const totalKeys = await client.keys('*')
         expect(totalKeys.length).toBe(4)
 
@@ -167,9 +167,9 @@ describe('test save redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        await saveRedisAction(client, actionData, pointId)
+        await saveRedisAction(client, actionData, pointId, 'one')
 
-        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber, 'one')
         const totalKeys = await client.keys('*')
         expect(totalKeys.length).toBe(6)
 
@@ -238,7 +238,7 @@ describe('test get redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber, 'one')
         await client.hSet(`${baseKey}:team`, 'name', actionData.team.name)
         await client.hSet(`${baseKey}:team`, 'id', actionData.team._id!.toString())
         await client.hSet(`${baseKey}:team`, 'place', actionData.team.place!)
@@ -265,7 +265,7 @@ describe('test get redis action', () => {
         await client.hSet(`${baseKey}:comments:1:user`, 'lastName', actionData.playerOne!.lastName)
         await client.hSet(`${baseKey}:comments:1:user`, 'username', actionData.playerOne!.username!)
 
-        const action = await getRedisAction(client, pointId, actionData.actionNumber)
+        const action = await getRedisAction(client, pointId, actionData.actionNumber, 'one')
         expect(action._id).toBeUndefined()
         expect(action.actionType).toBe(actionData.actionType)
         expect(action.actionNumber).toBe(actionData.actionNumber)
@@ -317,7 +317,7 @@ describe('test get redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber, 'one')
         await client.hSet(`${baseKey}:team`, 'name', actionData.team.name)
         await client.hSet(`${baseKey}:team`, 'id', actionData.team._id!.toString())
         await client.hSet(`${baseKey}:team`, 'place', actionData.team.place!)
@@ -330,7 +330,7 @@ describe('test get redis action', () => {
             await client.rPush(`${baseKey}:tags`, tag)
         }
 
-        const action = await getRedisAction(client, pointId, actionData.actionNumber)
+        const action = await getRedisAction(client, pointId, actionData.actionNumber, 'one')
         expect(action._id).toBeUndefined()
         expect(action.actionType).toBe(actionData.actionType)
         expect(action.actionNumber).toBe(actionData.actionNumber)
@@ -370,7 +370,7 @@ describe('test get redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber, 'one')
         await client.hSet(`${baseKey}:team`, 'name', actionData.team.name)
         await client.set(`${baseKey}:type`, actionData.actionType)
         await client.set(`${baseKey}:display`, actionData.displayMessage)
@@ -382,7 +382,7 @@ describe('test get redis action', () => {
             await client.rPush(`${baseKey}:tags`, tag)
         }
 
-        const action = await getRedisAction(client, pointId, actionData.actionNumber)
+        const action = await getRedisAction(client, pointId, actionData.actionNumber, 'one')
         expect(action._id).toBeUndefined()
         expect(action.actionType).toBe(actionData.actionType)
         expect(action.actionNumber).toBe(actionData.actionNumber)
@@ -439,7 +439,7 @@ describe('test delete redis action', () => {
             tags: ['good', 'huck'],
         }
 
-        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber, 'one')
         await client.hSet(`${baseKey}:team`, 'name', actionData.team.name)
         await client.hSet(`${baseKey}:team`, 'id', actionData.team._id!.toString())
         await client.hSet(`${baseKey}:team`, 'place', actionData.team.place!)
@@ -460,7 +460,7 @@ describe('test delete redis action', () => {
             await client.rPush(`${baseKey}:tags`, tag)
         }
 
-        await deleteRedisAction(client, pointId, actionData.actionNumber)
+        await deleteRedisAction(client, pointId, actionData.actionNumber, 'one')
         const team = await client.hGetAll(`${baseKey}:team`)
         const type = await client.get(`${baseKey}:type`)
         const display = await client.get(`${baseKey}:display`)
@@ -502,9 +502,9 @@ describe('test delete redis action', () => {
             comments: [],
             tags: ['good', 'huck'],
         }
-        await deleteRedisAction(client, pointId, actionData.actionNumber)
+        await deleteRedisAction(client, pointId, actionData.actionNumber, 'one')
 
-        const baseKey = getActionBaseKey(pointId, actionData.actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionData.actionNumber, 'one')
         const team = await client.hGetAll(`${baseKey}:team`)
         const type = await client.get(`${baseKey}:type`)
         const display = await client.get(`${baseKey}:display`)
@@ -524,8 +524,8 @@ describe('test save redis comment', () => {
             comment: 'That was a wild huck',
             user: { _id: new Types.ObjectId(), firstName: 'Noah', lastName: 'Celuch', username: 'noah' },
         }
-        await saveRedisComment(client, 'point1', 1, commentData)
-        const key = getActionBaseKey('point1', 1)
+        await saveRedisComment(client, 'point1', 1, commentData, 'one')
+        const key = getActionBaseKey('point1', 1, 'one')
 
         const totalComments = await client.get(`${key}:comments`)
         const comment = await client.get(`${key}:comments:1:text`)
@@ -543,8 +543,8 @@ describe('test save redis comment', () => {
             comment: 'That was a wild huck',
             user: { firstName: 'Noah', lastName: 'Celuch' },
         }
-        await saveRedisComment(client, 'point1', 1, commentData)
-        const key = getActionBaseKey('point1', 1)
+        await saveRedisComment(client, 'point1', 1, commentData, 'one')
+        const key = getActionBaseKey('point1', 1, 'one')
 
         const totalComments = await client.get(`${key}:comments`)
         const comment = await client.get(`${key}:comments:1:text`)
@@ -566,7 +566,7 @@ describe('test delete redis comment', () => {
         }
         const pointId = 'point1'
         const actionNumber = 1
-        const baseKey = getActionBaseKey(pointId, actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionNumber, 'one')
         const totalComments = await client.incr(`${baseKey}:comments`)
         await client.set(`${baseKey}:comments:${totalComments}:text`, data.comment)
         await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'id', data.user._id?.toString() || '')
@@ -574,7 +574,7 @@ describe('test delete redis comment', () => {
         await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', data.user.firstName)
         await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', data.user.lastName)
 
-        await deleteRedisComment(client, 'point1', 1, 1)
+        await deleteRedisComment(client, 'point1', 1, 1, 'one')
 
         const comment = await client.get(`${baseKey}:comments:${totalComments}:text`)
         const user = await client.hGetAll(`${baseKey}:comments:${totalComments}:user`)
@@ -587,9 +587,9 @@ describe('test delete redis comment', () => {
     it('with non-existing comment', async () => {
         const pointId = 'point1'
         const actionNumber = 1
-        const baseKey = getActionBaseKey(pointId, actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionNumber, 'one')
         const totalComments = 0
-        await deleteRedisComment(client, 'point1', 1, 1)
+        await deleteRedisComment(client, 'point1', 1, 1, 'one')
 
         const comment = await client.get(`${baseKey}:comments:${totalComments}:text`)
         const user = await client.hGetAll(`${baseKey}:comments:${totalComments}:user`)
@@ -606,7 +606,7 @@ describe('test get redis comment', () => {
         }
         const pointId = 'point1'
         const actionNumber = 1
-        const baseKey = getActionBaseKey(pointId, actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionNumber, 'one')
         const totalComments = await client.incr(`${baseKey}:comments`)
         await client.set(`${baseKey}:comments:${totalComments}:text`, data.comment)
         await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'id', data.user._id?.toString() || '')
@@ -614,7 +614,7 @@ describe('test get redis comment', () => {
         await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', data.user.firstName)
         await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', data.user.lastName)
 
-        const comment = await getRedisComment(client, 'point1', 1, 1)
+        const comment = await getRedisComment(client, 'point1', 1, 1, 'one')
         expect(comment?.comment).toBe(data.comment)
         expect(comment?.user).toMatchObject(data.user)
     })
@@ -626,14 +626,14 @@ describe('test get redis comment', () => {
         }
         const pointId = 'point1'
         const actionNumber = 1
-        const baseKey = getActionBaseKey(pointId, actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionNumber, 'one')
         const totalComments = await client.incr(`${baseKey}:comments`)
         await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'id', data.user._id?.toString() || '')
         await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'username', data.user.username || '')
         await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', data.user.firstName)
         await client.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', data.user.lastName)
 
-        const comment = await getRedisComment(client, 'point1', 1, 1)
+        const comment = await getRedisComment(client, 'point1', 1, 1, 'one')
         expect(comment).toBeUndefined()
     })
 
@@ -644,25 +644,25 @@ describe('test get redis comment', () => {
         }
         const pointId = 'point1'
         const actionNumber = 1
-        const baseKey = getActionBaseKey(pointId, actionNumber)
+        const baseKey = getActionBaseKey(pointId, actionNumber, 'one')
         const totalComments = await client.incr(`${baseKey}:comments`)
         await client.set(`${baseKey}:comments:${totalComments}:text`, data.comment)
 
-        const comment = await getRedisComment(client, 'point1', 1, 1)
+        const comment = await getRedisComment(client, 'point1', 1, 1, 'one')
         expect(comment).toBeUndefined()
     })
 })
 
 describe('test action exists', () => {
     it('with existing action', async () => {
-        const key = getActionBaseKey('point1', 2)
+        const key = getActionBaseKey('point1', 2, 'one')
         await client.set(`${key}:type`, 'SCORE')
-        const exists = await actionExists(client, 'point1', 2)
+        const exists = await actionExists(client, 'point1', 2, 'one')
         expect(exists).toBe(true)
     })
 
     it('with non-existing action', async () => {
-        const exists = await actionExists(client, 'point1', 2)
+        const exists = await actionExists(client, 'point1', 2, 'one')
         expect(exists).toBe(false)
     })
 })
