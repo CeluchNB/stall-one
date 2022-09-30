@@ -155,6 +155,31 @@ describe('test create a live action', () => {
         expect(updatedPoint?.teamOnePlayers.length).toBe(1)
         expect(updatedPoint?.teamOnePlayers[0].username).toBe(subtituteAction.playerTwo?.username)
     })
+
+    it('with undefined point error', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            actionType: ActionType.CATCH,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        await expect(
+            services.createLiveAction(actionData, game._id.toString(), point._id.toString(), 'one'),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_POINT, 404))
+    })
 })
 
 describe('test get live action', () => {
@@ -221,6 +246,8 @@ describe('test undo action', () => {
         expect(oldType).toBeNull()
         const keys = await client.keys('*')
         expect(keys.length).toBe(1)
+        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:one:actions`)
+        expect(Number(totalActions)).toBe(0)
     })
 
     it('with many actions', async () => {
@@ -277,6 +304,8 @@ describe('test undo action', () => {
         const threeKey = getActionBaseKey(point._id.toString(), 3, 'two')
         const threeType = await client.get(`${threeKey}:type`)
         expect(threeType).toBe(ActionType.SUBSTITUTION)
+        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:two:actions`)
+        expect(Number(totalActions)).toBe(3)
     })
 
     it('with unfound game', async () => {
@@ -291,6 +320,8 @@ describe('test undo action', () => {
         await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 1)
         const action = await services.undoAction(game._id.toString(), point._id.toString(), 'two')
         expect(action).toBeUndefined()
+        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:one:actions`)
+        expect(Number(totalActions)).toBe(1)
     })
 })
 

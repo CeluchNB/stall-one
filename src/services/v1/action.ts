@@ -50,9 +50,16 @@ export default class ActionServices {
         pointId: string,
         team: TeamNumberString,
     ): Promise<RedisAction> => {
+        const totalActions = await this.redisClient.get(`${gameId}:${pointId}:${team}:actions`)
+        if (!totalActions) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
+        }
+
+        // ensure this is a valid action to submit
         const prevAction = await getLastRedisAction(this.redisClient, gameId, pointId, team)
         const isPulling = await isPullingTeam(this.redisClient, gameId, pointId, team)
         validateActionData(data, isPulling, prevAction)
+        // increment total actions and create new action
         const actionNumber = await this.redisClient.incr(`${gameId}:${pointId}:${team}:actions`)
         const actionData = parseActionData(data, actionNumber, team)
         await saveRedisAction(this.redisClient, actionData, pointId)
@@ -74,7 +81,8 @@ export default class ActionServices {
             throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
         }
 
-        if (Number(totalActions) > 0) {
+        const foundAction = await actionExists(this.redisClient, pointId, Number(totalActions), team)
+        if (foundAction) {
             const action = await getRedisAction(this.redisClient, pointId, Number(totalActions), team)
             await deleteRedisAction(this.redisClient, pointId, Number(totalActions), team)
             await this.redisClient.decr(`${gameId}:${pointId}:${team}:actions`)
