@@ -1,6 +1,6 @@
 import * as Constants from '../../utils/constants'
 import Action, { IActionModel } from '../../models/action'
-import IAction, { RedisClientType, ClientAction, ActionType, InputComment } from '../../types/action'
+import { RedisClientType, ClientAction, ActionType, InputComment, RedisAction } from '../../types/action'
 import {
     saveRedisAction,
     getRedisAction,
@@ -9,6 +9,8 @@ import {
     getRedisComment,
     deleteRedisComment,
     deleteRedisAction,
+    getLastRedisAction,
+    isPullingTeam,
 } from '../../utils/redis'
 import { handleSubstitute, parseActionData, validateActionData } from '../../utils/action'
 import Point, { IPointModel } from '../../models/point'
@@ -47,23 +49,25 @@ export default class ActionServices {
         gameId: string,
         pointId: string,
         team: TeamNumberString,
-    ): Promise<IAction> => {
-        validateActionData(data)
+    ): Promise<RedisAction> => {
+        const prevAction = await getLastRedisAction(this.redisClient, gameId, pointId, team)
+        const isPulling = await isPullingTeam(this.redisClient, gameId, pointId, team)
+        validateActionData(data, isPulling, prevAction)
         const actionNumber = await this.redisClient.incr(`${gameId}:${pointId}:${team}:actions`)
-        const actionData = parseActionData(data, actionNumber)
-        await saveRedisAction(this.redisClient, actionData, pointId, team)
-        await this.handleSideEffects(data, gameId, pointId)
+        const actionData = parseActionData(data, actionNumber, team)
+        await saveRedisAction(this.redisClient, actionData, pointId)
+        await this.handleSideEffects(data, gameId, pointId, team)
         // treat redis as source of truth always
         const action = await getRedisAction(this.redisClient, pointId, actionData.actionNumber, team)
 
         return action
     }
 
-    getLiveAction = async (pointId: string, actionNumber: number, team: TeamNumberString): Promise<IAction> => {
+    getLiveAction = async (pointId: string, actionNumber: number, team: TeamNumberString): Promise<RedisAction> => {
         return await getRedisAction(this.redisClient, pointId, actionNumber, team)
     }
 
-    undoAction = async (gameId: string, pointId: string, team: TeamNumberString): Promise<IAction | undefined> => {
+    undoAction = async (gameId: string, pointId: string, team: TeamNumberString): Promise<RedisAction | undefined> => {
         const totalActions = await this.redisClient.get(`${gameId}:${pointId}:${team}:actions`)
         const game = await this.gameModel.findById(gameId)
         if (!game) {
@@ -84,7 +88,7 @@ export default class ActionServices {
         actionNumber: number,
         data: InputComment,
         team: TeamNumberString,
-    ): Promise<IAction> => {
+    ): Promise<RedisAction> => {
         const { jwt, comment } = data
         const response = await axios.get(`${this.ultmtUrl}/api/v1/user/me`, {
             headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${jwt}` },
@@ -113,7 +117,7 @@ export default class ActionServices {
         commentNumber: number,
         jwt: string,
         team: TeamNumberString,
-    ): Promise<IAction> => {
+    ): Promise<RedisAction> => {
         const response = await axios.get(`${this.ultmtUrl}/api/v1/user/me`, {
             headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${jwt}` },
         })
@@ -130,9 +134,9 @@ export default class ActionServices {
         return await getRedisAction(this.redisClient, pointId, actionNumber, team)
     }
 
-    private handleSideEffects = async (data: ClientAction, gameId: string, pointId: string) => {
+    private handleSideEffects = async (data: ClientAction, gameId: string, pointId: string, team: TeamNumberString) => {
         if (data.actionType === ActionType.SUBSTITUTION) {
-            await handleSubstitute(data, gameId, pointId, this.pointModel, this.gameModel)
+            await handleSubstitute(data, gameId, pointId, team, this.pointModel, this.gameModel)
         }
     }
 }

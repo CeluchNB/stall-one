@@ -4,7 +4,6 @@ import IAction, { ActionType } from '../types/action'
 const schema = new Schema<IAction>({
     actionNumber: { type: Number, required: true },
     actionType: { type: String, enum: Object.values(ActionType) },
-    displayMessage: String,
     comments: [
         {
             user: {

@@ -14,7 +14,7 @@ import {
 import Point from '../../../src/models/point'
 import { Types } from 'mongoose'
 import { Player } from '../../../src/types/ultmt'
-import IAction, { ActionType } from '../../../src/types/action'
+import { ActionType, RedisAction } from '../../../src/types/action'
 import { saveRedisAction } from '../../../src/utils/redis'
 
 beforeAll(async () => {
@@ -302,11 +302,10 @@ describe('test /PUT finish point', () => {
         await game.save()
         await point.save()
 
-        const action1: IAction = {
+        const action1: RedisAction = {
             actionNumber: 1,
             actionType: ActionType.CATCH,
-            team: game.teamOne,
-            displayMessage: 'Throw from Noah to Connor',
+            teamNumber: 'one',
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -323,11 +322,10 @@ describe('test /PUT finish point', () => {
             tags: ['Huck'],
         }
 
-        const action2: IAction = {
+        const action2: RedisAction = {
             actionNumber: 2,
             actionType: ActionType.TEAM_ONE_SCORE,
-            team: game.teamOne,
-            displayMessage: 'Score from Noah to Connor',
+            teamNumber: 'one',
             playerTwo: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -344,7 +342,7 @@ describe('test /PUT finish point', () => {
             tags: ['Break'],
         }
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 2)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
         await saveRedisAction(client, action1, point._id.toString())
         await saveRedisAction(client, action2, point._id.toString())
 
@@ -411,7 +409,7 @@ describe('test /DELETE point', () => {
         game.points.push(point._id)
         await game.save()
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 5)
 
         await request(app)
             .delete(`/api/v1/point/${point._id.toString()}`)
@@ -424,7 +422,7 @@ describe('test /DELETE point', () => {
         const gameRecord = await Game.findOne({})
         expect(gameRecord?.points.length).toBe(0)
 
-        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:actions`)
+        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:one:actions`)
         expect(totalActions).toBeNull()
     })
 

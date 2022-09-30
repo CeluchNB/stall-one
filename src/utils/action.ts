@@ -1,6 +1,6 @@
 import * as Constants from './constants'
-import IAction, { ClientAction, ActionType, VALID_ACTIONS } from '../types/action'
-import { Player } from '../types/ultmt'
+import { ClientAction, ActionType, VALID_ACTIONS, RedisAction } from '../types/action'
+import { Player, TeamNumberString } from '../types/ultmt'
 import { ApiError } from '../types/errors'
 import { IPointModel } from '../models/point'
 import { IGameModel } from '../models/game'
@@ -51,11 +51,16 @@ export const validateActionData = (
 
     return true
 }
-export const parseActionData = (data: ClientAction, actionNumber: number): IAction => {
+
+export const parseActionData = (
+    data: ClientAction,
+    actionNumber: number,
+    teamNumber: TeamNumberString,
+): RedisAction => {
     return {
         ...data,
         actionNumber,
-        displayMessage: getDisplayMessage(data.actionType, data.playerOne, data.playerTwo),
+        teamNumber,
         comments: [],
     }
 }
@@ -75,6 +80,7 @@ export const handleSubstitute = async (
     data: ClientAction,
     gameId: string,
     pointId: string,
+    team: TeamNumberString,
     pointModel: IPointModel,
     gameModel: IGameModel,
 ) => {
@@ -86,7 +92,7 @@ export const handleSubstitute = async (
     if (!game) {
         throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
     }
-    if (data.team._id?.toString() === game.teamOne._id?.toString()) {
+    if (team === 'one') {
         point.teamOnePlayers.push(data.playerTwo as Player)
     } else {
         point.teamTwoPlayers.push(data.playerTwo as Player)

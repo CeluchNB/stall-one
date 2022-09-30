@@ -40,14 +40,6 @@ describe('test client action error case', () => {
     it('should throw error with bad jwt', (done) => {
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -68,14 +60,6 @@ describe('test server action', () => {
     it('with valid data', (done) => {
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -90,7 +74,7 @@ describe('test server action', () => {
                 {
                     ...actionData,
                     actionNumber: 1,
-                    displayMessage: 'Pull',
+                    teamNumber: 'one',
                     comments: [],
                 },
                 pointId,
@@ -101,21 +85,14 @@ describe('test server action', () => {
                 expect(action.tags[0]).toBe(actionData.tags[0])
                 done()
             })
-            clientSocket.emit('action:server', JSON.stringify({ pointId, actionNumber: 1 }))
+            clientSocket.emit('action:server', JSON.stringify({ pointId, actionNumber: 1, teamNumber: 'one' }))
         })
     })
 
     it('with invalid data', (done) => {
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
+
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -130,7 +107,7 @@ describe('test server action', () => {
                 {
                     ...actionData,
                     actionNumber: 1,
-                    displayMessage: 'Pull',
+                    teamNumber: 'one',
                     comments: [],
                 },
                 pointId,
@@ -144,20 +121,12 @@ describe('test server action', () => {
         })
     })
 
-    it('with invalid data', (done) => {
+    it('with service error', (done) => {
         jest.spyOn(RedisUtils, 'getRedisAction').mockImplementationOnce(() => {
             throw 7
         })
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -172,7 +141,7 @@ describe('test server action', () => {
                 {
                     ...actionData,
                     actionNumber: 1,
-                    displayMessage: 'Pull',
+                    teamNumber: 'one',
                     comments: [],
                 },
                 pointId,
@@ -182,7 +151,7 @@ describe('test server action', () => {
                 expect(error.message).toBe(Constants.GENERIC_ERROR)
                 done()
             })
-            clientSocket.emit('action:server', JSON.stringify({ pointId, actionNumber: 1 }))
+            clientSocket.emit('action:server', JSON.stringify({ pointId, actionNumber: 1, teamNumber: 'one' }))
         })
     })
 })
@@ -209,14 +178,6 @@ describe('test action comment', () => {
         })
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -231,7 +192,7 @@ describe('test action comment', () => {
                 {
                     ...actionData,
                     actionNumber: 1,
-                    displayMessage: 'Pull',
+                    teamNumber: 'one',
                     comments: [],
                 },
                 pointId,
@@ -247,6 +208,7 @@ describe('test action comment', () => {
                 JSON.stringify({
                     pointId: pointId,
                     actionNumber: 1,
+                    teamNumber: 'one',
                     jwt: 'test.jwt.1234',
                     comment: 'That was a nice huck',
                 }),
@@ -257,14 +219,6 @@ describe('test action comment', () => {
     it('with missing data', (done) => {
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -279,7 +233,7 @@ describe('test action comment', () => {
                 {
                     ...actionData,
                     actionNumber: 1,
-                    displayMessage: 'Pull',
+                    teamNumber: 'one',
                     comments: [],
                 },
                 pointId,
@@ -306,14 +260,6 @@ describe('test action comment', () => {
         })
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -328,7 +274,7 @@ describe('test action comment', () => {
                 {
                     ...actionData,
                     actionNumber: 1,
-                    displayMessage: 'Pull',
+                    teamNumber: 'one',
                     comments: [],
                 },
                 pointId,
@@ -343,6 +289,7 @@ describe('test action comment', () => {
                 JSON.stringify({
                     pointId,
                     actionNumber: 1,
+                    teamNumber: 'one',
                     jwt: 'test.jwt.1234',
                     comment: 'Profane shit comment',
                 }),
@@ -372,14 +319,6 @@ describe('test delete live action', () => {
         })
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -394,22 +333,28 @@ describe('test delete live action', () => {
                 {
                     ...actionData,
                     actionNumber: 1,
-                    displayMessage: 'Pull',
+                    teamNumber: 'one',
                     comments: [],
                 },
                 pointId,
             ),
         )
             .then(() => {
-                return RedisUtils.saveRedisComment(client, pointId, 1, {
-                    comment: 'Good huck',
-                    user: {
-                        _id: userData._id,
-                        firstName: userData.firstName,
-                        lastName: userData.lastName,
-                        username: userData.username,
+                return RedisUtils.saveRedisComment(
+                    client,
+                    pointId,
+                    1,
+                    {
+                        comment: 'Good huck',
+                        user: {
+                            _id: userData._id,
+                            firstName: userData.firstName,
+                            lastName: userData.lastName,
+                            username: userData.username,
+                        },
                     },
-                })
+                    'one',
+                )
             })
             .then(() => {
                 clientSocket.on('action:client', (action) => {
@@ -423,6 +368,7 @@ describe('test delete live action', () => {
                         pointId,
                         actionNumber: 1,
                         commentNumber: 1,
+                        teamNumber: 'one',
                         jwt: 'test.jwt.1234',
                     }),
                 )
@@ -435,14 +381,6 @@ describe('test delete live action', () => {
         })
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -457,22 +395,28 @@ describe('test delete live action', () => {
                 {
                     ...actionData,
                     actionNumber: 1,
-                    displayMessage: 'Pull',
+                    teamNumber: 'one',
                     comments: [],
                 },
                 pointId,
             ),
         )
             .then(() => {
-                return RedisUtils.saveRedisComment(client, pointId, 1, {
-                    comment: 'Good huck',
-                    user: {
-                        _id: new Types.ObjectId(),
-                        firstName: 'Test First',
-                        lastName: 'Test Last',
-                        username: 'testuser',
+                return RedisUtils.saveRedisComment(
+                    client,
+                    pointId,
+                    1,
+                    {
+                        comment: 'Good huck',
+                        user: {
+                            _id: new Types.ObjectId(),
+                            firstName: 'Test First',
+                            lastName: 'Test Last',
+                            username: 'testuser',
+                        },
                     },
-                })
+                    'one',
+                )
             })
             .then(() => {
                 clientSocket.on('action:error', (error) => {
@@ -485,6 +429,7 @@ describe('test delete live action', () => {
                         pointId,
                         actionNumber: 1,
                         commentNumber: 1,
+                        teamNumber: 'one',
                         jwt: 'test.jwt.1234',
                     }),
                 )
@@ -494,14 +439,6 @@ describe('test delete live action', () => {
     it('with missing data', (done) => {
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -516,22 +453,28 @@ describe('test delete live action', () => {
                 {
                     ...actionData,
                     actionNumber: 1,
-                    displayMessage: 'Pull',
+                    teamNumber: 'one',
                     comments: [],
                 },
                 pointId,
             ),
         )
             .then(() => {
-                return RedisUtils.saveRedisComment(client, pointId, 1, {
-                    comment: 'Good huck',
-                    user: {
-                        _id: new Types.ObjectId(),
-                        firstName: 'Test First',
-                        lastName: 'Test Last',
-                        username: 'testuser',
+                return RedisUtils.saveRedisComment(
+                    client,
+                    pointId,
+                    1,
+                    {
+                        comment: 'Good huck',
+                        user: {
+                            _id: new Types.ObjectId(),
+                            firstName: 'Test First',
+                            lastName: 'Test Last',
+                            username: 'testuser',
+                        },
                     },
-                })
+                    'one',
+                )
             })
             .then(() => {
                 clientSocket.on('action:error', (error) => {

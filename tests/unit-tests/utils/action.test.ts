@@ -61,17 +61,16 @@ describe('test parse action data', () => {
         const action = parseActionData(
             {
                 actionType: ActionType.PULL,
-                team: {
-                    name: 'test name',
-                },
                 tags: ['good'],
             },
             2,
+            'one',
         )
         expect(action.tags[0]).toBe('good')
         expect(action.actionType).toBe(ActionType.PULL)
         expect(action.comments.length).toBe(0)
         expect(action.actionNumber).toBe(2)
+        expect(action.teamNumber).toBe('one')
     })
 })
 
@@ -83,9 +82,6 @@ const action: ClientAction = {
     playerTwo: {
         firstName: 'First 2',
         lastName: 'Last 2',
-    },
-    team: {
-        name: 'Team 1',
     },
     actionType: ActionType.PULL,
     tags: [],
@@ -99,9 +95,6 @@ const prevAction: ClientAction = {
     playerTwo: {
         firstName: 'First 2',
         lastName: 'Last 2',
-    },
-    team: {
-        name: 'Team 1',
     },
     actionType: ActionType.CATCH,
     tags: [],
@@ -230,7 +223,6 @@ describe('test handle substitute', () => {
 
         const actionData: ClientAction = {
             actionType: ActionType.SUBSTITUTION,
-            team: createPointData.pullingTeam,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -245,7 +237,7 @@ describe('test handle substitute', () => {
             },
             tags: ['good'],
         }
-        await handleSubstitute(actionData, game._id.toString(), point._id.toString(), Point, Game)
+        await handleSubstitute(actionData, game._id.toString(), point._id.toString(), 'one', Point, Game)
 
         const updatedPoint = await Point.findById(point._id)
         expect(updatedPoint?.teamOnePlayers.length).toBe(1)
@@ -261,7 +253,6 @@ describe('test handle substitute', () => {
 
         const actionData: ClientAction = {
             actionType: ActionType.SUBSTITUTION,
-            team: createPointData.receivingTeam,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -276,7 +267,7 @@ describe('test handle substitute', () => {
             },
             tags: ['good'],
         }
-        await handleSubstitute(actionData, game._id.toString(), point._id.toString(), Point, Game)
+        await handleSubstitute(actionData, game._id.toString(), point._id.toString(), 'two', Point, Game)
 
         const updatedPoint = await Point.findById(point._id)
         expect(updatedPoint?.teamTwoPlayers.length).toBe(1)
@@ -291,7 +282,6 @@ describe('test handle substitute', () => {
         await game.save()
         const actionData: ClientAction = {
             actionType: ActionType.SUBSTITUTION,
-            team: createPointData.receivingTeam,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -307,7 +297,7 @@ describe('test handle substitute', () => {
             tags: ['good'],
         }
         await expect(
-            handleSubstitute(actionData, game._id.toString(), new Types.ObjectId().toString(), Point, Game),
+            handleSubstitute(actionData, game._id.toString(), new Types.ObjectId().toString(), 'one', Point, Game),
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_POINT, 404))
     })
 
@@ -318,7 +308,6 @@ describe('test handle substitute', () => {
         await game.save()
         const actionData: ClientAction = {
             actionType: ActionType.SUBSTITUTION,
-            team: createPointData.receivingTeam,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -335,7 +324,7 @@ describe('test handle substitute', () => {
         }
 
         await expect(
-            handleSubstitute(actionData, new Types.ObjectId().toString(), point._id.toString(), Point, Game),
+            handleSubstitute(actionData, new Types.ObjectId().toString(), point._id.toString(), 'one', Point, Game),
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
     })
 })

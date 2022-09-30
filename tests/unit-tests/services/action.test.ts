@@ -3,7 +3,7 @@ import { Types } from 'mongoose'
 import Game from '../../../src/models/game'
 import Point from '../../../src/models/point'
 import ActionServices from '../../../src/services/v1/action'
-import { ActionType, ClientAction, Comment } from '../../../src/types/action'
+import { ActionType, ClientAction, Comment, RedisAction } from '../../../src/types/action'
 import { getActionBaseKey } from '../../../src/utils/utils'
 import {
     setUpDatabase,
@@ -37,7 +37,6 @@ describe('test create a live action', () => {
         const point = await Point.create(createPointData)
         const actionData: ClientAction = {
             actionType: ActionType.CATCH,
-            team: createPointData.pullingTeam,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -53,25 +52,19 @@ describe('test create a live action', () => {
             tags: ['good'],
         }
         await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 0)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:pulling`, 'two')
 
         const action = await services.createLiveAction(actionData, game._id.toString(), point._id.toString(), 'one')
-        expect(action._id).toBeUndefined()
         expect(action.actionNumber).toBe(1)
         expect(action.actionType).toBe(ActionType.CATCH)
         expect(action.playerOne?.username).toBe('noah')
         expect(action.playerTwo?.username).toBe('amy')
-        expect(action.displayMessage).toBeDefined()
         expect(action.comments.length).toBe(0)
-        expect(action.team.teamname).toBe(createPointData.pullingTeam.teamname)
         expect(action.tags[0]).toBe(actionData.tags[0])
 
         const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:one:actions`)
         expect(totalActions).toBe('1')
         const baseKey = getActionBaseKey(point._id.toString(), action.actionNumber, 'one')
-        const team = await client.hGetAll(`${baseKey}:team`)
-        expect(team.id).toBe(actionData.team._id?.toString())
-        expect(team.teamname).toBe(actionData.team.teamname)
-        expect(team.name).toBe(actionData.team.name)
         const playerOne = await client.hGetAll(`${baseKey}:playerone`)
         expect(playerOne.username).toBe(actionData.playerOne?.username)
         const playerTwo = await client.hGetAll(`${baseKey}:playertwo`)
@@ -79,8 +72,6 @@ describe('test create a live action', () => {
         expect(playerTwo.firstName).toBe('Amy')
         const actionType = await client.get(`${baseKey}:type`)
         expect(actionType).toBe(actionData.actionType)
-        const displayMessage = (await client.get(`${baseKey}:display`)) as string
-        expect(displayMessage).toBe(action.displayMessage)
         const tagLength = await client.lLen(`${baseKey}:tags`)
         const tags = await client.lRange(`${baseKey}:tags`, 0, tagLength)
         expect(tags[0]).toBe(actionData.tags[0])
@@ -106,47 +97,16 @@ describe('test create a live action', () => {
         ).rejects.toThrow()
     })
 
-    // it('with substitute side effect', async () => {
-    //     const game = await Game.create(gameData)
-    //     const point = await Point.create(createPointData)
-    //     game.teamOne = createPointData.pullingTeam
-    //     await game.save()
-    //     await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 0)
-
-    //     const actionData: ClientAction = {
-    //         actionType: ActionType.SUBSTITUTION,
-    //         team: createPointData.pullingTeam,
-    //         playerOne: {
-    //             _id: new Types.ObjectId(),
-    //             firstName: 'Noah',
-    //             lastName: 'Celuch',
-    //             username: 'noah',
-    //         },
-    //         playerTwo: {
-    //             _id: new Types.ObjectId(),
-    //             firstName: 'Amy',
-    //             lastName: 'Celuch',
-    //             username: 'amy',
-    //         },
-    //         tags: ['good'],
-    //     }
-
-    //     const action = await services.createLiveAction(actionData, game._id.toString(), point._id.toString())
-    //     expect(action.actionNumber).toBe(1)
-    //     expect(action.actionType).toBe(ActionType.SUBSTITUTION)
-    //     const updatedPoint = await Point.findOne({})
-    //     expect(updatedPoint?.teamOnePlayers.length).toBe(1)
-    //     expect(updatedPoint?.teamOnePlayers[0].username).toBe(actionData.playerTwo?.username)
-    // })
-})
-
-describe('test get live action', () => {
-    it('with valid data', async () => {
-        await Game.create(gameData)
+    it('with substitute side effect', async () => {
+        const game = await Game.create(gameData)
         const point = await Point.create(createPointData)
-        const actionData: ClientAction = {
-            actionType: ActionType.CATCH,
-            team: createPointData.pullingTeam,
+        game.teamOne = createPointData.pullingTeam
+        await game.save()
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 1)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:pulling`, 'one')
+
+        const subtituteAction: ClientAction = {
+            actionType: ActionType.SUBSTITUTION,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -162,16 +122,69 @@ describe('test get live action', () => {
             tags: ['good'],
         }
 
-        await saveRedisAction(client, parseActionData(actionData, 1), point._id.toString(), 'one')
+        const firstAction: RedisAction = {
+            actionType: ActionType.PULL,
+            actionNumber: 1,
+            teamNumber: 'one',
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+            comments: [],
+        }
+
+        await saveRedisAction(client, firstAction, point._id.toString())
+        const action = await services.createLiveAction(
+            subtituteAction,
+            game._id.toString(),
+            point._id.toString(),
+            'one',
+        )
+        expect(action.actionNumber).toBe(2)
+        expect(action.actionType).toBe(ActionType.SUBSTITUTION)
+        const updatedPoint = await Point.findOne({})
+        expect(updatedPoint?.teamOnePlayers.length).toBe(1)
+        expect(updatedPoint?.teamOnePlayers[0].username).toBe(subtituteAction.playerTwo?.username)
+    })
+})
+
+describe('test get live action', () => {
+    it('with valid data', async () => {
+        await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        const actionData: ClientAction = {
+            actionType: ActionType.CATCH,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Amy',
+                lastName: 'Celuch',
+                username: 'amy',
+            },
+            tags: ['good'],
+        }
+
+        await saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())
         const action = await services.getLiveAction(point._id.toString(), 1, 'one')
-        expect(action._id).toBeUndefined()
         expect(action.actionNumber).toBe(1)
         expect(action.actionType).toBe(ActionType.CATCH)
         expect(action.playerOne?.username).toBe('noah')
         expect(action.playerTwo?.username).toBe('amy')
-        expect(action.displayMessage).toBeDefined()
         expect(action.comments.length).toBe(0)
-        expect(action.team.teamname).toBe(createPointData.pullingTeam.teamname)
         expect(action.tags[0]).toBe(actionData.tags[0])
     })
 })
@@ -182,7 +195,6 @@ describe('test undo action', () => {
         const point = await Point.create(createPointData)
         const actionData: ClientAction = {
             actionType: ActionType.CATCH,
-            team: game.teamOne,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -199,16 +211,14 @@ describe('test undo action', () => {
         }
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 1)
-        await saveRedisAction(client, parseActionData(actionData, 1), point._id.toString(), 'one')
+        await saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())
         const action = await services.undoAction(game._id.toString(), point._id.toString(), 'one')
         expect(action?.actionType).toBe(actionData.actionType)
         expect(action?.tags[0]).toBe(actionData.tags[0])
 
         const key = getActionBaseKey(point._id.toString(), 1, 'one')
         const oldType = await client.get(`${key}:type`)
-        const oldTeam = await client.hGetAll(`${key}:team`)
         expect(oldType).toBeNull()
-        expect(oldTeam).toMatchObject({})
         const keys = await client.keys('*')
         expect(keys.length).toBe(1)
     })
@@ -225,7 +235,6 @@ describe('test undo action', () => {
         const point = await Point.create(createPointData)
         const actionData: ClientAction = {
             actionType: ActionType.CATCH,
-            team: game.teamOne,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -243,13 +252,12 @@ describe('test undo action', () => {
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:two:actions`, 4)
 
-        await saveRedisAction(client, parseActionData(actionData, 1), point._id.toString(), 'two')
-        await saveRedisAction(client, parseActionData(actionData, 2), point._id.toString(), 'two')
+        await saveRedisAction(client, parseActionData(actionData, 1, 'two'), point._id.toString())
+        await saveRedisAction(client, parseActionData(actionData, 2, 'two'), point._id.toString())
         actionData.actionType = ActionType.SUBSTITUTION
-        await saveRedisAction(client, parseActionData(actionData, 3), point._id.toString(), 'two')
+        await saveRedisAction(client, parseActionData(actionData, 3, 'two'), point._id.toString())
         actionData.actionType = ActionType.CATCH
-        actionData.team = game.teamTwo
-        await saveRedisAction(client, parseActionData(actionData, 4), point._id.toString(), 'two')
+        await saveRedisAction(client, parseActionData(actionData, 4, 'two'), point._id.toString())
 
         const action = await services.undoAction(game._id.toString(), point._id.toString(), 'two')
         expect(action?.actionNumber).toBe(4)
@@ -258,9 +266,7 @@ describe('test undo action', () => {
 
         const key = getActionBaseKey(point._id.toString(), 4, 'two')
         const oldType = await client.get(`${key}:type`)
-        const oldTeam = await client.hGetAll(`${key}:team`)
         expect(oldType).toBeNull()
-        expect(oldTeam).toMatchObject({})
 
         const oneKey = getActionBaseKey(point._id.toString(), 1, 'two')
         const oneType = await client.get(`${oneKey}:type`)
@@ -312,7 +318,6 @@ describe('test add live comment', () => {
         const point = await Point.create(createPointData)
         const actionData: ClientAction = {
             actionType: ActionType.CATCH,
-            team: createPointData.pullingTeam,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -328,7 +333,7 @@ describe('test add live comment', () => {
             tags: ['good'],
         }
 
-        await saveRedisAction(client, parseActionData(actionData, 1), point._id.toString(), 'two')
+        await saveRedisAction(client, parseActionData(actionData, 1, 'two'), point._id.toString())
         const action = await services.addLiveComment(
             point._id.toString(),
             1,
@@ -358,7 +363,6 @@ describe('test add live comment', () => {
         const point = await Point.create(createPointData)
         const actionData: ClientAction = {
             actionType: ActionType.CATCH,
-            team: createPointData.pullingTeam,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -374,7 +378,7 @@ describe('test add live comment', () => {
             tags: ['good'],
         }
 
-        await saveRedisAction(client, parseActionData(actionData, 1), point._id.toString(), 'two')
+        await saveRedisAction(client, parseActionData(actionData, 1, 'two'), point._id.toString())
         await expect(
             services.addLiveComment(point._id.toString(), 1, { jwt: '', comment: 'That was a good play' }, 'two'),
         ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
@@ -400,7 +404,6 @@ describe('test add live comment', () => {
         const point = await Point.create(createPointData)
         const actionData: ClientAction = {
             actionType: ActionType.CATCH,
-            team: createPointData.pullingTeam,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -416,7 +419,7 @@ describe('test add live comment', () => {
             tags: ['good'],
         }
 
-        await saveRedisAction(client, parseActionData(actionData, 1), point._id.toString(), 'one')
+        await saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())
         await expect(
             services.addLiveComment(point._id.toString(), 1, { jwt: '', comment: 'That dude sucks ass' }, 'one'),
         ).rejects.toThrowError(new ApiError(Constants.PROFANE_COMMENT, 400))
@@ -446,7 +449,6 @@ describe('test delete live comment', () => {
         const point = await Point.create(createPointData)
         const actionData: ClientAction = {
             actionType: ActionType.CATCH,
-            team: createPointData.pullingTeam,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -472,7 +474,7 @@ describe('test delete live comment', () => {
             },
         }
 
-        await saveRedisAction(client, parseActionData(actionData, 1), point._id.toString(), 'one')
+        await saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())
         const baseKey = getActionBaseKey(point._id.toString(), 1, 'one')
         const totalComments = await client.incr(`${baseKey}:comments`)
         await client.set(`${baseKey}:comments:${totalComments}:text`, comment.comment)
@@ -502,7 +504,6 @@ describe('test delete live comment', () => {
         const point = await Point.create(createPointData)
         const actionData: ClientAction = {
             actionType: ActionType.CATCH,
-            team: createPointData.pullingTeam,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -528,7 +529,7 @@ describe('test delete live comment', () => {
             },
         }
 
-        await saveRedisAction(client, parseActionData(actionData, 1), point._id.toString(), 'one')
+        await saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())
         const baseKey = getActionBaseKey(point._id.toString(), 1, 'one')
         const totalComments = await client.incr(`${baseKey}:comments`)
         await client.set(`${baseKey}:comments:${totalComments}:text`, comment.comment)
@@ -558,7 +559,6 @@ describe('test delete live comment', () => {
         const point = await Point.create(createPointData)
         const actionData: ClientAction = {
             actionType: ActionType.CATCH,
-            team: createPointData.pullingTeam,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -584,7 +584,7 @@ describe('test delete live comment', () => {
             },
         }
 
-        await saveRedisAction(client, parseActionData(actionData, 1), point._id.toString(), 'two')
+        await saveRedisAction(client, parseActionData(actionData, 1, 'two'), point._id.toString())
         const baseKey = getActionBaseKey(point._id.toString(), 1, 'two')
         const totalComments = await client.incr(`${baseKey}:comments`)
         await client.set(`${baseKey}:comments:${totalComments}:text`, comment.comment)

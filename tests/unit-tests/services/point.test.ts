@@ -16,7 +16,7 @@ import { ApiError } from '../../../src/types/errors'
 import { Types } from 'mongoose'
 import Action from '../../../src/models/action'
 import { saveRedisAction } from '../../../src/utils/redis'
-import IAction, { ActionType } from '../../../src/types/action'
+import { ActionType, RedisAction } from '../../../src/types/action'
 import { getActionBaseKey } from '../../../src/utils/utils'
 
 beforeAll(async () => {
@@ -57,6 +57,10 @@ describe('test create point', () => {
         expect(oneActionsValue).toBe('0')
         const twoActionsValue = await client.get(`${game._id.toString()}:${point._id.toString()}:two:actions`)
         expect(twoActionsValue).toBe('0')
+        const pullingTeam = await client.get(`${game._id.toString()}:${point._id.toString()}:pulling`)
+        expect(pullingTeam).toBe('one')
+        const receivingTeam = await client.get(`${game._id.toString()}:${point._id.toString()}:receiving`)
+        expect(receivingTeam).toBe('two')
     })
 
     it('with valid first point data and team two', async () => {
@@ -83,6 +87,10 @@ describe('test create point', () => {
         expect(oneActionsValue).toBe('0')
         const twoActionsValue = await client.get(`${game._id.toString()}:${point._id.toString()}:two:actions`)
         expect(twoActionsValue).toBe('0')
+        const pullingTeam = await client.get(`${game._id.toString()}:${point._id.toString()}:pulling`)
+        expect(pullingTeam).toBe('two')
+        const receivingTeam = await client.get(`${game._id.toString()}:${point._id.toString()}:receiving`)
+        expect(receivingTeam).toBe('one')
     })
 
     it('with valid first point data and previous creation', async () => {
@@ -152,6 +160,10 @@ describe('test create point', () => {
         const gameRecord = await Game.findById(game._id)
         expect(gameRecord?.points.length).toBe(3)
         expect(gameRecord?.points[2].toString()).toBe(point._id.toString())
+        const pullingTeam = await client.get(`${game._id.toString()}:${point._id.toString()}:pulling`)
+        expect(pullingTeam).toBe('one')
+        const receivingTeam = await client.get(`${game._id.toString()}:${point._id.toString()}:receiving`)
+        expect(receivingTeam).toBe('two')
     })
 
     it('with unfound game', async () => {
@@ -257,6 +269,10 @@ describe('test switch pulling team', () => {
         const pointRecord = await Point.findById(point._id)
         expect(pointRecord?.pullingTeam.name).toBe(game.teamTwo.name)
         expect(pointRecord?.receivingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
+        const pullingTeam = await client.get(`${game._id.toString()}:${point._id.toString()}:pulling`)
+        expect(pullingTeam).toBe('two')
+        const receivingTeam = await client.get(`${game._id.toString()}:${point._id.toString()}:receiving`)
+        expect(receivingTeam).toBe('one')
     })
 
     it('with valid data keeping the same pulling team', async () => {
@@ -264,6 +280,8 @@ describe('test switch pulling team', () => {
         const point = await Point.create(createPointData)
         game.points.push(point._id)
         await game.save()
+        await client.set(`${game._id.toString()}:${point._id.toString()}:pulling`, 'one')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:receiving`, 'two')
 
         const result = await services.setPullingTeam(game._id.toString(), point._id.toString(), TeamNumber.ONE)
         expect(result.pullingTeam.name).toBe(game.teamOne.name)
@@ -272,6 +290,11 @@ describe('test switch pulling team', () => {
         const pointRecord = await Point.findById(point._id)
         expect(pointRecord?.pullingTeam.name).toBe(game.teamOne.name)
         expect(pointRecord?.receivingTeam._id?.toString()).toBe(game.teamTwo._id?.toString())
+
+        const pullingTeam = await client.get(`${game._id.toString()}:${point._id.toString()}:pulling`)
+        expect(pullingTeam).toBe('one')
+        const receivingTeam = await client.get(`${game._id.toString()}:${point._id.toString()}:receiving`)
+        expect(receivingTeam).toBe('two')
     })
 
     it('with unfound game', async () => {
@@ -518,11 +541,10 @@ describe('test finish point', () => {
         await game.save()
         await point.save()
 
-        const action1: IAction = {
+        const action1: RedisAction = {
             actionNumber: 1,
             actionType: ActionType.CATCH,
-            team: game.teamOne,
-            displayMessage: 'Throw from Noah to Connor',
+            teamNumber: 'one',
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -539,11 +561,10 @@ describe('test finish point', () => {
             tags: ['Huck'],
         }
 
-        const action2: IAction = {
+        const action2: RedisAction = {
             actionNumber: 2,
             actionType: ActionType.TEAM_ONE_SCORE,
-            team: game.teamOne,
-            displayMessage: 'Score from Noah to Connor',
+            teamNumber: 'one',
             playerTwo: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -561,8 +582,8 @@ describe('test finish point', () => {
         }
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
-        await saveRedisAction(client, action1, point._id.toString(), 'one')
-        await saveRedisAction(client, action2, point._id.toString(), 'one')
+        await saveRedisAction(client, action1, point._id.toString())
+        await saveRedisAction(client, action2, point._id.toString())
 
         // check point actions and score update
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.ONE)
@@ -601,11 +622,10 @@ describe('test finish point', () => {
         await game.save()
         await point.save()
 
-        const action1: IAction = {
+        const action1: RedisAction = {
             actionNumber: 1,
             actionType: ActionType.PULL,
-            team: game.teamOne,
-            displayMessage: 'Noah pulls',
+            teamNumber: 'one',
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -616,18 +636,17 @@ describe('test finish point', () => {
             tags: ['Huck'],
         }
 
-        const action2: IAction = {
+        const action2: RedisAction = {
             actionNumber: 2,
             actionType: ActionType.TEAM_TWO_SCORE,
-            team: game.teamOne,
-            displayMessage: 'Score from Noah to Connor',
+            teamNumber: 'one',
             comments: [],
             tags: ['Break'],
         }
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
-        await saveRedisAction(client, action1, point._id.toString(), 'one')
-        await saveRedisAction(client, action2, point._id.toString(), 'one')
+        await saveRedisAction(client, action1, point._id.toString())
+        await saveRedisAction(client, action2, point._id.toString())
 
         // check point actions and score update
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.TWO)
@@ -655,8 +674,7 @@ describe('test finish point', () => {
 
         // check redis action deletion
         const keys = await client.keys('*')
-        expect(keys.length).toBe(1)
-        expect(keys[0]).toBe(`${game._id.toString()}:${point._id.toString()}:two:actions`)
+        expect(keys.length).toBe(0)
     })
 
     it('with team one already finished', async () => {
@@ -668,11 +686,10 @@ describe('test finish point', () => {
         await game.save()
         await point.save()
 
-        const action1: IAction = {
+        const action1: RedisAction = {
             actionNumber: 1,
             actionType: ActionType.CATCH,
-            team: game.teamOne,
-            displayMessage: 'Throw from Noah to Connor',
+            teamNumber: 'one',
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -689,11 +706,10 @@ describe('test finish point', () => {
             tags: ['Huck'],
         }
 
-        const action2: IAction = {
+        const action2: RedisAction = {
             actionNumber: 2,
             actionType: ActionType.TEAM_ONE_SCORE,
-            team: game.teamOne,
-            displayMessage: 'Score from Noah to Connor',
+            teamNumber: 'one',
             playerTwo: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -711,8 +727,8 @@ describe('test finish point', () => {
         }
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
-        await saveRedisAction(client, action1, point._id.toString(), 'one')
-        await saveRedisAction(client, action2, point._id.toString(), 'one')
+        await saveRedisAction(client, action1, point._id.toString())
+        await saveRedisAction(client, action2, point._id.toString())
 
         // check point actions and score update
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.ONE)
@@ -741,11 +757,10 @@ describe('test finish point', () => {
         await game.save()
         await point.save()
 
-        const action1: IAction = {
+        const action1: RedisAction = {
             actionNumber: 1,
             actionType: ActionType.CATCH,
-            team: game.teamOne,
-            displayMessage: 'Throw from Noah to Connor',
+            teamNumber: 'one',
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -762,11 +777,10 @@ describe('test finish point', () => {
             tags: ['Huck'],
         }
 
-        const action2: IAction = {
+        const action2: RedisAction = {
             actionNumber: 2,
             actionType: ActionType.TEAM_ONE_SCORE,
-            team: game.teamOne,
-            displayMessage: 'Score from Noah to Connor',
+            teamNumber: 'one',
             playerTwo: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -784,8 +798,8 @@ describe('test finish point', () => {
         }
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
-        await saveRedisAction(client, action1, point._id.toString(), 'one')
-        await saveRedisAction(client, action2, point._id.toString(), 'one')
+        await saveRedisAction(client, action1, point._id.toString())
+        await saveRedisAction(client, action2, point._id.toString())
 
         // check point actions and score update
         const result = await services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.TWO)
@@ -834,11 +848,10 @@ describe('test finish point', () => {
         await game.save()
         await point.save()
 
-        const action1: IAction = {
+        const action1: RedisAction = {
             actionNumber: 1,
             actionType: ActionType.CATCH,
-            team: game.teamOne,
-            displayMessage: 'Throw from Noah to Connor',
+            teamNumber: 'one',
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -855,11 +868,10 @@ describe('test finish point', () => {
             tags: ['Huck'],
         }
 
-        const action2: IAction = {
+        const action2: RedisAction = {
             actionNumber: 3,
             actionType: ActionType.CATCH,
-            team: game.teamOne,
-            displayMessage: 'Throw from Noah to Connor',
+            teamNumber: 'one',
             playerTwo: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -877,8 +889,8 @@ describe('test finish point', () => {
         }
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 3)
-        await saveRedisAction(client, action1, point._id.toString(), 'one')
-        await saveRedisAction(client, action2, point._id.toString(), 'one')
+        await saveRedisAction(client, action1, point._id.toString())
+        await saveRedisAction(client, action2, point._id.toString())
 
         await expect(
             services.finishPoint(game._id.toString(), point._id.toString(), TeamNumber.ONE),

@@ -7,6 +7,7 @@ import IPoint from '../../types/point'
 import IAction, { ActionType, RedisClientType } from '../../types/action'
 import { IActionModel } from '../../models/action'
 import { actionExists, deleteRedisAction, getRedisAction } from '../../utils/redis'
+import { Types } from 'mongoose'
 
 export default class PointServices {
     pointModel: IPointModel
@@ -90,6 +91,14 @@ export default class PointServices {
         // allows for validation on key existence later
         await this.redisClient.set(`${gameId}:${point._id.toString()}:one:actions`, 0)
         await this.redisClient.set(`${gameId}:${point._id.toString()}:two:actions`, 0)
+        await this.redisClient.set(
+            `${gameId}:${point._id.toString()}:pulling`,
+            pullingTeam === TeamNumber.ONE ? 'one' : 'two',
+        )
+        await this.redisClient.set(
+            `${gameId}:${point._id.toString()}:receiving`,
+            pullingTeam === TeamNumber.ONE ? 'two' : 'one',
+        )
 
         return point
     }
@@ -130,23 +139,25 @@ export default class PointServices {
         }
 
         const teamOneActions = await this.redisClient.get(`${gameId}:${pointId}:one:actions`)
-        for (let i = 1; i <= Number(teamOneActions); i++) {
-            const exists = await actionExists(this.redisClient, pointId, i, 'one')
-            if (exists) {
-                throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
-            }
+        if (Number(teamOneActions) > 0) {
+            throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
         }
 
         const teamTwoActions = await this.redisClient.get(`${gameId}:${pointId}:two:actions`)
-        for (let i = 1; i <= Number(teamTwoActions); i++) {
-            const exists = await actionExists(this.redisClient, pointId, i, 'one')
-            if (exists) {
-                throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
-            }
+        if (Number(teamTwoActions) > 0) {
+            throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
         }
 
         point.pullingTeam = newPullingTeam
         point.receivingTeam = newReceivingTeam
+        await this.redisClient.set(
+            `${gameId}:${point._id.toString()}:pulling`,
+            pullingTeam === TeamNumber.ONE ? 'one' : 'two',
+        )
+        await this.redisClient.set(
+            `${gameId}:${point._id.toString()}:receiving`,
+            pullingTeam === TeamNumber.ONE ? 'two' : 'one',
+        )
         await point.save()
 
         return point
@@ -237,13 +248,14 @@ export default class PointServices {
             if (!exists) {
                 continue
             }
-            const action = await getRedisAction(this.redisClient, pointId, i, 'one')
-            if (action.actionType === ActionType.TEAM_ONE_SCORE) {
+            const redisAction = await getRedisAction(this.redisClient, pointId, i, 'one')
+            if (redisAction.actionType === ActionType.TEAM_ONE_SCORE) {
                 point.scoringTeam = game.teamOne
                 teamOneScore = true
-            } else if (action.actionType === ActionType.TEAM_TWO_SCORE) {
+            } else if (redisAction.actionType === ActionType.TEAM_TWO_SCORE) {
                 point.scoringTeam = game.teamTwo
             }
+            const action: IAction = { ...redisAction, _id: new Types.ObjectId(), team: game.teamOne }
             actions.push(action)
         }
 
@@ -253,13 +265,14 @@ export default class PointServices {
             if (!exists) {
                 continue
             }
-            const action = await getRedisAction(this.redisClient, pointId, i, 'two')
-            if (action.actionType === ActionType.TEAM_ONE_SCORE) {
+            const redisAction = await getRedisAction(this.redisClient, pointId, i, 'two')
+            if (redisAction.actionType === ActionType.TEAM_ONE_SCORE) {
                 point.scoringTeam = game.teamOne
                 teamOneScore = true
-            } else if (action.actionType === ActionType.TEAM_TWO_SCORE) {
+            } else if (redisAction.actionType === ActionType.TEAM_TWO_SCORE) {
                 point.scoringTeam = game.teamTwo
             }
+            const action = { ...redisAction, _id: new Types.ObjectId(), team: game.teamTwo }
             actions.push(action)
         }
 
@@ -283,21 +296,21 @@ export default class PointServices {
 
         if (team === TeamNumber.ONE) {
             point.teamOneActive = false
-            // delete actions from redis
-            for (let i = 1; i <= Number(teamOneActions); i++) {
-                await deleteRedisAction(this.redisClient, pointId, i, 'one')
-            }
         } else if (team === TeamNumber.TWO) {
             point.teamTwoActive = false
-            for (let i = 1; i <= Number(teamTwoActions); i++) {
-                await deleteRedisAction(this.redisClient, pointId, i, 'two')
-            }
         }
 
         // update point and game once
         await point.save()
         await game.save()
-        await this.redisClient.del(`${gameId}:${pointId}:${team}:actions`)
+        for (let i = 1; i <= Number(teamTwoActions); i++) {
+            await deleteRedisAction(this.redisClient, pointId, i, 'two')
+        }
+        for (let i = 1; i <= Number(teamOneActions); i++) {
+            await deleteRedisAction(this.redisClient, pointId, i, 'one')
+        }
+        await this.redisClient.del(`${gameId}:${pointId}:one:actions`)
+        await this.redisClient.del(`${gameId}:${pointId}:two:actions`)
 
         return point
     }

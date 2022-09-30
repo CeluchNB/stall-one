@@ -1,19 +1,21 @@
 import * as Constants from '../../utils/constants'
-import IAction, { ClientAction, RedisClientType } from '../../types/action'
+import { ClientAction, RedisAction, RedisClientType } from '../../types/action'
 import { Socket } from 'socket.io'
 import ActionServices from '../../services/v1/action'
 import { ApiError } from '../../types/errors'
 import { handleSocketError } from '../../utils/utils'
 import { gameAuth } from '../../middlware/socket-game-auth'
+import { TeamNumberString } from '../../types/ultmt'
 
 const actionHandler = async (
     data: ClientAction,
     gameId: string,
     pointId: string,
+    teamNumber: TeamNumberString,
     client: RedisClientType,
-): Promise<IAction> => {
+): Promise<RedisAction> => {
     const services = new ActionServices(client, process.env.ULTMT_API_URL as string, process.env.API_KEY as string)
-    return await services.createLiveAction(data, gameId, pointId)
+    return await services.createLiveAction(data, gameId, pointId, teamNumber)
 }
 
 const undoActionHandler = async (
@@ -23,7 +25,7 @@ const undoActionHandler = async (
         pointId: string
         team: 'one' | 'two'
     },
-): Promise<IAction | undefined> => {
+): Promise<RedisAction | undefined> => {
     const { gameId, pointId, team } = data
     if (!gameId || !pointId || !team) {
         throw new ApiError(Constants.INVALID_DATA, 400)
@@ -34,47 +36,47 @@ const undoActionHandler = async (
 
 const serverActionHandler = async (
     client: RedisClientType,
-    data: { pointId: string; actionNumber: number },
-): Promise<IAction> => {
-    const { pointId, actionNumber } = data
-    if (!pointId || !actionNumber) {
+    data: { pointId: string; actionNumber: number; teamNumber: TeamNumberString },
+): Promise<RedisAction> => {
+    const { pointId, actionNumber, teamNumber } = data
+    if (!pointId || !actionNumber || !teamNumber) {
         throw new ApiError(Constants.INVALID_DATA, 400)
     }
     const services = new ActionServices(client, process.env.ULTMT_API_URL as string, process.env.API_KEY as string)
-    return await services.getLiveAction(pointId, actionNumber)
+    return await services.getLiveAction(pointId, actionNumber, teamNumber)
 }
 
 const commentHandler = async (
     client: RedisClientType,
-    data: { pointId: string; actionNumber: number; comment: string; jwt: string },
-): Promise<IAction> => {
-    const { pointId, actionNumber, comment, jwt } = data
-    if (!pointId || !actionNumber || !comment || !jwt) {
+    data: { pointId: string; actionNumber: number; teamNumber: TeamNumberString; comment: string; jwt: string },
+): Promise<RedisAction> => {
+    const { pointId, actionNumber, teamNumber, comment, jwt } = data
+    if (!pointId || !actionNumber || !teamNumber || !comment || !jwt) {
         throw new ApiError(Constants.INVALID_DATA, 400)
     }
     const services = new ActionServices(client, process.env.ULTMT_API_URL as string, process.env.API_KEY as string)
-    return await services.addLiveComment(pointId, actionNumber, { comment, jwt })
+    return await services.addLiveComment(pointId, actionNumber, { comment, jwt }, teamNumber)
 }
 
 const deleteCommentHandler = async (
     client: RedisClientType,
-    data: { pointId: string; actionNumber: number; commentNumber: number; jwt: string },
+    data: { pointId: string; actionNumber: number; teamNumber: TeamNumberString; commentNumber: number; jwt: string },
 ) => {
-    const { pointId, actionNumber, commentNumber, jwt } = data
-    if (!pointId || !actionNumber || !commentNumber || !jwt) {
+    const { pointId, actionNumber, teamNumber, commentNumber, jwt } = data
+    if (!pointId || !actionNumber || !teamNumber || !commentNumber || !jwt) {
         throw new ApiError(Constants.INVALID_DATA, 400)
     }
     const services = new ActionServices(client, process.env.ULTMT_API_URL as string, process.env.API_KEY as string)
-    return await services.deleteLiveComment(pointId, actionNumber, commentNumber, jwt)
+    return await services.deleteLiveComment(pointId, actionNumber, commentNumber, jwt, teamNumber)
 }
 
 const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
     socket.on('action', async (data) => {
         try {
-            const { gameId } = await gameAuth(socket)
+            const { gameId, team } = await gameAuth(socket)
             const dataJson = JSON.parse(data)
             const { action: clientAction, pointId } = dataJson
-            const action = await actionHandler(clientAction, gameId, pointId, client)
+            const action = await actionHandler(clientAction, gameId, pointId, team, client)
             // send action to client
             socket.emit('action:client', action)
             socket.to('servers').emit('action:server', { pointId, number: action.actionNumber })
@@ -122,10 +124,10 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
     socket.on('action:comment', async (data) => {
         try {
             const dataJson = JSON.parse(data)
-            const { pointId, actionNumber } = dataJson
+            const { pointId, actionNumber, teamNumber } = dataJson
             const action = await commentHandler(client, dataJson)
             socket.emit('action:client', action)
-            socket.to('servers').emit('action:server', { pointId, actionNumber })
+            socket.to('servers').emit('action:server', { pointId, actionNumber, teamNumber })
         } catch (error) {
             const response = handleSocketError(error)
             socket.emit('action:error', response)
