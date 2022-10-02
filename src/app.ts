@@ -35,7 +35,7 @@ const io = new Server<ClientToServerEvents>(httpServer, {})
 Promise.resolve(createRedisAdapter()).then(async (adapter) => {
     const client = await getClient()
     io.adapter(adapter)
-    io.of('/live').on('connection', socketHandler(client))
+    io.of('/live').on('connection', socketHandler(client, io))
 })
 
 // Close all connections, for testing purposes

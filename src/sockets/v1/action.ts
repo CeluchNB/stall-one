@@ -1,6 +1,6 @@
 import * as Constants from '../../utils/constants'
 import { ClientAction, RedisAction, RedisClientType } from '../../types/action'
-import { Socket } from 'socket.io'
+import { Server, Socket } from 'socket.io'
 import ActionServices from '../../services/v1/action'
 import { ApiError } from '../../types/errors'
 import { handleSocketError } from '../../utils/utils'
@@ -70,7 +70,13 @@ const deleteCommentHandler = async (
     return await services.deleteLiveComment(pointId, actionNumber, commentNumber, jwt, teamNumber)
 }
 
-const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
+const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Server) => {
+    const liveIo = io.of('/live')
+
+    socket.on('join:point', (gameId: string, pointId: string) => {
+        socket.join(`${gameId}:${pointId}`)
+    })
+
     socket.on('action', async (data) => {
         try {
             const { gameId, team } = await gameAuth(socket)
@@ -78,11 +84,10 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
             const { action: clientAction, pointId } = dataJson
             const action = await actionHandler(clientAction, gameId, pointId, team, client)
             // send action to client
-            socket.emit('action:client', action)
-            socket.to('servers').emit('action:server', { pointId, number: action.actionNumber })
+            liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
+            liveIo.to('servers').emit('action:server', { gameId, pointId, number: action.actionNumber })
         } catch (error) {
-            const response = handleSocketError(error)
-            socket.emit('action:error', response)
+            handleSocketError(socket, error)
         }
     })
 
@@ -94,56 +99,61 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType) => {
 
             const action = await undoActionHandler(client, { gameId, team, pointId })
             if (action) {
-                socket.emit('action:undo:client', { pointId, actionNumber: action.actionNumber })
-                socket.emit('action:undo:server', { pointId, actionNumber: action.actionNumber })
+                liveIo
+                    .to(`${gameId}:${pointId}`)
+                    .emit('action:undo:client', { pointId, actionNumber: action.actionNumber })
+                liveIo.to('servers').emit('action:undo:server', { gameId, pointId, actionNumber: action.actionNumber })
             } else {
                 throw new ApiError(Constants.INVALID_DATA, 400)
             }
         } catch (error) {
-            const response = handleSocketError(error)
-            socket.emit('action:error', response)
+            handleSocketError(socket, error)
         }
     })
 
     socket.on('action:server', async (data) => {
         try {
             const dataJson = JSON.parse(data)
+            const { gameId, pointId } = dataJson
             const action = await serverActionHandler(client, dataJson)
+
             // send action to client
-            socket.emit('action:client', action)
+            liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
         } catch (error) {
-            const response = handleSocketError(error)
-            socket.emit('action:error', response)
+            handleSocketError(socket, error)
         }
     })
 
     socket.on('action:undo:server', async (data) => {
-        socket.emit('action:undo:client', data)
+        try {
+            const { gameId, pointId } = JSON.parse(data)
+            liveIo.to(`${gameId}:${pointId}`).emit('action:undo:client', data)
+        } catch (error) {
+            handleSocketError(socket, error)
+        }
     })
 
     socket.on('action:comment', async (data) => {
         try {
             const dataJson = JSON.parse(data)
-            const { pointId, actionNumber, teamNumber } = dataJson
+            const { gameId, pointId, actionNumber, teamNumber } = dataJson
             const action = await commentHandler(client, dataJson)
-            socket.emit('action:client', action)
-            socket.to('servers').emit('action:server', { pointId, actionNumber, teamNumber })
+            liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
+            liveIo.to('servers').emit('action:server', { pointId, actionNumber, teamNumber })
         } catch (error) {
-            const response = handleSocketError(error)
-            socket.emit('action:error', response)
+            handleSocketError(socket, error)
         }
     })
 
     socket.on('action:comment:delete', async (data) => {
         try {
             const dataJson = JSON.parse(data)
-            const { pointId, actionNumber } = dataJson
+            const { gameId, pointId, actionNumber } = dataJson
             const action = await deleteCommentHandler(client, dataJson)
-            socket.emit('action:client', action)
-            socket.to('servers').emit('action:server', { pointId, actionNumber })
+            liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
+            liveIo.to('servers').emit('action:server', { gameId, pointId, actionNumber })
         } catch (error) {
-            const response = handleSocketError(error)
-            socket.emit('action:error', response)
+            handleSocketError(socket, error)
         }
     })
 }
