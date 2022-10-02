@@ -120,7 +120,7 @@ export interface RedisAction extends ClientAction {
     comments: Comment[]
 }
 
-interface IAction extends RedisAction {
+interface IAction {
     _id: Types.ObjectId
     actionNumber: number
     actionType: ActionType

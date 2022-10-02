@@ -63,7 +63,8 @@ const schema = new Schema<IPoint>({
         required: true,
         default: true,
     },
-    actions: [SchemaTypes.ObjectId],
+    teamOneActions: [SchemaTypes.ObjectId],
+    teamTwoActions: [SchemaTypes.ObjectId],
 })
 
 const Point = model<IPoint>('Point', schema)

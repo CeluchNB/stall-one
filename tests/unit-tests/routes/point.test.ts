@@ -343,6 +343,8 @@ describe('test /PUT finish point', () => {
         }
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:pulling`, 'one')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:receiving`, 'two')
         await saveRedisAction(client, action1, point._id.toString())
         await saveRedisAction(client, action2, point._id.toString())
 
@@ -354,7 +356,7 @@ describe('test /PUT finish point', () => {
 
         const { point: pointResponse } = response.body
         expect(pointResponse._id.toString()).toBe(point._id.toString())
-        expect(pointResponse.actions.length).toBe(2)
+        expect(pointResponse.teamOneActions.length).toBe(2)
         expect(pointResponse.teamOneScore).toBe(1)
         expect(pointResponse.teamTwoScore).toBe(0)
         expect(pointResponse.teamOneActive).toBe(false)
@@ -409,7 +411,7 @@ describe('test /DELETE point', () => {
         game.points.push(point._id)
         await game.save()
 
-        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 5)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 0)
 
         await request(app)
             .delete(`/api/v1/point/${point._id.toString()}`)
@@ -446,7 +448,7 @@ describe('test /DELETE point', () => {
         const point = await Point.create(createPointData)
         game.points.push(point._id)
         await game.save()
-        point.actions.push(new Types.ObjectId())
+        point.teamOneActions.push(new Types.ObjectId())
         await point.save()
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)

@@ -94,7 +94,8 @@ export const createPointData: IPoint = {
     },
     teamOneActive: true,
     teamTwoActive: true,
-    actions: [],
+    teamOneActions: [],
+    teamTwoActions: [],
 }
 
 export const getMock = jest.fn((url) => {

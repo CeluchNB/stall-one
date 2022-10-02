@@ -28,6 +28,8 @@ export const userErrorResponse = (error: string): { message: string; code: numbe
         return { message: Constants.MODIFY_LIVE_POINT_ERROR, code: 400 }
     } else if (error.includes(Constants.INVALID_ACTION_TYPE)) {
         return { message: Constants.INVALID_ACTION_TYPE, code: 400 }
+    } else if (error.includes(Constants.CONFLICTING_SCORE)) {
+        return { message: Constants.CONFLICTING_SCORE, code: 400 }
     } else {
         return { message: Constants.GENERIC_ERROR, code: 500 }
     }

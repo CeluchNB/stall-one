@@ -98,4 +98,10 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
+    it('with invalid conflicting score', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.CONFLICTING_SCORE}`)).toEqual({
+            message: Constants.CONFLICTING_SCORE,
+            code: 400,
+        })
+    })
 })
