@@ -29,6 +29,7 @@ import { parseActionData } from '../../../src/utils/action'
 
 let clientSocket: ReturnType<typeof ioClient>
 let gameId: Types.ObjectId
+const pointId = 'pointone'
 beforeAll((done) => {
     app.listen(process.env.PORT, () => {
         Game.create(createData, (error, game) => {
@@ -37,6 +38,7 @@ beforeAll((done) => {
                 extraHeaders: { authorization: `Bearer ${game.teamOneToken}` },
             })
             clientSocket.on('connect', () => {
+                clientSocket.emit('join:point', gameId, pointId)
                 done()
             })
         })
@@ -86,7 +88,7 @@ describe('test client action sent', () => {
             expect(action.playerOne.username).toBe(actionData.playerOne?.username)
             done()
         })
-        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId: 'pointone' }))
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }))
     })
 
     it('with bad data', (done) => {
@@ -104,7 +106,7 @@ describe('test client action sent', () => {
             expect(error.message).toBe(Constants.INVALID_ACTION_TYPE)
             done()
         })
-        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId: 'pointone' }))
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }))
     })
 
     it('with non object exception', (done) => {
@@ -125,7 +127,7 @@ describe('test client action sent', () => {
             expect(error.message).toBe(Constants.GENERIC_ERROR)
             done()
         })
-        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId: 'pointone' }))
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }))
     })
 })
 
@@ -145,6 +147,7 @@ describe('test client undo action', () => {
     beforeAll(async () => {
         game = await Game.findOne({})
         point = await Point.create({ ...createPointData })
+        clientSocket.emit('join:point', game?._id.toString(), point._id.toString())
 
         await client.set(`${game?._id.toString()}:${point._id.toString()}:one:actions`, '1')
         await RedisUtils.saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())

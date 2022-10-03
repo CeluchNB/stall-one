@@ -126,8 +126,9 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
 
     socket.on('action:undo:server', async (data) => {
         try {
-            const { gameId, pointId } = JSON.parse(data)
-            liveIo.to(`${gameId}:${pointId}`).emit('action:undo:client', data)
+            const dataJson = JSON.parse(data)
+            const { gameId, pointId } = dataJson
+            liveIo.to(`${gameId}:${pointId}`).emit('action:undo:client', dataJson)
         } catch (error) {
             handleSocketError(socket, error)
         }
