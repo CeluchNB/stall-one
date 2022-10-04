@@ -104,4 +104,10 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
+    it('with unfound tournament', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.UNABLE_TO_FIND_TOURNAMENT}`)).toEqual({
+            message: Constants.UNABLE_TO_FIND_TOURNAMENT,
+            code: 404,
+        })
+    })
 })

@@ -1,7 +1,10 @@
+import * as Constants from '../../../src/utils/constants'
 import { setUpDatabase, tearDownDatabase, resetDatabase } from '../../fixtures/setup-db'
 import { CreateTournament } from '../../../src/types/tournament'
 import Tournament from '../../../src/models/tournament'
 import TournamentServices from '../../../src/services/v1/tournament'
+import { ApiError } from '../../../src/types/errors'
+import { Types } from 'mongoose'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -49,5 +52,26 @@ describe('test create tournament', () => {
 
         const tournamentRecord = await Tournament.findById(tournament._id)
         expect(tournamentRecord?.eventId).toBe(createData.eventId)
+    })
+})
+
+describe('test get tournament', () => {
+    it('with existing tournament', async () => {
+        const createData: CreateTournament = {
+            startDate: new Date('09-22-2022'),
+            endDate: new Date('09-23-2022'),
+            name: 'Mid-Atlantic Regionals 2022',
+            eventId: 'mareg22',
+        }
+        const initTournament = await Tournament.create(createData)
+
+        const tournament = await services.getTournament(initTournament._id.toString())
+        expect(tournament.eventId).toBe(createData.eventId)
+    })
+
+    it('with unfound tournament', async () => {
+        await expect(services.getTournament(new Types.ObjectId().toString())).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_TOURNAMENT, 404),
+        )
     })
 })

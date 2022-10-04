@@ -17,3 +17,4 @@ export const MODIFY_LIVE_POINT_ERROR =
     'This point has live data associated with it. Please remove live actions and try again.'
 export const INVALID_ACTION_TYPE = 'This action type cannot be submitted based on the previous action.'
 export const CONFLICTING_SCORE = 'The other team reported a different score. Please work this out with them.'
+export const UNABLE_TO_FIND_TOURNAMENT = 'We were not able to find this tournament.'

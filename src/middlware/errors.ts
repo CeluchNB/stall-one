@@ -30,6 +30,8 @@ export const userErrorResponse = (error: string): { message: string; code: numbe
         return { message: Constants.INVALID_ACTION_TYPE, code: 400 }
     } else if (error.includes(Constants.CONFLICTING_SCORE)) {
         return { message: Constants.CONFLICTING_SCORE, code: 400 }
+    } else if (error.includes(Constants.UNABLE_TO_FIND_TOURNAMENT)) {
+        return { message: Constants.UNABLE_TO_FIND_TOURNAMENT, code: 404 }
     } else {
         return { message: Constants.GENERIC_ERROR, code: 500 }
     }
