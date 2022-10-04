@@ -49,7 +49,17 @@ describe('test create game', () => {
     it('with valid data and team two resolved', async () => {
         const tournamentId = new Types.ObjectId()
         const { game, token } = await services.createGame(
-            { ...createData, teamTwoDefined: true, tournament: tournamentId },
+            {
+                ...createData,
+                teamTwoDefined: true,
+                tournament: {
+                    _id: tournamentId,
+                    startDate: new Date('09-22-2022'),
+                    endDate: new Date('09-23-2022'),
+                    name: 'Mid-Atlantic Regionals 2022',
+                    eventId: 'mareg22',
+                },
+            },
             '',
         )
 
@@ -59,14 +69,16 @@ describe('test create game', () => {
         expect(game.teamTwoScore).toBe(0)
         expect(game.teamTwoActive).toBe(false)
         expect(game.teamTwoDefined).toBe(true)
-        expect(game.tournament?.toString()).toBe(tournamentId.toString())
+        expect(game.tournament?._id.toString()).toBe(tournamentId.toString())
+        expect(game.tournament?.eventId).toBe('mareg22')
         expect(token.length).toBeGreaterThan(20)
         expect(gameRecord?.teamOneActive).toBe(true)
         expect(gameRecord?.teamTwoActive).toBe(false)
         expect(gameRecord?.creator.username).toBe('firstlast')
         expect(gameRecord?.teamOnePlayers.length).toBe(2)
         expect(gameRecord?.teamTwoPlayers.length).toBe(2)
-        expect(gameRecord?.tournament?.toString()).toBe(tournamentId.toString())
+        expect(gameRecord?.tournament?._id.toString()).toBe(tournamentId.toString())
+        expect(gameRecord?.tournament?.eventId).toBe('mareg22')
         expect(token).toBe(gameRecord?.teamOneToken)
         expect(gameRecord?.teamTwoToken).toBeUndefined()
     })
@@ -255,13 +267,14 @@ describe('test edit game', () => {
         const game = await Game.create(gameData)
 
         const updatedGame = await services.updateGame(game._id.toString(), {
-            tournament: tournament._id,
+            tournament,
         })
         expect(updatedGame.teamOneActive).toBe(true)
-        expect(updatedGame.tournament?.toString()).toBe(tournament._id.toString())
+        expect(updatedGame.tournament?._id.toString()).toBe(tournament._id.toString())
+        expect(updatedGame.tournament?.eventId).toBe(tournament.eventId)
 
         const gameRecord = await Game.findById(game._id)
-        expect(gameRecord?.tournament?.toString()).toBe(tournament._id.toString())
+        expect(gameRecord?.tournament?.eventId).toBe(tournament.eventId)
     })
 
     it('with unfound game', async () => {

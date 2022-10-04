@@ -1,4 +1,5 @@
 import { Types } from 'mongoose'
+import ITournament from './tournament'
 import { Player, Team } from './ultmt'
 
 export interface UpdateGame {
@@ -12,7 +13,7 @@ export interface UpdateGame {
     playersPerPoint?: number
     timeoutPerHalf?: number
     floaterTimeout?: boolean
-    tournament?: Types.ObjectId
+    tournament?: ITournament
 }
 
 type UpdateGameKey = keyof UpdateGame
@@ -29,7 +30,7 @@ export const updateGameKeys: UpdateGameKey[] = [
     'floaterTimeout',
 ]
 
-export interface CreateGame extends UpdateGame {
+export interface CreateGame {
     creator: Player
     teamOne: Team
     teamTwo: Team
@@ -42,7 +43,7 @@ export interface CreateGame extends UpdateGame {
     playersPerPoint: number
     timeoutPerHalf: number
     floaterTimeout: boolean
-    tournament?: Types.ObjectId
+    tournament?: ITournament
 }
 
 interface IGame extends CreateGame {

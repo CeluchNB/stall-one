@@ -69,8 +69,13 @@ const schema = new Schema<IGame>({
     floaterTimeout: Boolean,
     points: [SchemaTypes.ObjectId],
     tournament: {
-        type: SchemaTypes.ObjectId,
-        ref: 'Tournament',
+        type: {
+            _id: SchemaTypes.ObjectId,
+            startDate: Date,
+            endDate: Date,
+            name: String,
+            eventId: String,
+        },
     },
 })
 
