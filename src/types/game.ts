@@ -12,6 +12,7 @@ export interface UpdateGame {
     playersPerPoint?: number
     timeoutPerHalf?: number
     floaterTimeout?: boolean
+    tournament?: Types.ObjectId
 }
 
 type UpdateGameKey = keyof UpdateGame
@@ -41,6 +42,7 @@ export interface CreateGame extends UpdateGame {
     playersPerPoint: number
     timeoutPerHalf: number
     floaterTimeout: boolean
+    tournament?: Types.ObjectId
 }
 
 interface IGame extends CreateGame {
