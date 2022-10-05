@@ -75,3 +75,49 @@ describe('test get tournament', () => {
         )
     })
 })
+
+describe('test search tournaments', () => {
+    beforeEach(async () => {
+        await Tournament.create({
+            name: 'Mid-Atlantic Regionals 2022',
+            eventId: 'mareg22',
+        })
+
+        await Tournament.create({
+            startDate: new Date('09-29-2022'),
+            endDate: new Date('09-30-2022'),
+            name: 'Great Lakes Mens Regionals 2022',
+            eventId: 'glmenreg2022',
+        })
+
+        await Tournament.create({
+            startDate: new Date('09-22-2022'),
+            endDate: new Date('09-23-2022'),
+            name: 'Southwest Womens Regionals 2022',
+            eventId: 'swwomenreg22',
+        })
+    })
+
+    it('finding all tournaments', async () => {
+        const tournaments = await services.searchTournaments('Regionals')
+        expect(tournaments.length).toBe(3)
+        expect(tournaments[0].eventId).toBe('glmenreg2022')
+        expect(tournaments[1].eventId).toBe('swwomenreg22')
+        expect(tournaments[2].eventId).toBe('mareg22')
+    })
+
+    it('finding one tournament by name', async () => {
+        const tournaments = await services.searchTournaments('Womens')
+        expect(tournaments.length).toBe(1)
+    })
+
+    it('finding one tournament by event id', async () => {
+        const tournaments = await services.searchTournaments('mareg22')
+        expect(tournaments.length).toBe(1)
+    })
+
+    it('finding no tournaments', async () => {
+        const tournaments = await services.searchTournaments('random text')
+        expect(tournaments.length).toBe(0)
+    })
+})

@@ -11,6 +11,8 @@ const schema = new Schema<ITournament>({
     eventId: { type: String, required: true, unique: true },
 })
 
+schema.index({ name: 'text', eventId: 'text' })
+
 const Tournament = model<ITournament>('Tournament', schema)
 export type ITournamentModel = typeof Tournament
 export default Tournament

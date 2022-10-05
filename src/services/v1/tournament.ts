@@ -33,4 +33,19 @@ export default class TournamentServices {
 
         return tournament
     }
+
+    /**
+     * Method to search tounaments
+     * @param q search query
+     * @returns array of tournaments
+     */
+    searchTournaments = async (q: string): Promise<ITournament[]> => {
+        const tournaments = await this.tournamentModel.find({ $text: { $search: q } })
+        tournaments.sort((a, b) => {
+            const aTime = Math.abs(new Date().getTime() - (a.startDate?.getTime() || 0))
+            const bTime = Math.abs(new Date().getTime() - (b.startDate?.getTime() || 0))
+            return aTime - bTime
+        })
+        return tournaments
+    }
 }
