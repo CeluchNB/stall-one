@@ -13,7 +13,8 @@ interface IPoint {
     scoringTeam?: Team
     teamOneActive: boolean
     teamTwoActive: boolean
-    actions: Types.ObjectId[]
+    teamOneActions: Types.ObjectId[]
+    teamTwoActions: Types.ObjectId[]
 }
 
 export default IPoint

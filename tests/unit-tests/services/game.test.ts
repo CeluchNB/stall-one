@@ -9,6 +9,8 @@ import { Types } from 'mongoose'
 import jwt from 'jsonwebtoken'
 import axios from 'axios'
 import randomstring from 'randomstring'
+import Tournament from '../../../src/models/tournament'
+import { CreateTournament } from '../../../src/types/tournament'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -45,7 +47,21 @@ describe('test create game', () => {
     })
 
     it('with valid data and team two resolved', async () => {
-        const { game, token } = await services.createGame({ ...createData, teamTwoDefined: true }, '')
+        const tournamentId = new Types.ObjectId()
+        const { game, token } = await services.createGame(
+            {
+                ...createData,
+                teamTwoDefined: true,
+                tournament: {
+                    _id: tournamentId,
+                    startDate: new Date('09-22-2022'),
+                    endDate: new Date('09-23-2022'),
+                    name: 'Mid-Atlantic Regionals 2022',
+                    eventId: 'mareg22',
+                },
+            },
+            '',
+        )
 
         const gameRecord = await Game.findById(game._id)
         expect(game._id.toString()).toBe(gameRecord?._id.toString())
@@ -53,12 +69,16 @@ describe('test create game', () => {
         expect(game.teamTwoScore).toBe(0)
         expect(game.teamTwoActive).toBe(false)
         expect(game.teamTwoDefined).toBe(true)
+        expect(game.tournament?._id.toString()).toBe(tournamentId.toString())
+        expect(game.tournament?.eventId).toBe('mareg22')
         expect(token.length).toBeGreaterThan(20)
         expect(gameRecord?.teamOneActive).toBe(true)
         expect(gameRecord?.teamTwoActive).toBe(false)
         expect(gameRecord?.creator.username).toBe('firstlast')
         expect(gameRecord?.teamOnePlayers.length).toBe(2)
         expect(gameRecord?.teamTwoPlayers.length).toBe(2)
+        expect(gameRecord?.tournament?._id.toString()).toBe(tournamentId.toString())
+        expect(gameRecord?.tournament?.eventId).toBe('mareg22')
         expect(token).toBe(gameRecord?.teamOneToken)
         expect(gameRecord?.teamTwoToken).toBeUndefined()
     })
@@ -234,6 +254,27 @@ describe('test edit game', () => {
         expect(gameRecord?.teamTwoPlayers.length).toBe(2)
         expect(gameRecord?.teamOneActive).toBe(true)
         expect(gameRecord?.teamTwoActive).toBe(false)
+    })
+
+    it('with tournament', async () => {
+        const tournamentData: CreateTournament = {
+            startDate: new Date('09-22-2022'),
+            endDate: new Date('09-23-2022'),
+            name: 'Mid-Atlantic Regionals 2022',
+            eventId: 'mareg22',
+        }
+        const tournament = await Tournament.create(tournamentData)
+        const game = await Game.create(gameData)
+
+        const updatedGame = await services.updateGame(game._id.toString(), {
+            tournament,
+        })
+        expect(updatedGame.teamOneActive).toBe(true)
+        expect(updatedGame.tournament?._id.toString()).toBe(tournament._id.toString())
+        expect(updatedGame.tournament?.eventId).toBe(tournament.eventId)
+
+        const gameRecord = await Game.findById(game._id)
+        expect(gameRecord?.tournament?.eventId).toBe(tournament.eventId)
     })
 
     it('with unfound game', async () => {

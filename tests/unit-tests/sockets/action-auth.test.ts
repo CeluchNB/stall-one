@@ -28,13 +28,17 @@ import { parseActionData } from '../../../src/utils/action'
 */
 
 let clientSocket: ReturnType<typeof ioClient>
+let gameId: Types.ObjectId
+const pointId = 'pointone'
 beforeAll((done) => {
     app.listen(process.env.PORT, () => {
         Game.create(createData, (error, game) => {
+            gameId = game._id
             clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`, {
                 extraHeaders: { authorization: `Bearer ${game.teamOneToken}` },
             })
             clientSocket.on('connect', () => {
+                clientSocket.emit('join:point', gameId, pointId)
                 done()
             })
         })
@@ -57,18 +61,18 @@ afterAll(async () => {
     app.close()
 })
 
+it('placeholder', () => {
+    expect(1 + 1).toBe(2)
+})
+
 describe('test client action sent', () => {
+    beforeEach(async () => {
+        await client.set(`${gameId}:pointone:one:actions`, 0)
+        await client.set(`${gameId}:pointone:pulling`, 'two')
+    })
     it('with valid data', (done) => {
         const actionData: ClientAction = {
-            actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
+            actionType: ActionType.PICKUP,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -79,25 +83,17 @@ describe('test client action sent', () => {
         }
         clientSocket.on('action:client', (action) => {
             expect(action.actionNumber).toBe(1)
-            expect(action.actionType).toBe(ActionType.PULL)
-            expect(action.team.teamname).toBe(actionData.team.teamname)
+            expect(action.actionType).toBe(ActionType.PICKUP)
+            expect(action.teamNumber).toBe('one')
             expect(action.playerOne.username).toBe(actionData.playerOne?.username)
             done()
         })
-        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId: '' }))
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }))
     })
 
     it('with bad data', (done) => {
         const actionData = {
             pointId: new Types.ObjectId().toString(),
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -107,10 +103,10 @@ describe('test client action sent', () => {
             tags: ['IB'],
         }
         clientSocket.on('action:error', (error) => {
-            expect(error.message).toBe(Constants.INVALID_DATA)
+            expect(error.message).toBe(Constants.INVALID_ACTION_TYPE)
             done()
         })
-        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId: '' }))
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }))
     })
 
     it('with non object exception', (done) => {
@@ -118,15 +114,7 @@ describe('test client action sent', () => {
             throw 7
         })
         const actionData: ClientAction = {
-            actionType: ActionType.PULL,
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Pittsburgh',
-                name: 'Temper',
-                teamname: 'pghtemper',
-                seasonStart: new Date('2022'),
-                seasonEnd: new Date('2022'),
-            },
+            actionType: ActionType.PICKUP,
             playerOne: {
                 _id: new Types.ObjectId(),
                 firstName: 'Noah',
@@ -139,7 +127,7 @@ describe('test client action sent', () => {
             expect(error.message).toBe(Constants.GENERIC_ERROR)
             done()
         })
-        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId: '' }))
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }))
     })
 })
 
@@ -148,14 +136,6 @@ describe('test client undo action', () => {
     let point: IPoint
     const actionData: ClientAction = {
         actionType: ActionType.PULL,
-        team: {
-            _id: new Types.ObjectId(),
-            place: 'Pittsburgh',
-            name: 'Temper',
-            teamname: 'pghtemper',
-            seasonStart: new Date('2022'),
-            seasonEnd: new Date('2022'),
-        },
         playerOne: {
             _id: new Types.ObjectId(),
             firstName: 'Noah',
@@ -167,10 +147,10 @@ describe('test client undo action', () => {
     beforeAll(async () => {
         game = await Game.findOne({})
         point = await Point.create({ ...createPointData })
+        clientSocket.emit('join:point', game?._id.toString(), point._id.toString())
 
-        actionData.team = (game as IGame).teamOne
-        await client.set(`${game?._id.toString()}:${point._id.toString()}:actions`, '1')
-        await RedisUtils.saveRedisAction(client, parseActionData(actionData, 1), point._id.toString())
+        await client.set(`${game?._id.toString()}:${point._id.toString()}:one:actions`, '1')
+        await RedisUtils.saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())
     })
 
     it('with valid data', (done) => {
@@ -191,7 +171,7 @@ describe('test client undo action', () => {
     })
 
     it('with unfound action', (done) => {
-        expect(client.set(`${game?._id.toString()}:${point._id.toString()}:actions`, '0')).resolves.toBe('OK')
+        expect(client.set(`${game?._id.toString()}:${point._id.toString()}:one:actions`, '0')).resolves.toBe('OK')
         clientSocket.on('action:error', (error) => {
             expect(error.message).toBe(Constants.INVALID_DATA)
             done()

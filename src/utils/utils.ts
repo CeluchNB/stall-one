@@ -1,8 +1,9 @@
-import { Player, TeamNumber } from '../types/ultmt'
+import { Player, TeamNumber, TeamNumberString } from '../types/ultmt'
 import { userErrorResponse } from '../middlware/errors'
 import { Types } from 'mongoose'
+import { Socket } from 'socket.io'
 
-export const getMyTeamNumber = (isMyTeam: boolean, myTeam: 'one' | 'two'): TeamNumber => {
+export const getMyTeamNumber = (isMyTeam: boolean, myTeam: TeamNumberString): TeamNumber => {
     if (isMyTeam) {
         if (myTeam === 'one') {
             return TeamNumber.ONE
@@ -18,17 +19,18 @@ export const getMyTeamNumber = (isMyTeam: boolean, myTeam: 'one' | 'two'): TeamN
     }
 }
 
-export const getActionBaseKey = (pointId: string, number: number): string => {
-    return `${pointId}:${number}`
+export const getActionBaseKey = (pointId: string, number: number, team: TeamNumberString): string => {
+    return `${pointId}:${number}:${team}`
 }
 
-export const handleSocketError = (error: unknown): { message: string; code: number } => {
+export const handleSocketError = (socket: Socket, error: unknown) => {
+    let errorData
     if (error && typeof error === 'object') {
-        const errorData = userErrorResponse(error.toString())
-        return errorData
+        errorData = userErrorResponse(error.toString())
+    } else {
+        errorData = userErrorResponse('')
     }
-    const errorData = userErrorResponse('')
-    return errorData
+    socket.emit('action:error', errorData)
 }
 
 export const parseRedisUser = (redisUser: { [x: string]: string }): Player | undefined => {

@@ -1,7 +1,6 @@
-import IAction, { RedisClientType, ActionType, Comment } from '../types/action'
+import { RedisClientType, ActionType, Comment, RedisAction } from '../types/action'
 import { getActionBaseKey, parseRedisUser } from './utils'
-import { Types } from 'mongoose'
-import { Player, Team } from '../types/ultmt'
+import { Player, TeamNumberString } from '../types/ultmt'
 import { createClient } from 'redis'
 
 const client = createClient({ url: process.env.REDIS_URL })
@@ -12,30 +11,11 @@ export const getClient = async () => {
     return client
 }
 
-export const saveRedisAction = async (redisClient: RedisClientType, data: IAction, pointId: string) => {
-    const { actionNumber: number, team, playerOne, playerTwo, displayMessage, tags, actionType } = data
-    const { _id, place, name, teamname, seasonStart, seasonEnd } = team
-    const baseKey = getActionBaseKey(pointId, number)
-
-    await redisClient.hSet(`${baseKey}:team`, 'name', name)
-    if (_id) {
-        await redisClient.hSet(`${baseKey}:team`, 'id', _id?.toString())
-    }
-    if (place) {
-        await redisClient.hSet(`${baseKey}:team`, 'place', place)
-    }
-    if (teamname) {
-        await redisClient.hSet(`${baseKey}:team`, 'teamname', teamname)
-    }
-    if (seasonStart) {
-        await redisClient.hSet(`${baseKey}:team`, 'seasonStart', new Date(seasonStart).getUTCFullYear())
-    }
-    if (seasonEnd) {
-        await redisClient.hSet(`${baseKey}:team`, 'seasonEnd', new Date(seasonEnd).getUTCFullYear())
-    }
+export const saveRedisAction = async (redisClient: RedisClientType, data: RedisAction, pointId: string) => {
+    const { actionNumber: number, teamNumber, playerOne, playerTwo, tags, actionType } = data
+    const baseKey = getActionBaseKey(pointId, number, teamNumber)
 
     await redisClient.set(`${baseKey}:type`, actionType)
-    await redisClient.set(`${baseKey}:display`, displayMessage)
     if (playerOne) {
         if (playerOne._id) {
             await redisClient.hSet(`${baseKey}:playerone`, 'id', playerOne._id.toString())
@@ -64,17 +44,11 @@ export const saveRedisAction = async (redisClient: RedisClientType, data: IActio
 export const getRedisAction = async (
     redisClient: RedisClientType,
     pointId: string,
-    number: number,
-): Promise<IAction> => {
-    const baseKey = getActionBaseKey(pointId, number)
-    const teamId = await redisClient.hGet(`${baseKey}:team`, 'id')
-    const teamPlace = await redisClient.hGet(`${baseKey}:team`, 'place')
-    const teamName = (await redisClient.hGet(`${baseKey}:team`, 'name')) as string
-    const teamTeamname = await redisClient.hGet(`${baseKey}:team`, 'teamname')
-    const teamStart = await redisClient.hGet(`${baseKey}:team`, 'seasonStart')
-    const teamEnd = await redisClient.hGet(`${baseKey}:team`, 'seasonEnd')
+    actionNumber: number,
+    teamNumber: TeamNumberString,
+): Promise<RedisAction> => {
+    const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
     const actionType = await redisClient.get(`${baseKey}:type`)
-    const displayMessage = (await redisClient.get(`${baseKey}:display`)) as string
     const playerOne = await redisClient.hGetAll(`${baseKey}:playerone`)
     const playerTwo = await redisClient.hGetAll(`${baseKey}:playertwo`)
     const tags = await redisClient.lRange(`${baseKey}:tags`, 0, -1)
@@ -90,34 +64,10 @@ export const getRedisAction = async (
         }
     }
 
-    const team: Team = {
-        name: teamName,
-    }
-
-    if (teamId) {
-        team._id = new Types.ObjectId(teamId)
-    }
-
-    if (teamPlace) {
-        team.place = teamPlace
-    }
-
-    if (teamTeamname) {
-        team.teamname = teamTeamname
-    }
-
-    if (teamStart) {
-        team.seasonStart = new Date(teamStart)
-    }
-    if (teamEnd) {
-        team.seasonEnd = new Date(teamEnd)
-    }
-
-    const action: IAction = {
-        team,
-        actionNumber: number,
+    const action: RedisAction = {
+        teamNumber,
+        actionNumber,
         actionType: actionType as ActionType,
-        displayMessage,
         tags,
         comments,
     }
@@ -128,11 +78,14 @@ export const getRedisAction = async (
     return action
 }
 
-export const deleteRedisAction = async (redisClient: RedisClientType, pointId: string, number: number) => {
-    const baseKey = getActionBaseKey(pointId, number)
-    await redisClient.del(`${baseKey}:team`)
+export const deleteRedisAction = async (
+    redisClient: RedisClientType,
+    pointId: string,
+    number: number,
+    teamNumber: TeamNumberString,
+) => {
+    const baseKey = getActionBaseKey(pointId, number, teamNumber)
     await redisClient.del(`${baseKey}:type`)
-    await redisClient.del(`${baseKey}:display`)
     await redisClient.del(`${baseKey}:playerone`)
     await redisClient.del(`${baseKey}:playertwo`)
     await redisClient.del(`${baseKey}:tags`)
@@ -144,8 +97,9 @@ export const saveRedisComment = async (
     pointId: string,
     actionNumber: number,
     data: Comment,
+    teamNumber: TeamNumberString,
 ) => {
-    const baseKey = getActionBaseKey(pointId, actionNumber)
+    const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
     const totalComments = await redisClient.incr(`${baseKey}:comments`)
     await redisClient.set(`${baseKey}:comments:${totalComments}:text`, data.comment)
     if (data.user._id) {
@@ -163,8 +117,9 @@ export const getRedisComment = async (
     pointId: string,
     actionNumber: number,
     commentNumber: number,
+    teamNumber: TeamNumberString,
 ): Promise<Comment | undefined> => {
-    const baseKey = getActionBaseKey(pointId, actionNumber)
+    const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
     const comment = await redisClient.get(`${baseKey}:comments:${commentNumber}:text`)
     const userData = await redisClient.hGetAll(`${baseKey}:comments:${commentNumber}:user`)
     const user = parseRedisUser(userData)
@@ -180,8 +135,9 @@ export const deleteRedisComment = async (
     pointId: string,
     actionNumber: number,
     commentNumber: number,
+    teamNumber: TeamNumberString,
 ) => {
-    const baseKey = getActionBaseKey(pointId, actionNumber)
+    const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
     await redisClient.del(`${baseKey}:comments:${commentNumber}:text`)
     await redisClient.del(`${baseKey}:comments:${commentNumber}:user`)
 }
@@ -190,8 +146,38 @@ export const actionExists = async (
     redisClient: RedisClientType,
     pointId: string,
     actionNumber: number,
+    teamNumber: TeamNumberString,
 ): Promise<boolean> => {
-    const baseKey = getActionBaseKey(pointId, actionNumber)
+    const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
     const type = await redisClient.get(`${baseKey}:type`)
     return !!type
+}
+
+export const getLastRedisAction = async (
+    redisClient: RedisClientType,
+    gameId: string,
+    pointId: string,
+    team: TeamNumberString,
+): Promise<RedisAction | undefined> => {
+    const totalActions = await redisClient.get(`${gameId}:${pointId}:${team}:actions`)
+    if (!totalActions) {
+        return undefined
+    }
+
+    const prevActionExists = await actionExists(redisClient, pointId, Number(totalActions), team)
+    if (!prevActionExists) {
+        return undefined
+    }
+
+    return await getRedisAction(redisClient, pointId, Number(totalActions), team)
+}
+
+export const isPullingTeam = async (
+    redisClient: RedisClientType,
+    gameId: string,
+    pointId: string,
+    team: TeamNumberString,
+): Promise<boolean> => {
+    const pulling = await redisClient.get(`${gameId}:${pointId}:pulling`)
+    return pulling === team
 }

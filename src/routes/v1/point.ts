@@ -32,6 +32,28 @@ pointRouter.post(
 )
 
 pointRouter.put(
+    '/point/:id/pulling',
+    param('id').isString(),
+    query('team').isString(),
+    passport.authenticate('jwt', { session: false }),
+    async (req: Request, res: Response, next) => {
+        try {
+            const data = req.user as GameAuth
+            if (req.query.team !== 'one' && req.query.team !== 'two') {
+                throw new Error()
+            }
+            const teamNumber = getMyTeamNumber(true, req.query.team)
+            const redisClient = await getClient()
+            const services = new PointServices(Point, Game, Action, redisClient)
+            const point = await services.setPullingTeam(data.game._id.toString(), req.params.id, teamNumber)
+            return res.json({ point })
+        } catch (error) {
+            next(error)
+        }
+    },
+)
+
+pointRouter.put(
     '/point/:id/players',
     body('players').isArray(),
     param('id').isString(),

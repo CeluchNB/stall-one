@@ -6,6 +6,7 @@ import Game from '../../src/models/game'
 import jwt from 'jsonwebtoken'
 import Point from '../../src/models/point'
 import Action from '../../src/models/action'
+import Tournament from '../../src/models/tournament'
 
 export const client = createClient({ url: process.env.REDIS_URL })
 export const setUpDatabase = async () => {
@@ -17,6 +18,7 @@ export const resetDatabase = async () => {
     await Game.deleteMany({})
     await Point.deleteMany({})
     await Action.deleteMany({})
+    await Tournament.deleteMany({})
     if (client.isOpen) {
         await client.flushAll()
     }
@@ -94,7 +96,8 @@ export const createPointData: IPoint = {
     },
     teamOneActive: true,
     teamTwoActive: true,
-    actions: [],
+    teamOneActions: [],
+    teamTwoActions: [],
 }
 
 export const getMock = jest.fn((url) => {

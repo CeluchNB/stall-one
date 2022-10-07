@@ -49,6 +49,7 @@ export default class GameServices {
             playersPerPoint: gameData.playersPerPoint,
             timeoutPerHalf: gameData.timeoutPerHalf,
             floaterTimeout: gameData.floaterTimeout,
+            tournament: gameData.tournament,
         }
 
         const teamOneResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamOne._id}`, {
@@ -113,6 +114,7 @@ export default class GameServices {
             playersPerPoint: gameData.playersPerPoint,
             timeoutPerHalf: gameData.timeoutPerHalf,
             floaterTimeout: gameData.floaterTimeout,
+            tournament: gameData.tournament,
         }
 
         for (const key of updateGameKeys) {

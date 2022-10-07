@@ -87,9 +87,27 @@ describe('should return correct message for error', () => {
         })
     })
     it('with cannot delete point error', () => {
-        expect(userErrorResponse(`Extra Error: ${Constants.CANNOT_DELETE_POINT}`)).toEqual({
-            message: Constants.CANNOT_DELETE_POINT,
+        expect(userErrorResponse(`Extra Error: ${Constants.MODIFY_LIVE_POINT_ERROR}`)).toEqual({
+            message: Constants.MODIFY_LIVE_POINT_ERROR,
             code: 400,
+        })
+    })
+    it('with invalid action type', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.INVALID_ACTION_TYPE}`)).toEqual({
+            message: Constants.INVALID_ACTION_TYPE,
+            code: 400,
+        })
+    })
+    it('with invalid conflicting score', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.CONFLICTING_SCORE}`)).toEqual({
+            message: Constants.CONFLICTING_SCORE,
+            code: 400,
+        })
+    })
+    it('with unfound tournament', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.UNABLE_TO_FIND_TOURNAMENT}`)).toEqual({
+            message: Constants.UNABLE_TO_FIND_TOURNAMENT,
+            code: 404,
         })
     })
 })

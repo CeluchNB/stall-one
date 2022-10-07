@@ -68,6 +68,15 @@ const schema = new Schema<IGame>({
     timeoutPerHalf: Number,
     floaterTimeout: Boolean,
     points: [SchemaTypes.ObjectId],
+    tournament: {
+        type: {
+            _id: SchemaTypes.ObjectId,
+            startDate: Date,
+            endDate: Date,
+            name: String,
+            eventId: String,
+        },
+    },
 })
 
 schema.pre('save', async function (next) {

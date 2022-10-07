@@ -24,8 +24,14 @@ export const userErrorResponse = (error: string): { message: string; code: numbe
         return { message: Constants.PROFANE_COMMENT, code: 400 }
     } else if (error.includes(Constants.SCORE_REQUIRED)) {
         return { message: Constants.SCORE_REQUIRED, code: 400 }
-    } else if (error.includes(Constants.CANNOT_DELETE_POINT)) {
-        return { message: Constants.CANNOT_DELETE_POINT, code: 400 }
+    } else if (error.includes(Constants.MODIFY_LIVE_POINT_ERROR)) {
+        return { message: Constants.MODIFY_LIVE_POINT_ERROR, code: 400 }
+    } else if (error.includes(Constants.INVALID_ACTION_TYPE)) {
+        return { message: Constants.INVALID_ACTION_TYPE, code: 400 }
+    } else if (error.includes(Constants.CONFLICTING_SCORE)) {
+        return { message: Constants.CONFLICTING_SCORE, code: 400 }
+    } else if (error.includes(Constants.UNABLE_TO_FIND_TOURNAMENT)) {
+        return { message: Constants.UNABLE_TO_FIND_TOURNAMENT, code: 404 }
     } else {
         return { message: Constants.GENERIC_ERROR, code: 500 }
     }

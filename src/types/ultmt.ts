@@ -20,3 +20,5 @@ export enum TeamNumber {
     ONE = 'one',
     TWO = 'two',
 }
+
+export type TeamNumberString = 'one' | 'two'

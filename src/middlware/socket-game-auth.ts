@@ -2,8 +2,9 @@ import * as Constants from '../utils/constants'
 import { Socket } from 'socket.io'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import { ApiError } from '../types/errors'
+import { TeamNumberString } from '../types/ultmt'
 
-export const gameAuth = async (socket: Socket): Promise<{ gameId: string; team: 'one' | 'two' }> => {
+export const gameAuth = async (socket: Socket): Promise<{ gameId: string; team: TeamNumberString }> => {
     try {
         const token = socket.request.headers.authorization?.replace('Bearer ', '')
         if (!token) {
