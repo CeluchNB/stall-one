@@ -5,7 +5,7 @@ import Game from '../../../src/models/game'
 import { createData, gameData, getMock, resetDatabase } from '../../fixtures/setup-db'
 import axios from 'axios'
 import { Types } from 'mongoose'
-import jwt from 'jsonwebtoken'
+import jwt, { JwtPayload } from 'jsonwebtoken'
 import { ApiError } from '../../../src/types/errors'
 
 afterAll(async () => {
@@ -56,9 +56,11 @@ describe('test /POST game', () => {
 describe('test /PUT update game', () => {
     it('with valid data', async () => {
         const game = await Game.create(gameData)
+        const token = game.getToken('one')
+
         const response = await request(app)
             .put('/api/v1/game')
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send({
                 gameData: { timeoutPerHalf: 10 },
             })
@@ -96,7 +98,7 @@ describe('test /PUT update game', () => {
             .send({
                 gameData: { timeoutPerHalf: 10 },
             })
-            .expect(401)
+            .expect(404)
     })
 
     it('with error', async () => {
@@ -104,9 +106,10 @@ describe('test /PUT update game', () => {
             return Promise.resolve({ ok: false, status: 400 })
         })
         const game = await Game.create(gameData)
+        const token = game.getToken('one')
         await request(app)
             .put('/api/v1/game')
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send({
                 gameData: { timeoutPerHalf: 10, teamTwoDefined: true },
             })
@@ -135,8 +138,11 @@ describe('test /PUT game join', () => {
 
         const { game, token } = response.body
         expect(game._id.toString()).toBe(initialGame._id.toString())
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
+        expect(payload.sub).toBe(game._id.toString())
+        expect(payload.team).toBe('two')
+        expect(payload.exp).toBe(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3)
         const gameRecord = await Game.findById(game._id)
-        expect(token).toBe(gameRecord?.teamTwoToken)
         expect(gameRecord?.teamTwoActive).toBe(true)
     })
 
@@ -168,10 +174,11 @@ describe('test /PUT game join', () => {
 describe('test /PUT add guest player', () => {
     it('with valid data', async () => {
         const game = await Game.create(gameData)
+        const token = game.getToken('one')
 
         const response = await request(app)
             .put('/api/v1/game/player/guest')
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send({
                 player: {
                     firstName: 'Noah',
@@ -219,10 +226,11 @@ describe('test /PUT add guest player', () => {
 describe('test /PUT finish game', () => {
     it('with valid data for single team', async () => {
         const game = await Game.create(createData)
+        const token = game.getToken('one')
 
         const response = await request(app)
             .put('/api/v1/game/finish')
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send()
             .expect(200)
 
@@ -248,10 +256,11 @@ describe('test /PUT finish game', () => {
         })
 
         const game = await Game.create(createData)
+        const token = game.getToken('one')
 
         const response = await request(app)
             .put('/api/v1/game/finish')
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send()
             .expect(404)
 

@@ -29,7 +29,8 @@ gameRouter.put(
         try {
             const data = req.body.gameData
             const services = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
-            const game = await services.updateGame((req.user as GameAuth).game._id.toString(), data)
+            const { gameId } = req.user as GameAuth
+            const game = await services.updateGame(gameId, data)
             return res.json({ game })
         } catch (error) {
             next(error)
@@ -64,8 +65,8 @@ gameRouter.put(
     async (req: Request, res: Response, next) => {
         try {
             const services = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
-            const { game: gameAuth, team } = req.user as GameAuth
-            const game = await services.addGuestPlayer(gameAuth._id.toString(), team as TeamNumber, req.body.player)
+            const { gameId, team } = req.user as GameAuth
+            const game = await services.addGuestPlayer(gameId, team as TeamNumber, req.body.player)
             return res.json({ game })
         } catch (error) {
             next(error)
@@ -79,8 +80,8 @@ gameRouter.put(
     async (req: Request, res: Response, next) => {
         try {
             const services = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
-            const { game: gameAuth, team } = req.user as GameAuth
-            const game = await services.finishGame(gameAuth._id.toString(), team as TeamNumber)
+            const { gameId, team } = req.user as GameAuth
+            const game = await services.finishGame(gameId, team as TeamNumber)
             return res.json({ game })
         } catch (error) {
             next(error)

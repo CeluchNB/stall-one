@@ -4,7 +4,6 @@ import IGame, { CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import axios from 'axios'
 import randomstring from 'randomstring'
-import jwt from 'jsonwebtoken'
 import { Player, TeamNumber } from '../../types/ultmt'
 
 export default class GameServices {
@@ -77,17 +76,9 @@ export default class GameServices {
             resolveCode: randomstring.generate({ length: 6, charset: 'numeric' }),
         })
 
-        const payload = {
-            sub: game._id.toString(),
-            iat: Date.now(),
-            team: 'one',
-        }
+        const token = game.getToken('one')
 
-        const token = jwt.sign(payload, process.env.JWT_SECRET as string)
-        game.teamOneToken = token
-        await game.save()
-
-        return { game, token: game.teamOneToken }
+        return { game, token }
     }
 
     /**
@@ -174,14 +165,7 @@ export default class GameServices {
             throw new ApiError(Constants.WRONG_RESOLVE_CODE, 401)
         }
 
-        const payload = {
-            sub: game._id.toString(),
-            iat: Date.now(),
-            team: 'two',
-        }
-
-        const token = jwt.sign(payload, process.env.JWT_SECRET as string)
-        game.teamTwoToken = token
+        const token = game.getToken('two')
         game.teamTwoActive = true
         await game.save()
 

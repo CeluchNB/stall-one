@@ -1,8 +1,7 @@
-import * as Constants from '../utils/constants'
 import { Schema, SchemaTypes, model } from 'mongoose'
 import IGame from '../types/game'
 import jwt from 'jsonwebtoken'
-import { ApiError } from '../types/errors'
+import { TeamNumber } from '../types/ultmt'
 
 const schema = new Schema<IGame>({
     teamOne: {
@@ -36,8 +35,6 @@ const schema = new Schema<IGame>({
             username: String,
         },
     },
-    teamOneToken: String,
-    teamTwoToken: String,
     scoreLimit: { type: Number, default: 15 },
     halfScore: { type: Number, default: 8 },
     teamOneScore: { type: Number, default: 0 },
@@ -79,31 +76,12 @@ const schema = new Schema<IGame>({
     },
 })
 
-schema.pre('save', async function (next) {
-    if (!this.teamOneToken) {
-        const payload = {
-            sub: this._id.toString(),
-            team: 'one',
-            iat: Date.now(),
-        }
-
-        try {
-            const token = jwt.sign(payload, process.env.JWT_SECRET as string)
-            this.teamOneToken = token
-        } catch (error) {
-            throw new ApiError(Constants.GENERIC_ERROR, 500)
-        }
-    }
-
-    next()
-})
-
-schema.methods.toJSON = function () {
-    const gameObject = this.toObject()
-    delete gameObject.teamOneToken
-    delete gameObject.teamTwoToken
-
-    return gameObject
+schema.methods.getToken = function (team: TeamNumber) {
+    const token = jwt.sign({ team }, process.env.JWT_SECRET as string, {
+        subject: this._id.toString(),
+        expiresIn: '3 hours',
+    })
+    return token
 }
 
 const Game = model<IGame>('Game', schema)

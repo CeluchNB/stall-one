@@ -6,7 +6,7 @@ import { ApiError } from '../../../src/types/errors'
 import { CreateGame } from '../../../src/types/game'
 import { TeamNumber } from '../../../src/types/ultmt'
 import { Types } from 'mongoose'
-import jwt from 'jsonwebtoken'
+import jwt, { JwtPayload } from 'jsonwebtoken'
 import axios from 'axios'
 import randomstring from 'randomstring'
 import Tournament from '../../../src/models/tournament'
@@ -38,12 +38,16 @@ describe('test create game', () => {
         expect(game.teamTwoScore).toBe(0)
         expect(game.teamTwoActive).toBe(false)
         expect(game.teamTwoDefined).toBe(false)
-        expect(token.length).toBeGreaterThan(20)
         expect(gameRecord?.teamOneActive).toBe(true)
         expect(gameRecord?.teamTwoActive).toBe(false)
         expect(gameRecord?.creator.username).toBe('firstlast')
         expect(gameRecord?.teamOnePlayers.length).toBe(2)
         expect(gameRecord?.teamTwoPlayers.length).toBe(0)
+
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
+        expect(payload.sub).toBe(game._id.toString())
+        expect(payload.team).toBe('one')
+        expect(payload.exp).toBe(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3)
     })
 
     it('with valid data and team two resolved', async () => {
@@ -79,8 +83,10 @@ describe('test create game', () => {
         expect(gameRecord?.teamTwoPlayers.length).toBe(2)
         expect(gameRecord?.tournament?._id.toString()).toBe(tournamentId.toString())
         expect(gameRecord?.tournament?.eventId).toBe('mareg22')
-        expect(token).toBe(gameRecord?.teamOneToken)
-        expect(gameRecord?.teamTwoToken).toBeUndefined()
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
+        expect(payload.sub).toBe(game._id.toString())
+        expect(payload.team).toBe('one')
+        expect(payload.exp).toBe(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3)
     })
 
     it('with fetch error', async () => {
@@ -206,7 +212,7 @@ describe('test create game', () => {
         jest.spyOn(jwt, 'sign').mockImplementationOnce(() => {
             throw new Error('bad message')
         })
-        expect(services.createGame(createData, '')).rejects.toThrowError(Constants.GENERIC_ERROR)
+        expect(services.createGame(createData, '')).rejects.toThrowError('bad message')
     })
 })
 
@@ -323,9 +329,12 @@ describe('test team two join', () => {
         )
 
         const gameRecord = await Game.findById(initialGame._id)
-        expect(token).toBe(gameRecord?.teamTwoToken)
         expect(game._id).toEqual(initialGame._id)
         expect(gameRecord?.teamTwoActive).toBe(true)
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
+        expect(payload.sub).toBe(game._id.toString())
+        expect(payload.team).toBe('two')
+        expect(payload.exp).toBe(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3)
     })
 
     it('with unfound game', async () => {
@@ -349,7 +358,6 @@ describe('test team two join', () => {
 
         const gameRecord = await Game.findById(initialGame._id)
         expect(gameRecord?.teamTwoActive).toBe(false)
-        expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 
     it('with unfound user', async () => {
@@ -378,7 +386,6 @@ describe('test team two join', () => {
 
         const gameRecord = await Game.findById(initialGame._id)
         expect(gameRecord?.teamTwoActive).toBe(false)
-        expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 
     it('with user from wrong team', async () => {
@@ -407,7 +414,6 @@ describe('test team two join', () => {
 
         const gameRecord = await Game.findById(initialGame._id)
         expect(gameRecord?.teamTwoActive).toBe(false)
-        expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 
     it('with wrong resolve code', async () => {
@@ -435,7 +441,6 @@ describe('test team two join', () => {
 
         const gameRecord = await Game.findById(initialGame._id)
         expect(gameRecord?.teamTwoActive).toBe(false)
-        expect(gameRecord?.teamTwoToken).toBe(undefined)
     })
 })
 

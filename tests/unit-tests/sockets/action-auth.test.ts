@@ -34,8 +34,9 @@ beforeAll((done) => {
     app.listen(process.env.PORT, () => {
         Game.create(createData, (error, game) => {
             gameId = game._id
+            const token = game.getToken('one')
             clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`, {
-                extraHeaders: { authorization: `Bearer ${game.teamOneToken}` },
+                extraHeaders: { authorization: `Bearer ${token}` },
             })
             clientSocket.on('connect', () => {
                 clientSocket.emit('join:point', gameId, pointId)

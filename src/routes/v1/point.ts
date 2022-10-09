@@ -19,11 +19,11 @@ pointRouter.post(
     passport.authenticate('jwt', { session: false }),
     async (req: Request, res: Response, next) => {
         try {
-            const data = req.user as GameAuth
-            const pullingTeam = getMyTeamNumber(req.query.pulling === 'true', data.team)
+            const { gameId, team } = req.user as GameAuth
+            const pullingTeam = getMyTeamNumber(req.query.pulling === 'true', team)
             const redisClient = await getClient()
             const services = new PointServices(Point, Game, Action, redisClient)
-            const point = await services.createPoint(data.game._id.toString(), pullingTeam, Number(req.query.number))
+            const point = await services.createPoint(gameId, pullingTeam, Number(req.query.number))
             return res.json({ point })
         } catch (error) {
             next(error)
@@ -38,14 +38,14 @@ pointRouter.put(
     passport.authenticate('jwt', { session: false }),
     async (req: Request, res: Response, next) => {
         try {
-            const data = req.user as GameAuth
+            const { gameId } = req.user as GameAuth
             if (req.query.team !== 'one' && req.query.team !== 'two') {
                 throw new Error()
             }
             const teamNumber = getMyTeamNumber(true, req.query.team)
             const redisClient = await getClient()
             const services = new PointServices(Point, Game, Action, redisClient)
-            const point = await services.setPullingTeam(data.game._id.toString(), req.params.id, teamNumber)
+            const point = await services.setPullingTeam(gameId, req.params.id, teamNumber)
             return res.json({ point })
         } catch (error) {
             next(error)
@@ -60,16 +60,11 @@ pointRouter.put(
     passport.authenticate('jwt', { session: false }),
     async (req: Request, res: Response, next) => {
         try {
-            const data = req.user as GameAuth
-            const teamNumber = getMyTeamNumber(true, data.team)
+            const { gameId, team } = req.user as GameAuth
+            const teamNumber = getMyTeamNumber(true, team)
             const redisClient = await getClient()
             const services = new PointServices(Point, Game, Action, redisClient)
-            const point = await services.setPlayers(
-                data.game._id.toString(),
-                req.params.id,
-                teamNumber,
-                req.body.players,
-            )
+            const point = await services.setPlayers(gameId, req.params.id, teamNumber, req.body.players)
             return res.json({ point })
         } catch (error) {
             next(error)
@@ -83,11 +78,11 @@ pointRouter.put(
     passport.authenticate('jwt', { session: false }),
     async (req: Request, res: Response, next) => {
         try {
-            const data = req.user as GameAuth
-            const teamNumber = getMyTeamNumber(true, data.team)
+            const { gameId, team } = req.user as GameAuth
+            const teamNumber = getMyTeamNumber(true, team)
             const redisClient = await getClient()
             const services = new PointServices(Point, Game, Action, redisClient)
-            const point = await services.finishPoint(data.game._id.toString(), req.params.id, teamNumber)
+            const point = await services.finishPoint(gameId, req.params.id, teamNumber)
             return res.json({ point })
         } catch (error) {
             next(error)
@@ -101,11 +96,11 @@ pointRouter.delete(
     passport.authenticate('jwt', { session: false }),
     async (req: Request, res: Response, next) => {
         try {
-            const data = req.user as GameAuth
-            const teamNumber = getMyTeamNumber(true, data.team)
+            const { gameId, team } = req.user as GameAuth
+            const teamNumber = getMyTeamNumber(true, team)
             const redisClient = await getClient()
             const services = new PointServices(Point, Game, Action, redisClient)
-            await services.deletePoint(data.game._id.toString(), req.params.id, teamNumber)
+            await services.deletePoint(gameId, req.params.id, teamNumber)
             return res.send()
         } catch (error) {
             next(error)
