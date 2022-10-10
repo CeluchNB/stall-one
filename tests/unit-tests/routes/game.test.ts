@@ -130,7 +130,7 @@ describe('test /PUT game join', () => {
 
         const response = await request(app)
             .put(
-                `/api/v1/game/resolve/${initialGame._id}?team=${initialGame.teamTwo._id}&otp=${initialGame.resolveCode}`,
+                `/api/v1/game/${initialGame._id}/resolve?team=${initialGame.teamTwo._id}&otp=${initialGame.resolveCode}`,
             )
             .set('Authorization', 'Bearer fake.adf345.jwt')
             .send()
@@ -158,7 +158,7 @@ describe('test /PUT game join', () => {
 
         const response = await request(app)
             .put(
-                `/api/v1/game/resolve/${new Types.ObjectId()}?team=${initialGame.teamTwo._id}&otp=${
+                `/api/v1/game/${new Types.ObjectId()}/resolve?team=${initialGame.teamTwo._id}&otp=${
                     initialGame.resolveCode
                 }`,
             )
