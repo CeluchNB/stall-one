@@ -267,3 +267,35 @@ describe('test /PUT finish game', () => {
         expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_GAME)
     })
 })
+
+describe('test /PUT reactivate game', () => {
+    it('with valid data', async () => {
+        const initGame = await Game.create(createData)
+        initGame.teamOneActive = false
+        await initGame.save()
+
+        const response = await request(app)
+            .put(`/api/v1/game/${initGame._id.toString()}/reactivate?team=${initGame.teamOne._id?.toString()}`)
+            .set('Authorization', 'Bearer token')
+            .send()
+            .expect(200)
+
+        const { game, token } = response.body
+        expect(game.teamOneActive).toBe(true)
+
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
+        expect(payload.sub).toBe(initGame._id.toString())
+        expect(payload.team).toBe('one')
+        expect(payload.exp).toBe(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3)
+    })
+
+    it('with service error', async () => {
+        const response = await request(app)
+            .put(`/api/v1/game/${new Types.ObjectId().toString()}/reactivate?team=team1`)
+            .set('Authorization', 'Bearer token')
+            .send()
+            .expect(404)
+
+        expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_GAME)
+    })
+})

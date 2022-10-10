@@ -565,3 +565,74 @@ describe('test finish game', () => {
         )
     })
 })
+
+describe('test reactivate game', () => {
+    it('with valid data for team one', async () => {
+        const initGame = await Game.create(createData)
+        initGame.teamOneActive = false
+        await initGame.save()
+
+        const { game, token } = await services.reactivateGame(
+            initGame._id.toString(),
+            '',
+            initGame.teamOne._id?.toString() || '',
+        )
+
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
+        expect(payload.sub).toBe(initGame._id.toString())
+        expect(payload.team).toBe('one')
+        expect(payload.exp).toBe(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3)
+
+        expect(game.teamOneActive).toBe(true)
+
+        const gameRecord = await Game.findById(game._id)
+        expect(gameRecord?.teamOneActive).toBe(true)
+    })
+
+    it('with valid data for team two', async () => {
+        const initGame = await Game.create(createData)
+        initGame.teamTwoActive = false
+        initGame.teamTwo._id = new Types.ObjectId()
+        await initGame.save()
+
+        const { game, token } = await services.reactivateGame(
+            initGame._id.toString(),
+            '',
+            initGame.teamTwo._id?.toString() || '',
+        )
+
+        const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
+        expect(payload.sub).toBe(initGame._id.toString())
+        expect(payload.team).toBe('two')
+        expect(payload.exp).toBe(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3)
+
+        expect(game.teamTwoActive).toBe(true)
+
+        const gameRecord = await Game.findById(game._id)
+        expect(gameRecord?.teamTwoActive).toBe(true)
+    })
+
+    it('with unfound game', async () => {
+        await expect(services.reactivateGame(new Types.ObjectId().toString(), '', '')).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
+        )
+    })
+
+    it('with team not on game', async () => {
+        const initGame = await Game.create(createData)
+        initGame.teamOneActive = false
+        await initGame.save()
+
+        await expect(services.reactivateGame(initGame._id.toString(), '', '')).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 400),
+        )
+    })
+
+    it('with invalid user', async () => {
+        const initGame = await Game.create(createData)
+        getMock.mockImplementationOnce(() => Promise.resolve({ status: 401 }))
+        await expect(
+            services.reactivateGame(initGame._id.toString(), '', initGame.teamOne._id?.toString() || ''),
+        ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
+    })
+})

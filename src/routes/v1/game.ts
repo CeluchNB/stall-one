@@ -39,10 +39,10 @@ gameRouter.put(
 )
 
 gameRouter.put(
-    '/game/resolve/:id',
-    param('id').isString(),
-    query('team').isString(),
-    query('otp').isString(),
+    '/game/:id/resolve',
+    param('id').escape().isString(),
+    query('team').escape().isString(),
+    query('otp').escape().isString(),
     async (req: Request, res: Response, next) => {
         try {
             const jwt = req.headers.authorization?.replace('Bearer ', '') as string
@@ -83,6 +83,22 @@ gameRouter.put(
             const { gameId, team } = req.user as GameAuth
             const game = await services.finishGame(gameId, team as TeamNumber)
             return res.json({ game })
+        } catch (error) {
+            next(error)
+        }
+    },
+)
+
+gameRouter.put(
+    '/game/:id/reactivate',
+    param('id').escape().isString(),
+    query('team').escape().isString(),
+    async (req: Request, res: Response, next) => {
+        try {
+            const jwt = req.headers?.authorization?.replace('Bearer ', '') as string
+            const services = new GameServices(Game, process.env.ULTMT_API_URL || '', process.env.API_KEY || '')
+            const { game, token } = await services.reactivateGame(req.params.id, jwt, req.query.team as string)
+            return res.json({ game, token })
         } catch (error) {
             next(error)
         }

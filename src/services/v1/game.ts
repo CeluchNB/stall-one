@@ -4,7 +4,7 @@ import IGame, { CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import axios from 'axios'
 import randomstring from 'randomstring'
-import { Player, TeamNumber } from '../../types/ultmt'
+import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -225,5 +225,50 @@ export default class GameServices {
         await game.save()
 
         return game
+    }
+
+    /**
+     * Method to reactivate a game that has been finished or delayed
+     * @param gameId id of game to reactivate
+     * @param userJwt user to validate as team manager
+     * @param teamId team that is in game
+     * @returns new token and updated game
+     */
+    reactivateGame = async (
+        gameId: string,
+        userJwt: string,
+        teamId: string,
+    ): Promise<{ game: IGame; token: string }> => {
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        let team: TeamNumberString = 'one'
+        if (game.teamOne._id?.equals(teamId) && !game.teamTwo._id?.equals(teamId)) {
+            team = 'one'
+        } else if (game.teamTwo._id?.equals(teamId)) {
+            team = 'two'
+        } else {
+            throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 40)
+        }
+
+        const response = await axios.get(`${this.ultmtUrl}/api/v1/user/manager/authenticate?team=${teamId}`, {
+            headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
+        })
+
+        if (response.status === 401) {
+            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
+        }
+
+        const token = game.getToken(team)
+        if (team === 'one') {
+            game.teamOneActive = true
+        } else {
+            game.teamTwoActive = true
+        }
+        await game.save()
+
+        return { game, token }
     }
 }
