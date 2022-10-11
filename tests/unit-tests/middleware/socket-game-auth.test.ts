@@ -21,7 +21,7 @@ afterEach(async () => {
 describe('test game auth method', () => {
     it('should work with valid token', async () => {
         const game = await Game.create(createData)
-        const token = game.teamOneToken
+        const token = game.getToken('one')
 
         const socket = { data: {}, request: { headers: { authorization: `Bearer ${token}` } } } as Socket
         const { gameId, team } = await gameAuth(socket)

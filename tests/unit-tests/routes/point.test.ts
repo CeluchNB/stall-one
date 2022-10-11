@@ -33,10 +33,11 @@ afterEach(async () => {
 describe('test /POST first point route', () => {
     it('with valid data', async () => {
         const game = await Game.create(gameData)
+        const token = game.getToken('one')
 
         const response = await request(app)
             .post('/api/v1/point?pulling=true&number=1')
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send()
             .expect(200)
 
@@ -72,10 +73,11 @@ describe('test /POST first point route', () => {
         })
         game.points.push(point._id)
         await game.save()
+        const token = game.getToken('one')
 
         const response = await request(app)
             .post('/api/v1/point?pulling=false&number=1')
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send()
             .expect(400)
 
@@ -97,10 +99,11 @@ describe('test /PUT pulling team', () => {
         })
         game.points.push(initialPoint._id)
         await game.save()
+        const token = game.getToken('one')
 
         const response = await request(app)
             .put(`/api/v1/point/${initialPoint._id.toString()}/pulling?team=one`)
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send()
             .expect(200)
 
@@ -126,10 +129,11 @@ describe('test /PUT pulling team', () => {
         })
         game.points.push(initialPoint._id)
         await game.save()
+        const token = game.getToken('one')
 
         const response = await request(app)
             .put(`/api/v1/point/${initialPoint._id.toString()}/pulling?team=two`)
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send()
             .expect(200)
 
@@ -155,10 +159,11 @@ describe('test /PUT pulling team', () => {
         })
         game.points.push(initialPoint._id)
         await game.save()
+        const token = game.getToken('one')
 
         const response = await request(app)
             .put(`/api/v1/point/${initialPoint._id.toString()}/pulling?team=three`)
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send()
             .expect(500)
 
@@ -211,10 +216,11 @@ describe('test /PUT set players', () => {
                 username: `First${i}last${i}`,
             })
         }
+        const token = game.getToken('one')
 
         const response = await request(app)
             .put(`/api/v1/point/${initialPoint._id.toString()}/players`)
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send({ players })
             .expect(200)
 
@@ -282,10 +288,11 @@ describe('test /PUT set players', () => {
                 username: `First${i}last${i}`,
             })
         }
+        const token = game.getToken('one')
 
         const response = await request(app)
             .put(`/api/v1/point/${initialPoint._id.toString()}/players`)
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send({ players })
             .expect(400)
 
@@ -348,9 +355,11 @@ describe('test /PUT finish point', () => {
         await saveRedisAction(client, action1, point._id.toString())
         await saveRedisAction(client, action2, point._id.toString())
 
+        const token = game.getToken('one')
+
         const response = await request(app)
             .put(`/api/v1/point/${point._id.toString()}/finish`)
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send()
             .expect(200)
 
@@ -380,9 +389,11 @@ describe('test /PUT finish point', () => {
         await game.save()
         await point.save()
 
+        const token = game.getToken('one')
+
         const response = await request(app)
             .put(`/api/v1/point/${new Types.ObjectId()}/finish`)
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send()
             .expect(404)
         expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_POINT)
@@ -412,10 +423,11 @@ describe('test /DELETE point', () => {
         await game.save()
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 0)
+        const token = game.getToken('one')
 
         await request(app)
             .delete(`/api/v1/point/${point._id.toString()}`)
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send()
             .expect(200)
 
@@ -452,10 +464,11 @@ describe('test /DELETE point', () => {
         await point.save()
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
+        const token = game.getToken('one')
 
         const response = await request(app)
             .delete(`/api/v1/point/${point._id.toString()}`)
-            .set('Authorization', `Bearer ${game.teamOneToken}`)
+            .set('Authorization', `Bearer ${token}`)
             .send()
             .expect(400)
 

@@ -48,8 +48,6 @@ export interface CreateGame {
 
 interface IGame extends CreateGame {
     _id: Types.ObjectId
-    teamOneToken: string
-    teamTwoToken?: string
     teamOneScore: number
     teamTwoScore: number
     teamOneActive: boolean
@@ -58,11 +56,12 @@ interface IGame extends CreateGame {
     teamTwoPlayers: Player[]
     resolveCode: string
     points: Types.ObjectId[]
+    getToken: (team: 'one' | 'two') => string
 }
 
 export interface GameAuth {
     team: 'one' | 'two'
-    game: IGame
+    gameId: string
 }
 
 export default IGame

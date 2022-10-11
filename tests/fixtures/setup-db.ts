@@ -1,9 +1,9 @@
+/* istanbul ignore file */
 import { connect, connection, Types } from 'mongoose'
 import { createClient } from 'redis'
 import IGame, { CreateGame } from '../../src/types/game'
 import IPoint from '../../src/types/point'
 import Game from '../../src/models/game'
-import jwt from 'jsonwebtoken'
 import Point from '../../src/models/point'
 import Action from '../../src/models/action'
 import Tournament from '../../src/models/tournament'
@@ -65,14 +65,13 @@ export const gameData: IGame = {
     teamOnePlayers: [],
     teamTwoPlayers: [],
     creator: { firstName: 'first', lastName: 'last', _id: new Types.ObjectId(), username: 'firstlast' },
-    teamOneToken: jwt.sign({ sub: gameId, iat: 657483, team: 'one' }, process.env.JWT_SECRET as string),
-    teamTwoToken: undefined,
     teamOneScore: 0,
     teamTwoScore: 0,
     resolveCode: '123456',
     teamOneActive: true,
     teamTwoActive: false,
     points: [],
+    getToken: () => '',
 }
 
 const pointId = new Types.ObjectId()
