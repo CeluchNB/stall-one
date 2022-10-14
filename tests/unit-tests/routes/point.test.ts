@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as Constants from '../../../src/utils/constants'
 import app, { close } from '../../../src/app'
 import request from 'supertest'
@@ -15,7 +16,8 @@ import Point from '../../../src/models/point'
 import { Types } from 'mongoose'
 import { Player } from '../../../src/types/ultmt'
 import { ActionType, RedisAction } from '../../../src/types/action'
-import { saveRedisAction } from '../../../src/utils/redis'
+import { getRedisAction, saveRedisAction } from '../../../src/utils/redis'
+import Action from '../../../src/models/action'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -410,6 +412,128 @@ describe('test /PUT finish point', () => {
         await request(app)
             .put(`/api/v1/point/${point._id.toString()}/finish`)
             .set('Authorization', 'Bearer badf345.asdf432gsf.1324asdf1')
+            .send()
+            .expect(401)
+    })
+})
+
+describe('test /PUT reactivate point', () => {
+    beforeEach(async () => {
+        const action1 = await Action.create({
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'Place1Name1',
+                seasonStart: new Date(),
+                seasonEnd: new Date(),
+            },
+            actionNumber: 1,
+            actionType: 'Pull',
+            playerOne: { firstName: 'Name1', lastName: 'Last1' },
+        })
+        const action2 = await Action.create({
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'Place1Name1',
+                seasonStart: new Date(),
+                seasonEnd: new Date(),
+            },
+            actionNumber: 2,
+            actionType: 'TeamTwoScore',
+        })
+        const prevPoint = await Point.create({
+            pointNumber: 1,
+            teamOneActive: false,
+            teamTwoActive: false,
+            receivingTeam: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'Place1Name1',
+                seasonStart: new Date(),
+                seasonEnd: new Date(),
+            },
+            pullingTeam: { place: 'Place2', name: 'Name2' },
+            teamOneScore: 1,
+            teamTwoScore: 0,
+        })
+        const initialPoint = await Point.create({
+            pointNumber: 2,
+            teamOneActive: false,
+            teamTwoActive: false,
+            pullingTeam: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'Place1Name1',
+                seasonStart: new Date(),
+                seasonEnd: new Date(),
+            },
+            receivingTeam: { place: 'Place2', name: 'Name2' },
+            teamOneScore: 1,
+            teamTwoScore: 1,
+        })
+        initialPoint.teamOneActions = [action1._id, action2._id]
+        await initialPoint.save()
+
+        const game = await Game.create(gameData)
+        game.points = [prevPoint._id, initialPoint._id]
+        await game.save()
+    })
+
+    it('with valid use case', async () => {
+        const game = await Game.findOne({})
+        const initialPoint = await Point.findById(game!.points[1])
+
+        const token = game!.getToken('one')
+        const response = await request(app)
+            .put(`/api/v1/point/${initialPoint?._id.toString()}/reactivate`)
+            .set('Authorization', `Bearer ${token}`)
+            .send()
+            .expect(200)
+
+        const { point } = response.body
+
+        expect(point.teamOneActive).toBe(true)
+        expect(point.teamTwoActive).toBe(false)
+        expect(point.teamOneActions.length).toBe(0)
+        expect(point.teamOneScore).toBe(1)
+        expect(point.teamTwoScore).toBe(0)
+        const gameRecord = await Game.findById(game!._id)
+        expect(gameRecord?.teamOneScore).toBe(1)
+        expect(gameRecord?.teamTwoScore).toBe(0)
+
+        const actionCount = await client.get(`${game!._id}:${initialPoint!._id}:one:actions`)
+        expect(actionCount).toBe('2')
+
+        const actionOne = await getRedisAction(client, initialPoint!._id.toString(), 1, 'one')
+        expect(actionOne.actionNumber).toBe(1)
+        expect(actionOne.actionType).toBe('Pull')
+
+        const actionTwo = await getRedisAction(client, initialPoint!._id.toString(), 2, 'one')
+        expect(actionTwo.actionNumber).toBe(2)
+        expect(actionTwo.actionType).toBe('TeamTwoScore')
+    })
+
+    it('with service error', async () => {
+        const game = await Game.findOne({})
+
+        const token = game!.getToken('one')
+        const response = await request(app)
+            .put(`/api/v1/point/${new Types.ObjectId().toString()}/reactivate`)
+            .set('Authorization', `Bearer ${token}`)
+            .send()
+            .expect(404)
+        expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_POINT)
+    })
+
+    it('with bad token', async () => {
+        await request(app)
+            .put(`/api/v1/point/${new Types.ObjectId().toString()}/reactivate`)
+            .set('Authorization', `Bearer basdf1234.asft423gad.45asdf3`)
             .send()
             .expect(401)
     })
