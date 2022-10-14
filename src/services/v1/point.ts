@@ -4,9 +4,9 @@ import { IGameModel } from '../../models/game'
 import { Player, TeamNumber } from '../../types/ultmt'
 import { ApiError } from '../../types/errors'
 import IPoint from '../../types/point'
-import { ActionType, RedisClientType } from '../../types/action'
+import IAction, { ActionType, RedisAction, RedisClientType } from '../../types/action'
 import { IActionModel } from '../../models/action'
-import { deleteRedisAction, getRedisAction } from '../../utils/redis'
+import { deleteRedisAction, getRedisAction, saveRedisAction } from '../../utils/redis'
 
 export default class PointServices {
     pointModel: IPointModel
@@ -340,5 +340,92 @@ export default class PointServices {
         game.points = game.points.filter((id) => !id.equals(point._id))
         await game.save()
         await point.delete()
+    }
+
+    /**
+     * Method to reactivate a recent point to make it live again
+     * @param gameId
+     * @param pointId
+     * @param team
+     * @returns
+     */
+    reactivatePoint = async (gameId: string, pointId: string, team: TeamNumber): Promise<IPoint> => {
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        const point = await this.pointModel.findById(pointId)
+        if (!point) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
+        }
+
+        // can only reactivate the last point
+        if (point.pointNumber !== game.points.length) {
+            throw new ApiError(Constants.REACTIVATE_POINT_ERROR, 400)
+        }
+
+        if (team === TeamNumber.ONE) {
+            game.teamOneActive = true
+            point.teamOneActive = true
+            // load actions back into redis
+            const actions = await this.actionModel.find().where('_id').in(point.teamOneActions)
+            await this.saveActions(actions, gameId, pointId, team)
+            // delete actions from model
+            point.teamOneActions = []
+        } else {
+            game.teamTwoActive = true
+            point.teamTwoActive = true
+            // load actions back into redis
+            const actions = await this.actionModel.find().where('_id').in(point.teamTwoActions)
+            await this.saveActions(actions, gameId, pointId, team)
+
+            // delete actions from model
+            point.teamTwoActions = []
+        }
+
+        // only reduce score if the other team has no actions
+        // because finishPoint only updates score on first team reporting
+        if (
+            (team === TeamNumber.ONE && point.teamTwoActions.length === 0) ||
+            (team === TeamNumber.TWO && point.teamOneActions.length === 0)
+        ) {
+            const prevPoint = await this.pointModel
+                .findOne({ pointNumber: point.pointNumber - 1 })
+                .where('_id')
+                .in(game.points)
+
+            if (prevPoint) {
+                point.teamOneScore = prevPoint?.teamOneScore
+                point.teamTwoScore = prevPoint?.teamTwoScore
+            } else {
+                point.teamOneScore = 0
+                point.teamTwoScore = 0
+            }
+
+            game.teamOneScore = point.teamOneScore
+            game.teamTwoScore = point.teamTwoScore
+        }
+
+        await point.save()
+        await game.save()
+
+        return point
+    }
+
+    private saveActions = async (actions: IAction[], gameId: string, pointId: string, teamNumber: TeamNumber) => {
+        await this.redisClient.set(`${gameId}:${pointId}:${teamNumber}:actions`, actions.length)
+        for (const action of actions) {
+            const redisAction: RedisAction = {
+                teamNumber,
+                actionNumber: action.actionNumber,
+                actionType: action.actionType,
+                comments: action.comments,
+                tags: action.tags,
+                playerOne: action.playerOne,
+                playerTwo: action.playerTwo,
+            }
+            await saveRedisAction(this.redisClient, redisAction, pointId)
+        }
     }
 }

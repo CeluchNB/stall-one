@@ -18,3 +18,5 @@ export const MODIFY_LIVE_POINT_ERROR =
 export const INVALID_ACTION_TYPE = 'This action type cannot be submitted based on the previous action.'
 export const CONFLICTING_SCORE = 'The other team reported a different score. Please work this out with them.'
 export const UNABLE_TO_FIND_TOURNAMENT = 'We were not able to find this tournament.'
+export const REACTIVATE_POINT_ERROR =
+    'Only the most recent point can be re-activated. Try deleting the next point first.'

@@ -110,4 +110,10 @@ describe('should return correct message for error', () => {
             code: 404,
         })
     })
+    it('with reactivate point error', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.REACTIVATE_POINT_ERROR}`)).toEqual({
+            message: Constants.REACTIVATE_POINT_ERROR,
+            code: 400,
+        })
+    })
 })

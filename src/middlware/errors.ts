@@ -32,6 +32,8 @@ export const userErrorResponse = (error: string): { message: string; code: numbe
         return { message: Constants.CONFLICTING_SCORE, code: 400 }
     } else if (error.includes(Constants.UNABLE_TO_FIND_TOURNAMENT)) {
         return { message: Constants.UNABLE_TO_FIND_TOURNAMENT, code: 404 }
+    } else if (error.includes(Constants.REACTIVATE_POINT_ERROR)) {
+        return { message: Constants.REACTIVATE_POINT_ERROR, code: 400 }
     } else {
         return { message: Constants.GENERIC_ERROR, code: 500 }
     }
