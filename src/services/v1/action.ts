@@ -105,9 +105,7 @@ export default class ActionServices {
             throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
         }
 
-        const user: Player = {
-            ...response.data,
-        }
+        const { user } = response.data
         const exists = await actionExists(this.redisClient, pointId, actionNumber, team)
         if (!exists) {
             throw new ApiError(Constants.INVALID_DATA, 400)
@@ -164,6 +162,34 @@ export default class ActionServices {
         action.playerOne = playerOne
         action.playerTwo = playerTwo
         await action.save()
+        return action
+    }
+
+    addSavedComment = async (actionId: string, userJwt: string, comment: string): Promise<IAction> => {
+        const action = await this.actionModel.findById(actionId)
+        if (!action) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_ACTION, 404)
+        }
+        let user: Player
+        try {
+            const response = await axios.get(`${this.ultmtUrl}/api/v1/user/me`, {
+                headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
+            })
+            if (response.status !== 200) {
+                throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
+            }
+            user = response.data.user
+        } catch (_error) {
+            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
+        }
+
+        if (filter.isProfane(comment)) {
+            throw new ApiError(Constants.PROFANE_COMMENT, 400)
+        }
+
+        action.comments.push({ user, comment })
+        await action.save()
+
         return action
     }
 

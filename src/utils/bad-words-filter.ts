@@ -20,6 +20,7 @@ const badWords: string[] = [
     'f u c k e r',
     'fucker',
     'fucking',
+    'fuckin',
     'faggot',
     'fag',
     'dyke',
