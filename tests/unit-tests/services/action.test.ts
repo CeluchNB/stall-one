@@ -17,6 +17,7 @@ import { saveRedisAction } from '../../../src/utils/redis'
 import { parseActionData } from '../../../src/utils/action'
 import axios from 'axios'
 import { ApiError } from '../../../src/types/errors'
+import Action from '../../../src/models/action'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -635,5 +636,80 @@ describe('test delete live comment', () => {
         expect(commentText).toBe(comment.comment)
         expect(commentUser.id?.toString()).toBe(comment.user._id?.toString())
         expect(commentTotal).toBe('1')
+    })
+})
+
+describe('test edit action', () => {
+    it('with valid players', async () => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: {}, status: 200 })
+        })
+        const id = new Types.ObjectId()
+        const player2 = {
+            _id: id,
+            firstName: 'First2',
+            lastName: 'Last2',
+            username: 'firstlast2',
+        }
+        const initAction = await Action.create({
+            actionNumber: 1,
+            actionType: 'Pull',
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'placename',
+            },
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'First1',
+                lastName: 'Last1',
+                username: 'firstlast1',
+            },
+            playerTwo: player2,
+        })
+
+        const action = await services.editSavedAction(initAction._id.toString(), '', player2, undefined)
+
+        expect(action.actionNumber).toBe(initAction.actionNumber)
+        expect(action.actionType).toBe(initAction.actionType)
+        expect(action.playerTwo).toBe(undefined)
+        expect(action.playerOne?._id?.toString()).toBe(id.toString())
+        expect(action.playerOne?.firstName).toBe(player2.firstName)
+        expect(action.playerOne?.lastName).toBe(player2.lastName)
+        expect(action.playerOne?.username).toBe(player2.username)
+    })
+
+    it('with unfound action', async () => {
+        await expect(
+            services.editSavedAction(new Types.ObjectId().toString(), '', undefined, undefined),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_ACTION, 404))
+    })
+
+    it('with unauthenticated user', async () => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: {}, status: 401 })
+        })
+
+        const initAction = await Action.create({
+            actionNumber: 1,
+            actionType: 'Pull',
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'placename',
+            },
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'First1',
+                lastName: 'Last1',
+                username: 'firstlast1',
+            },
+            playerTwo: undefined,
+        })
+        await expect(
+            services.editSavedAction(initAction._id.toString(), '', undefined, undefined),
+        ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
     })
 })

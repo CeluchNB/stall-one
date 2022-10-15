@@ -1,6 +1,6 @@
 import * as Constants from '../../utils/constants'
 import Action, { IActionModel } from '../../models/action'
-import { RedisClientType, ClientAction, ActionType, InputComment, RedisAction } from '../../types/action'
+import IAction, { RedisClientType, ClientAction, ActionType, InputComment, RedisAction } from '../../types/action'
 import {
     saveRedisAction,
     getRedisAction,
@@ -140,6 +140,31 @@ export default class ActionServices {
 
         await deleteRedisComment(this.redisClient, pointId, actionNumber, commentNumber, team)
         return await getRedisAction(this.redisClient, pointId, actionNumber, team)
+    }
+
+    editSavedAction = async (
+        actionId: string,
+        userJwt?: string,
+        playerOne?: Player,
+        playerTwo?: Player,
+    ): Promise<IAction> => {
+        const action = await this.actionModel.findById(actionId)
+        if (!action) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_ACTION, 404)
+        }
+
+        const response = await axios.get(`${this.ultmtUrl}/api/v1/auth/manager?team=${action.team._id}`, {
+            headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
+        })
+
+        if (response.status === 401) {
+            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
+        }
+
+        action.playerOne = playerOne
+        action.playerTwo = playerTwo
+        await action.save()
+        return action
     }
 
     private handleSideEffects = async (data: ClientAction, gameId: string, pointId: string, team: TeamNumberString) => {
