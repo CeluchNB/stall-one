@@ -188,7 +188,7 @@ export default class ActionServices {
             throw new ApiError(Constants.PROFANE_COMMENT, 400)
         }
 
-        const commentNumber = Math.max(...action.comments.map((c) => c.commentNumber)) + 1
+        const commentNumber = action.comments.length ? Math.max(...action.comments.map((c) => c.commentNumber)) + 1 : 1
         action.comments.push({ user, comment, commentNumber })
         await action.save()
 

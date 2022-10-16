@@ -385,6 +385,7 @@ describe('test add live comment', () => {
                 lastName: userData.lastName,
                 username: userData.username,
             },
+            commentNumber: 1,
         })
     })
 
@@ -751,6 +752,47 @@ describe('test add saved comment', () => {
         expect(actionRecord?.comments[0].user.firstName).toBe(userData.firstName.toString())
         expect(actionRecord?.comments[0].user.lastName).toBe(userData.lastName.toString())
         expect(actionRecord?.comments[0].user.username).toBe(userData.username.toString())
+    })
+
+    it('with pre-existing comment', async () => {
+        const initAction = await Action.create({
+            actionNumber: 1,
+            actionType: 'Pull',
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'placename',
+            },
+            comments: [
+                {
+                    comment: 'Nice!',
+                    commentNumber: 7,
+                    user: {
+                        _id: userData._id,
+                        firstName: userData.firstName,
+                        lastName: userData.lastName,
+                        username: userData.username,
+                    },
+                },
+            ],
+        })
+
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: { user: userData }, status: 200 })
+        })
+
+        const comment = 'Good huck!'
+        const action = await services.addSavedComment(initAction._id.toString(), 'jwt', comment)
+
+        expect(action.actionNumber).toBe(initAction.actionNumber)
+        expect(action.comments.length).toBe(2)
+        expect(action.comments[1].comment).toBe(comment)
+        expect(action.comments[1].commentNumber).toBe(8)
+        expect(action.comments[1].user._id?.toString()).toBe(userData._id.toString())
+        expect(action.comments[1].user.firstName).toBe(userData.firstName.toString())
+        expect(action.comments[1].user.lastName).toBe(userData.lastName.toString())
+        expect(action.comments[1].user.username).toBe(userData.username.toString())
     })
 
     it('with unfound action', async () => {

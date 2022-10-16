@@ -23,6 +23,50 @@ actionRouter.put(
             )
             const { playerOne, playerTwo } = req.body.players
             const action = await services.editSavedAction(req.params.id, userJwt, playerOne, playerTwo)
+            return res.status(200).json({ action })
+        } catch (error) {
+            next(error)
+        }
+    },
+)
+
+actionRouter.post(
+    '/action/:id/comment',
+    param('id').escape(),
+    body('comment').isString(),
+    async (req: Request, res: Response, next) => {
+        try {
+            const userJwt = req.headers.authorization?.replace('Bearer ', '') as string
+            const redisClient = await getClient()
+            const services = new ActionServices(
+                redisClient,
+                process.env.ULTMT_API_URL || '',
+                process.env.API_KEY || '',
+                Action,
+            )
+            const action = await services.addSavedComment(req.params.id, userJwt, req.body.comment)
+            return res.status(201).json({ action })
+        } catch (error) {
+            next(error)
+        }
+    },
+)
+
+actionRouter.delete(
+    '/action/:id/comment/:commentNumber',
+    param('id').escape(),
+    param('commentNumber').isString(),
+    async (req: Request, res: Response, next) => {
+        try {
+            const userJwt = req.headers.authorization?.replace('Bearer ', '') as string
+            const redisClient = await getClient()
+            const services = new ActionServices(
+                redisClient,
+                process.env.ULTMT_API_URL || '',
+                process.env.API_KEY || '',
+                Action,
+            )
+            const action = await services.deleteSavedComment(req.params.id, userJwt, Number(req.params.commentNumber))
             return res.json({ action })
         } catch (error) {
             next(error)
