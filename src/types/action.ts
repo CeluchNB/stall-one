@@ -105,6 +105,7 @@ export interface InputComment {
 export interface Comment {
     user: Player
     comment: string
+    commentNumber: number
 }
 
 export interface ClientAction {

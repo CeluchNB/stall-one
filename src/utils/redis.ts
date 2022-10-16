@@ -60,7 +60,7 @@ export const getRedisAction = async (
         const commentor = await redisClient.hGetAll(`${baseKey}:comments:${i}:user`)
         const user = parseRedisUser(commentor) as Player
         if (comment) {
-            comments.push({ comment, user })
+            comments.push({ comment, user, commentNumber: i })
         }
     }
 
@@ -96,7 +96,7 @@ export const saveRedisComment = async (
     redisClient: RedisClientType,
     pointId: string,
     actionNumber: number,
-    data: Comment,
+    data: { user: Player; comment: string },
     teamNumber: TeamNumberString,
 ) => {
     const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
@@ -127,7 +127,7 @@ export const getRedisComment = async (
     if (!comment || !user) {
         return undefined
     }
-    return { user, comment }
+    return { user, comment, commentNumber }
 }
 
 export const deleteRedisComment = async (

@@ -13,6 +13,7 @@ const schema = new Schema<IAction>({
                 username: String,
             },
             comment: String,
+            commentNumber: Number,
         },
     ],
     team: {

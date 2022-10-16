@@ -18,6 +18,7 @@ import { parseActionData } from '../../../src/utils/action'
 import axios from 'axios'
 import { ApiError } from '../../../src/types/errors'
 import Action from '../../../src/models/action'
+import { Player } from '../../../src/types/ultmt'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -30,6 +31,21 @@ afterEach(async () => {
 afterAll(async () => {
     await tearDownDatabase()
 })
+
+const userData = {
+    _id: new Types.ObjectId(),
+    firstName: 'Noah',
+    lastName: 'Celuch',
+    email: 'noah@email.com',
+    username: 'noah',
+    private: false,
+    playerTeams: [],
+    managerTeams: [],
+    archiveTeams: [],
+    stats: [],
+    requests: [],
+    openToRequests: false,
+}
 
 const services = new ActionServices(client, '', '')
 describe('test create a live action', () => {
@@ -327,21 +343,6 @@ describe('test undo action', () => {
 })
 
 describe('test add live comment', () => {
-    const userData = {
-        _id: new Types.ObjectId(),
-        firstName: 'Noah',
-        lastName: 'Celuch',
-        email: 'noah@email.com',
-        username: 'noah',
-        private: false,
-        playerTeams: [],
-        managerTeams: [],
-        archiveTeams: [],
-        stats: [],
-        requests: [],
-        openToRequests: false,
-    }
-
     it('with valid data', async () => {
         jest.spyOn(axios, 'get').mockImplementationOnce(() => {
             return Promise.resolve({ data: { user: userData }, status: 200 })
@@ -459,20 +460,6 @@ describe('test add live comment', () => {
 })
 
 describe('test delete live comment', () => {
-    const userData = {
-        _id: new Types.ObjectId(),
-        firstName: 'Noah',
-        lastName: 'Celuch',
-        email: 'noah@email.com',
-        username: 'noah',
-        private: false,
-        playerTeams: [],
-        managerTeams: [],
-        archiveTeams: [],
-        stats: [],
-        requests: [],
-        openToRequests: false,
-    }
     it('with valid data', async () => {
         jest.spyOn(axios, 'get').mockImplementationOnce(() => {
             return Promise.resolve({ data: userData, status: 200 })
@@ -504,6 +491,7 @@ describe('test delete live comment', () => {
                 lastName: userData.lastName,
                 username: userData.username,
             },
+            commentNumber: 1,
         }
 
         await saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())
@@ -559,6 +547,7 @@ describe('test delete live comment', () => {
                 lastName: userData.lastName,
                 username: userData.username,
             },
+            commentNumber: 1,
         }
 
         await saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())
@@ -614,6 +603,7 @@ describe('test delete live comment', () => {
                 lastName: userData.lastName,
                 username: userData.username,
             },
+            commentNumber: 1,
         }
 
         await saveRedisAction(client, parseActionData(actionData, 1, 'two'), point._id.toString())
@@ -725,21 +715,6 @@ describe('test edit action', () => {
 })
 
 describe('test add saved comment', () => {
-    const userData = {
-        _id: new Types.ObjectId(),
-        firstName: 'Noah',
-        lastName: 'Celuch',
-        email: 'noah@email.com',
-        username: 'noah',
-        private: false,
-        playerTeams: [],
-        managerTeams: [],
-        archiveTeams: [],
-        stats: [],
-        requests: [],
-        openToRequests: false,
-    }
-
     it('with valid data', async () => {
         const initAction = await Action.create({
             actionNumber: 1,
@@ -845,5 +820,139 @@ describe('test add saved comment', () => {
         await expect(
             services.addSavedComment(initAction._id.toString(), 'jwt', 'What a fuckin huck'),
         ).rejects.toThrowError(new ApiError(Constants.PROFANE_COMMENT, 400))
+    })
+})
+
+describe('test delete saved comment', () => {
+    const user: Player = {
+        _id: userData._id,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        username: userData.username,
+    }
+    it('with existing comment', async () => {
+        jest.spyOn(axios, 'get').mockReturnValueOnce(Promise.resolve({ data: { user: userData }, status: 200 }))
+        const initAction = await Action.create({
+            actionNumber: 1,
+            actionType: 'Pull',
+            playerOne: {
+                firstName: 'First1',
+                lastName: 'Last1',
+            },
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'placename',
+            },
+            comments: [
+                {
+                    user,
+                    comment: 'Good huck',
+                    commentNumber: 2,
+                },
+            ],
+        })
+
+        const action = await services.deleteSavedComment(initAction._id.toString(), '', 2)
+        expect(action.comments.length).toBe(0)
+        expect(action.actionNumber).toBe(initAction.actionNumber)
+
+        const actionRecord = await Action.findById(initAction._id)
+        expect(actionRecord?.comments.length).toBe(0)
+        expect(actionRecord?.actionNumber).toBe(initAction.actionNumber)
+    })
+
+    it('with multiple comments', async () => {
+        jest.spyOn(axios, 'get').mockReturnValueOnce(Promise.resolve({ data: { user: userData }, status: 200 }))
+
+        const initAction = await Action.create({
+            actionNumber: 1,
+            actionType: 'Pull',
+            playerOne: {
+                firstName: 'First1',
+                lastName: 'Last1',
+            },
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'placename',
+            },
+            comments: [
+                {
+                    user,
+                    comment: 'Good huck',
+                    commentNumber: 2,
+                },
+                {
+                    user,
+                    comment: 'Bad huck',
+                    commentNumber: 1,
+                },
+            ],
+        })
+
+        const action = await services.deleteSavedComment(initAction._id.toString(), '', 2)
+        expect(action.comments.length).toBe(1)
+        expect(action.comments[0].comment).toBe(initAction.comments[1].comment)
+        expect(action.comments[0].user._id?.toString()).toBe(initAction.comments[1].user._id?.toString())
+        expect(action.comments[0].commentNumber).toBe(initAction.comments[1].commentNumber)
+        expect(action.actionNumber).toBe(initAction.actionNumber)
+
+        const actionRecord = await Action.findById(initAction._id)
+        expect(actionRecord?.comments.length).toBe(1)
+        expect(actionRecord?.comments[0].comment).toBe(initAction.comments[1].comment)
+        expect(actionRecord?.comments[0].user._id?.toString()).toBe(initAction.comments[1].user._id?.toString())
+        expect(actionRecord?.comments[0].commentNumber).toBe(initAction.comments[1].commentNumber)
+        expect(actionRecord?.actionNumber).toBe(initAction.actionNumber)
+    })
+
+    it('with unfound action', async () => {
+        await expect(services.deleteSavedComment(new Types.ObjectId().toString(), 'jwt', 2)).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_ACTION, 404),
+        )
+    })
+
+    it('with error response', async () => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.reject({ data: { user: userData }, status: 401 })
+        })
+
+        const initAction = await Action.create({
+            actionNumber: 1,
+            actionType: 'Pull',
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'placename',
+            },
+        })
+
+        await expect(services.deleteSavedComment(initAction._id.toString(), 'jwt', 2)).rejects.toThrowError(
+            new ApiError(Constants.UNAUTHENTICATED_USER, 401),
+        )
+    })
+
+    it('with malformed response', async () => {
+        jest.spyOn(axios, 'get').mockImplementationOnce(() => {
+            return Promise.resolve({ data: { user: userData }, status: 401 })
+        })
+
+        const initAction = await Action.create({
+            actionNumber: 1,
+            actionType: 'Pull',
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'placename',
+            },
+        })
+
+        await expect(services.deleteSavedComment(initAction._id.toString(), 'jwt', 2)).rejects.toThrowError(
+            new ApiError(Constants.UNAUTHENTICATED_USER, 401),
+        )
     })
 })

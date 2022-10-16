@@ -19,6 +19,7 @@ import axios from 'axios'
 import { Player, TeamNumberString } from '../../types/ultmt'
 import { ApiError } from '../../types/errors'
 import filter from '../../utils/bad-words-filter'
+import { Types } from 'mongoose'
 
 export default class ActionServices {
     redisClient: RedisClientType
@@ -187,7 +188,34 @@ export default class ActionServices {
             throw new ApiError(Constants.PROFANE_COMMENT, 400)
         }
 
-        action.comments.push({ user, comment })
+        const commentNumber = Math.max(...action.comments.map((c) => c.commentNumber)) + 1
+        action.comments.push({ user, comment, commentNumber })
+        await action.save()
+
+        return action
+    }
+
+    deleteSavedComment = async (actionId: string, userJwt: string, commentNumber: number): Promise<IAction> => {
+        const action = await this.actionModel.findById(actionId)
+        if (!action) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_ACTION, 404)
+        }
+        let user: { _id: Types.ObjectId }
+        try {
+            const response = await axios.get(`${this.ultmtUrl}/api/v1/user/me`, {
+                headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
+            })
+            if (response.status !== 200) {
+                throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
+            }
+            user = response.data.user
+        } catch (_error) {
+            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
+        }
+
+        action.comments = action.comments.filter((c) => {
+            return !c.user._id?.equals(user._id) || c.commentNumber !== commentNumber
+        })
         await action.save()
 
         return action

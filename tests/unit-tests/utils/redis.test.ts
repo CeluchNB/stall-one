@@ -375,6 +375,7 @@ describe('test save redis comment', () => {
         const commentData: Comment = {
             comment: 'That was a wild huck',
             user: { _id: new Types.ObjectId(), firstName: 'Noah', lastName: 'Celuch', username: 'noah' },
+            commentNumber: 1,
         }
         await saveRedisComment(client, 'point1', 1, commentData, 'one')
         const key = getActionBaseKey('point1', 1, 'one')
@@ -394,6 +395,7 @@ describe('test save redis comment', () => {
         const commentData: Comment = {
             comment: 'That was a wild huck',
             user: { firstName: 'Noah', lastName: 'Celuch' },
+            commentNumber: 1,
         }
         await saveRedisComment(client, 'point1', 1, commentData, 'one')
         const key = getActionBaseKey('point1', 1, 'one')
@@ -415,6 +417,7 @@ describe('test delete redis comment', () => {
         const data: Comment = {
             comment: 'That was a wild huck',
             user: { _id: new Types.ObjectId(), username: 'noah', firstName: 'Noah', lastName: 'Celuch' },
+            commentNumber: 1,
         }
         const pointId = 'point1'
         const actionNumber = 1
@@ -455,6 +458,7 @@ describe('test get redis comment', () => {
         const data: Comment = {
             comment: 'That was a wild huck',
             user: { _id: new Types.ObjectId(), username: 'noah', firstName: 'Noah', lastName: 'Celuch' },
+            commentNumber: 1,
         }
         const pointId = 'point1'
         const actionNumber = 1
@@ -475,6 +479,7 @@ describe('test get redis comment', () => {
         const data: Comment = {
             comment: 'That was a wild huck',
             user: { _id: new Types.ObjectId(), username: 'noah', firstName: 'Noah', lastName: 'Celuch' },
+            commentNumber: 1,
         }
         const pointId = 'point1'
         const actionNumber = 1
@@ -493,6 +498,7 @@ describe('test get redis comment', () => {
         const data: Comment = {
             comment: 'That was a wild huck',
             user: { _id: new Types.ObjectId(), username: 'noah', firstName: 'Noah', lastName: 'Celuch' },
+            commentNumber: 1,
         }
         const pointId = 'point1'
         const actionNumber = 1
