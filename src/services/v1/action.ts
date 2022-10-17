@@ -20,6 +20,7 @@ import { Player, TeamNumberString } from '../../types/ultmt'
 import { ApiError } from '../../types/errors'
 import filter from '../../utils/bad-words-filter'
 import { Types } from 'mongoose'
+import { findByIdOrThrow } from '../../utils/mongoose'
 
 export default class ActionServices {
     redisClient: RedisClientType
@@ -147,10 +148,7 @@ export default class ActionServices {
         playerOne?: Player,
         playerTwo?: Player,
     ): Promise<IAction> => {
-        const action = await this.actionModel.findById(actionId)
-        if (!action) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_ACTION, 404)
-        }
+        const action = await findByIdOrThrow<IAction>(actionId, this.actionModel, Constants.UNABLE_TO_FIND_ACTION)
 
         const response = await axios.get(`${this.ultmtUrl}/api/v1/auth/manager?team=${action.team._id}`, {
             headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
@@ -167,10 +165,8 @@ export default class ActionServices {
     }
 
     addSavedComment = async (actionId: string, userJwt: string, comment: string): Promise<IAction> => {
-        const action = await this.actionModel.findById(actionId)
-        if (!action) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_ACTION, 404)
-        }
+        const action = await findByIdOrThrow<IAction>(actionId, this.actionModel, Constants.UNABLE_TO_FIND_ACTION)
+
         let user: Player
         try {
             const response = await axios.get(`${this.ultmtUrl}/api/v1/user/me`, {
@@ -196,10 +192,8 @@ export default class ActionServices {
     }
 
     deleteSavedComment = async (actionId: string, userJwt: string, commentNumber: number): Promise<IAction> => {
-        const action = await this.actionModel.findById(actionId)
-        if (!action) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_ACTION, 404)
-        }
+        const action = await findByIdOrThrow<IAction>(actionId, this.actionModel, Constants.UNABLE_TO_FIND_ACTION)
+
         let user: { _id: Types.ObjectId }
         try {
             const response = await axios.get(`${this.ultmtUrl}/api/v1/user/me`, {

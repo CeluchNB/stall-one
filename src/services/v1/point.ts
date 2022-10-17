@@ -7,6 +7,8 @@ import IPoint from '../../types/point'
 import IAction, { ActionType, RedisAction, RedisClientType } from '../../types/action'
 import { IActionModel } from '../../models/action'
 import { deleteRedisAction, getRedisAction, saveRedisAction } from '../../utils/redis'
+import { findByIdOrThrow } from '../../utils/mongoose'
+import IGame from '../../types/game'
 
 export default class PointServices {
     pointModel: IPointModel
@@ -32,10 +34,7 @@ export default class PointServices {
             throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         if (pointNumber > 1) {
             const prevPoint = await this.pointModel
@@ -112,15 +111,8 @@ export default class PointServices {
      * @returns updated point
      */
     setPullingTeam = async (gameId: string, pointId: string, pullingTeam: TeamNumber): Promise<IPoint> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
-
-        const point = await this.pointModel.findById(pointId)
-        if (!point) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+        const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
 
         if (!game.points.includes(point._id)) {
             throw new ApiError(Constants.INVALID_DATA, 400)
@@ -171,15 +163,9 @@ export default class PointServices {
      * @returns updated point
      */
     setPlayers = async (gameId: string, pointId: string, team: TeamNumber, players: Player[]): Promise<IPoint> => {
-        const point = await this.pointModel.findById(pointId)
-        if (!point) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
-        }
+        const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
 
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         if (!game.points.includes(point._id)) {
             throw new ApiError(Constants.INVALID_DATA, 400)
@@ -206,15 +192,9 @@ export default class PointServices {
      * @returns final point
      */
     finishPoint = async (gameId: string, pointId: string, team: TeamNumber): Promise<IPoint> => {
-        const point = await this.pointModel.findById(pointId)
-        if (!point) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
-        }
+        const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
 
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         if (!game.points.includes(point._id)) {
             throw new ApiError(Constants.INVALID_DATA, 400)
@@ -298,15 +278,8 @@ export default class PointServices {
      * @param team one or two
      */
     deletePoint = async (gameId: string, pointId: string, team: TeamNumber): Promise<void> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
-
-        const point = await this.pointModel.findById(pointId)
-        if (!point) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+        const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
 
         if (!game.points.includes(point._id)) {
             throw new ApiError(Constants.INVALID_DATA, 400)
@@ -350,15 +323,8 @@ export default class PointServices {
      * @returns
      */
     reactivatePoint = async (gameId: string, pointId: string, team: TeamNumber): Promise<IPoint> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
-
-        const point = await this.pointModel.findById(pointId)
-        if (!point) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+        const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
 
         // can only reactivate the last point
         if (point.pointNumber !== game.points.length) {

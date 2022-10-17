@@ -5,6 +5,7 @@ import { ApiError } from '../../types/errors'
 import axios from 'axios'
 import randomstring from 'randomstring'
 import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
+import { findByIdOrThrow } from '../../utils/mongoose'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -85,10 +86,7 @@ export default class GameServices {
      * @returns updated game
      */
     updateGame = async (gameId: string, gameData: UpdateGame): Promise<IGame> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         // This does not actually work b/c of 0's
         const safeData: UpdateGame = {
@@ -145,10 +143,7 @@ export default class GameServices {
         userJwt: string,
         otp: string,
     ): Promise<{ game: IGame; token: string }> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         const response = await axios.get(`${this.ultmtUrl}/api/v1/auth/manager?team=${teamId}`, {
             headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
@@ -177,10 +172,7 @@ export default class GameServices {
      * @returns updated game object
      */
     addGuestPlayer = async (gameId: string, team: TeamNumber, player: Player): Promise<IGame> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         const playerData = {
             firstName: player.firstName,
@@ -208,10 +200,7 @@ export default class GameServices {
      * @returns updated game
      */
     finishGame = async (gameId: string, team: TeamNumber): Promise<IGame> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         if (team === TeamNumber.ONE) {
             game.teamOneActive = false
@@ -236,10 +225,7 @@ export default class GameServices {
         userJwt: string,
         teamId: string,
     ): Promise<{ game: IGame; token: string }> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         let team: TeamNumberString = 'one'
         if (game.teamOne._id?.equals(teamId) && !game.teamTwo._id?.equals(teamId)) {
