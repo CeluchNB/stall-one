@@ -24,13 +24,28 @@ afterEach(async () => {
     await resetDatabase()
 })
 
+const userData = {
+    _id: new Types.ObjectId(),
+    firstName: 'Noah',
+    lastName: 'Celuch',
+    email: 'noah@email.com',
+    username: 'noah',
+    private: false,
+    playerTeams: [],
+    managerTeams: [],
+    archiveTeams: [],
+    stats: [],
+    requests: [],
+    openToRequests: false,
+}
+
 const services = new GameServices(Game, '', '')
 
 jest.spyOn(axios, 'get').mockImplementation(getMock)
 
 describe('test create game', () => {
     it('with valid data and team two not resolved', async () => {
-        const { game, token } = await services.createGame(createData, '')
+        const { game, token } = await services.createGame(createData, 'jwt')
 
         const gameRecord = await Game.findById(game._id)
         expect(game._id.toString()).toBe(gameRecord?._id.toString())
@@ -64,7 +79,7 @@ describe('test create game', () => {
                     eventId: 'mareg22',
                 },
             },
-            '',
+            'jwt',
         )
 
         const gameRecord = await Game.findById(game._id)
@@ -91,7 +106,7 @@ describe('test create game', () => {
 
     it('with fetch error', async () => {
         getMock.mockImplementationOnce(() => Promise.resolve({ status: 401 }))
-        await expect(services.createGame(createData, '')).rejects.toThrowError(
+        await expect(services.createGame(createData, 'jwt')).rejects.toThrowError(
             new ApiError(Constants.UNAUTHENTICATED_USER, 401),
         )
 
@@ -101,46 +116,22 @@ describe('test create game', () => {
 
     it('with unfound team one', async () => {
         getMock.mockImplementationOnce(() => {
-            return Promise.resolve({
-                json: () =>
-                    Promise.resolve({
-                        user: {
-                            _id: new Types.ObjectId(),
-                            firstName: 'first',
-                            lastName: 'last',
-                            username: 'firstlast',
-                        },
-                    }),
-                ok: true,
-                status: 200,
-            })
+            return Promise.resolve({ data: { user: userData }, status: 200 })
         })
         getMock.mockImplementationOnce(() => {
             return Promise.resolve({ ok: false })
         })
 
-        await expect(services.createGame(createData, '')).rejects.toThrowError(
-            new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404),
-        )
+        await expect(
+            services.createGame({ ...createData, teamOne: { _id: new Types.ObjectId(), name: 'Name 1' } }, 'jwt'),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404))
         const games = await Game.find({})
         expect(games.length).toBe(0)
     })
 
     it('with unfound team two', async () => {
         getMock.mockImplementationOnce(() => {
-            return Promise.resolve({
-                json: () =>
-                    Promise.resolve({
-                        user: {
-                            _id: new Types.ObjectId(),
-                            firstName: 'first',
-                            lastName: 'last',
-                            username: 'firstlast',
-                        },
-                    }),
-                ok: true,
-                status: 200,
-            })
+            return Promise.resolve({ data: { user: userData }, status: 200 })
         })
         getMock.mockImplementationOnce(() => {
             return Promise.resolve({
@@ -172,7 +163,7 @@ describe('test create game', () => {
             return Promise.resolve({ ok: false })
         })
 
-        await expect(services.createGame({ ...createData, teamTwoDefined: true }, '')).rejects.toThrowError(
+        await expect(services.createGame({ ...createData, teamTwoDefined: true }, 'jwt')).rejects.toThrowError(
             new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404),
         )
         const games = await Game.find({})
@@ -190,7 +181,7 @@ describe('test create game', () => {
                 teamTwoScore: -99,
                 teamTwoActive: true,
             } as CreateGame,
-            '',
+            'jwt',
         )
 
         const gameRecord = await Game.findById(game._id)
@@ -212,7 +203,7 @@ describe('test create game', () => {
         jest.spyOn(jwt, 'sign').mockImplementationOnce(() => {
             throw new Error('bad message')
         })
-        expect(services.createGame(createData, '')).rejects.toThrowError('bad message')
+        expect(services.createGame(createData, 'jwt')).rejects.toThrowError('bad message')
     })
 })
 
@@ -390,9 +381,7 @@ describe('test team two join', () => {
 
     it('with user from wrong team', async () => {
         getMock.mockImplementationOnce(() => {
-            return Promise.resolve({
-                status: 401,
-            })
+            return Promise.resolve({ data: { user: userData }, status: 200 })
         })
         const initialGame = await Game.create(gameData)
         initialGame.teamTwo = {
@@ -406,7 +395,7 @@ describe('test team two join', () => {
         await expect(
             services.teamTwoJoinGame(
                 initialGame._id.toString(),
-                initialGame.teamTwo._id?.toString() || '',
+                new Types.ObjectId().toString(),
                 'asdf1234.asdf145radsf.ad43grad',
                 initialGame.resolveCode,
             ),
@@ -574,7 +563,7 @@ describe('test reactivate game', () => {
 
         const { game, token } = await services.reactivateGame(
             initGame._id.toString(),
-            '',
+            'jwt',
             initGame.teamOne._id?.toString() || '',
         )
 
@@ -597,7 +586,7 @@ describe('test reactivate game', () => {
 
         const { game, token } = await services.reactivateGame(
             initGame._id.toString(),
-            '',
+            'jwt',
             initGame.teamTwo._id?.toString() || '',
         )
 
@@ -613,7 +602,7 @@ describe('test reactivate game', () => {
     })
 
     it('with unfound game', async () => {
-        await expect(services.reactivateGame(new Types.ObjectId().toString(), '', '')).rejects.toThrowError(
+        await expect(services.reactivateGame(new Types.ObjectId().toString(), 'jwt', 'teamid')).rejects.toThrowError(
             new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
         )
     })
@@ -623,7 +612,7 @@ describe('test reactivate game', () => {
         initGame.teamOneActive = false
         await initGame.save()
 
-        await expect(services.reactivateGame(initGame._id.toString(), '', '')).rejects.toThrowError(
+        await expect(services.reactivateGame(initGame._id.toString(), 'jwt', 'teamid')).rejects.toThrowError(
             new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 400),
         )
     })
@@ -632,7 +621,7 @@ describe('test reactivate game', () => {
         const initGame = await Game.create(createData)
         getMock.mockImplementationOnce(() => Promise.resolve({ status: 401 }))
         await expect(
-            services.reactivateGame(initGame._id.toString(), '', initGame.teamOne._id?.toString() || ''),
+            services.reactivateGame(initGame._id.toString(), 'jwt', initGame.teamOne._id?.toString() || ''),
         ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
     })
 })

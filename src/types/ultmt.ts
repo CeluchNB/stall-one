@@ -7,6 +7,13 @@ export interface Player {
     username?: string
 }
 
+export interface UserResponse {
+    _id: Types.ObjectId
+    firstName: string
+    lastName: string
+    username: string
+}
+
 export interface Team {
     _id?: Types.ObjectId
     place?: string

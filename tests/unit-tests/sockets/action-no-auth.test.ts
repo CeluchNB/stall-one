@@ -261,7 +261,7 @@ describe('test action comment', () => {
 
     it('with service error', (done) => {
         jest.spyOn(axios, 'get').mockImplementationOnce(() => {
-            return Promise.resolve({ data: userData, status: 200 })
+            return Promise.resolve({ data: { user: userData }, status: 200 })
         })
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
@@ -320,7 +320,7 @@ describe('test delete live action', () => {
     }
     it('with valid data', (done) => {
         jest.spyOn(axios, 'get').mockImplementationOnce(() => {
-            return Promise.resolve({ data: userData, status: 200 })
+            return Promise.resolve({ data: { user: userData }, status: 200 })
         })
         const actionData: ClientAction = {
             actionType: ActionType.PULL,
@@ -383,7 +383,7 @@ describe('test delete live action', () => {
 
     it('with wrong user', (done) => {
         jest.spyOn(axios, 'get').mockImplementationOnce(() => {
-            return Promise.resolve({ data: userData, status: 200 })
+            return Promise.resolve({ data: { user: userData }, status: 200 })
         })
         const actionData: ClientAction = {
             actionType: ActionType.PULL,

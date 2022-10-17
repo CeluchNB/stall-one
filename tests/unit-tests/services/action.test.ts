@@ -463,7 +463,7 @@ describe('test add live comment', () => {
 describe('test delete live comment', () => {
     it('with valid data', async () => {
         jest.spyOn(axios, 'get').mockImplementationOnce(() => {
-            return Promise.resolve({ data: userData, status: 200 })
+            return Promise.resolve({ data: { user: userData }, status: 200 })
         })
         await Game.create(gameData)
         const point = await Point.create(createPointData)
@@ -575,7 +575,7 @@ describe('test delete live comment', () => {
 
     it('with non-matching user', async () => {
         jest.spyOn(axios, 'get').mockImplementationOnce(() => {
-            return Promise.resolve({ data: { ...userData, _id: new Types.ObjectId() }, status: 200 })
+            return Promise.resolve({ data: { user: { ...userData, _id: new Types.ObjectId() } }, status: 200 })
         })
         await Game.create(gameData)
         const point = await Point.create(createPointData)
@@ -633,7 +633,7 @@ describe('test delete live comment', () => {
 describe('test edit action', () => {
     it('with valid players', async () => {
         jest.spyOn(axios, 'get').mockImplementationOnce(() => {
-            return Promise.resolve({ data: {}, status: 200 })
+            return Promise.resolve({ data: { user: userData }, status: 200 })
         })
         const id = new Types.ObjectId()
         const player2 = {
@@ -660,7 +660,7 @@ describe('test edit action', () => {
             playerTwo: player2,
         })
 
-        const action = await services.editSavedAction(initAction._id.toString(), '', player2, undefined)
+        const action = await services.editSavedAction(initAction._id.toString(), 'jwt', player2, undefined)
 
         expect(action.actionNumber).toBe(initAction.actionNumber)
         expect(action.actionType).toBe(initAction.actionType)
@@ -689,7 +689,7 @@ describe('test edit action', () => {
 
     it('with unauthenticated user', async () => {
         jest.spyOn(axios, 'get').mockImplementationOnce(() => {
-            return Promise.resolve({ data: {}, status: 401 })
+            return Promise.resolve({ data: { user: userData }, status: 401 })
         })
 
         const initAction = await Action.create({
@@ -710,7 +710,7 @@ describe('test edit action', () => {
             playerTwo: undefined,
         })
         await expect(
-            services.editSavedAction(initAction._id.toString(), '', undefined, undefined),
+            services.editSavedAction(initAction._id.toString(), 'jwt', undefined, undefined),
         ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
     })
 })
