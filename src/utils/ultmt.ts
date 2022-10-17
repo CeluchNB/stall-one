@@ -1,6 +1,6 @@
 import * as Constants from './constants'
 import axios from 'axios'
-import { UserResponse } from '../types/ultmt'
+import { TeamResponse, UserResponse } from '../types/ultmt'
 import { ApiError } from '../types/errors'
 
 export const getUser = async (ultmtUrl: string, apiKey: string, jwt: string): Promise<UserResponse> => {
@@ -39,5 +39,23 @@ export const authenticateManager = async (
         return user
     } catch (error) {
         throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
+    }
+}
+
+export const getTeam = async (ultmtUrl: string, apiKey: string, teamId?: string): Promise<TeamResponse> => {
+    if (!teamId) {
+        throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
+    }
+    try {
+        const response = await axios.get(`${ultmtUrl}/api/v1/team/${teamId}`, {
+            headers: { 'X-API-Key': apiKey },
+        })
+        if (response.status !== 200) {
+            throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
+        }
+        const { team } = response.data
+        return team
+    } catch (error) {
+        throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
     }
 }

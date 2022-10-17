@@ -16,7 +16,13 @@ afterEach(async () => {
     await resetDatabase()
 })
 
-jest.spyOn(axios, 'get').mockImplementation(getMock)
+beforeEach(() => {
+    jest.spyOn(axios, 'get').mockImplementation(getMock)
+})
+
+afterEach(() => {
+    jest.spyOn(axios, 'get').mockReset()
+})
 
 describe('test /POST game', () => {
     it('with valid data', async () => {
@@ -102,9 +108,6 @@ describe('test /PUT update game', () => {
     })
 
     it('with error', async () => {
-        getMock.mockImplementationOnce(() => {
-            return Promise.resolve({ ok: false, status: 400 })
-        })
         const game = await Game.create(gameData)
         const token = game.getToken('one')
         await request(app)

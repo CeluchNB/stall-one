@@ -41,7 +41,13 @@ const userData = {
 
 const services = new GameServices(Game, '', '')
 
-jest.spyOn(axios, 'get').mockImplementation(getMock)
+beforeEach(() => {
+    jest.spyOn(axios, 'get').mockImplementation(getMock)
+})
+
+afterEach(() => {
+    jest.spyOn(axios, 'get').mockReset()
+})
 
 describe('test create game', () => {
     it('with valid data and team two not resolved', async () => {
@@ -62,7 +68,8 @@ describe('test create game', () => {
         const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
         expect(payload.sub).toBe(game._id.toString())
         expect(payload.team).toBe('one')
-        expect(payload.exp).toBe(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3)
+        const expectedTime = Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3
+        expect(Math.abs((payload.exp || 0) - expectedTime)).toBeLessThan(5)
     })
 
     it('with valid data and team two resolved', async () => {
@@ -70,6 +77,10 @@ describe('test create game', () => {
         const { game, token } = await services.createGame(
             {
                 ...createData,
+                teamTwo: {
+                    _id: new Types.ObjectId(),
+                    name: 'Name 2',
+                },
                 teamTwoDefined: true,
                 tournament: {
                     _id: tournamentId,
@@ -158,9 +169,6 @@ describe('test create game', () => {
                 ok: true,
                 status: 200,
             })
-        })
-        getMock.mockImplementationOnce(() => {
-            return Promise.resolve({ ok: false })
         })
 
         await expect(services.createGame({ ...createData, teamTwoDefined: true }, 'jwt')).rejects.toThrowError(
@@ -325,7 +333,8 @@ describe('test team two join', () => {
         const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
         expect(payload.sub).toBe(game._id.toString())
         expect(payload.team).toBe('two')
-        expect(payload.exp).toBe(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3)
+        const expectedTime = Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3
+        expect(Math.abs((payload.exp || 0) - expectedTime)).toBeLessThan(5)
     })
 
     it('with unfound game', async () => {
@@ -570,7 +579,8 @@ describe('test reactivate game', () => {
         const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
         expect(payload.sub).toBe(initGame._id.toString())
         expect(payload.team).toBe('one')
-        expect(payload.exp).toBe(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3)
+        const expectedTime = Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3
+        expect(Math.abs((payload.exp || 0) - expectedTime)).toBeLessThan(5)
 
         expect(game.teamOneActive).toBe(true)
 
@@ -593,7 +603,8 @@ describe('test reactivate game', () => {
         const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
         expect(payload.sub).toBe(initGame._id.toString())
         expect(payload.team).toBe('two')
-        expect(payload.exp).toBe(Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3)
+        const expectedTime = Math.floor(new Date().getTime() / 1000) + 60 * 60 * 3
+        expect(Math.abs((payload.exp || 0) - expectedTime)).toBeLessThan(5)
 
         expect(game.teamTwoActive).toBe(true)
 

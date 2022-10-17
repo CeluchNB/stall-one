@@ -23,6 +23,16 @@ export interface Team {
     seasonEnd?: Date
 }
 
+export interface TeamResponse {
+    _id: Types.ObjectId
+    place: string
+    name: string
+    teamname: string
+    seasonStart: Date
+    seasonEnd: Date
+    players: Player[]
+}
+
 export enum TeamNumber {
     ONE = 'one',
     TWO = 'two',
