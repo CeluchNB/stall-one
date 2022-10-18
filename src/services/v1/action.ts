@@ -1,6 +1,6 @@
 import * as Constants from '../../utils/constants'
 import Action, { IActionModel } from '../../models/action'
-import { RedisClientType, ClientAction, ActionType, InputComment, RedisAction } from '../../types/action'
+import IAction, { RedisClientType, ClientAction, ActionType, InputComment, RedisAction } from '../../types/action'
 import {
     saveRedisAction,
     getRedisAction,
@@ -15,10 +15,11 @@ import {
 import { handleSubstitute, parseActionData, validateActionData } from '../../utils/action'
 import Point, { IPointModel } from '../../models/point'
 import Game, { IGameModel } from '../../models/game'
-import axios from 'axios'
 import { Player, TeamNumberString } from '../../types/ultmt'
 import { ApiError } from '../../types/errors'
 import filter from '../../utils/bad-words-filter'
+import { findByIdOrThrow } from '../../utils/mongoose'
+import { authenticateManager, getUser } from '../../utils/ultmt'
 
 export default class ActionServices {
     redisClient: RedisClientType
@@ -98,16 +99,8 @@ export default class ActionServices {
         team: TeamNumberString,
     ): Promise<RedisAction> => {
         const { jwt, comment } = data
-        const response = await axios.get(`${this.ultmtUrl}/api/v1/user/me`, {
-            headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${jwt}` },
-        })
-        if (response.status !== 200) {
-            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
-        }
+        const user = await getUser(this.ultmtUrl, this.apiKey, jwt)
 
-        const user: Player = {
-            ...response.data,
-        }
         const exists = await actionExists(this.redisClient, pointId, actionNumber, team)
         if (!exists) {
             throw new ApiError(Constants.INVALID_DATA, 400)
@@ -126,20 +119,57 @@ export default class ActionServices {
         jwt: string,
         team: TeamNumberString,
     ): Promise<RedisAction> => {
-        const response = await axios.get(`${this.ultmtUrl}/api/v1/user/me`, {
-            headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${jwt}` },
-        })
-        if (response.status !== 200) {
-            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
-        }
+        const user = await getUser(this.ultmtUrl, this.apiKey, jwt)
 
         const comment = await getRedisComment(this.redisClient, pointId, actionNumber, commentNumber, team)
-        if (!comment?.user._id?.equals(response.data._id)) {
+        if (!comment?.user._id?.equals(user._id)) {
             throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
         }
 
         await deleteRedisComment(this.redisClient, pointId, actionNumber, commentNumber, team)
         return await getRedisAction(this.redisClient, pointId, actionNumber, team)
+    }
+
+    editSavedAction = async (
+        actionId: string,
+        userJwt?: string,
+        playerOne?: Player,
+        playerTwo?: Player,
+    ): Promise<IAction> => {
+        const action = await findByIdOrThrow<IAction>(actionId, this.actionModel, Constants.UNABLE_TO_FIND_ACTION)
+        await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, action.team._id?.toString())
+
+        action.playerOne = playerOne
+        action.playerTwo = playerTwo
+        await action.save()
+        return action
+    }
+
+    addSavedComment = async (actionId: string, userJwt: string, comment: string): Promise<IAction> => {
+        const action = await findByIdOrThrow<IAction>(actionId, this.actionModel, Constants.UNABLE_TO_FIND_ACTION)
+        const user = await getUser(this.ultmtUrl, this.apiKey, userJwt)
+
+        if (filter.isProfane(comment)) {
+            throw new ApiError(Constants.PROFANE_COMMENT, 400)
+        }
+
+        const commentNumber = action.comments.length ? Math.max(...action.comments.map((c) => c.commentNumber)) + 1 : 1
+        action.comments.push({ user, comment, commentNumber })
+        await action.save()
+
+        return action
+    }
+
+    deleteSavedComment = async (actionId: string, userJwt: string, commentNumber: number): Promise<IAction> => {
+        const action = await findByIdOrThrow<IAction>(actionId, this.actionModel, Constants.UNABLE_TO_FIND_ACTION)
+        const user = await getUser(this.ultmtUrl, this.apiKey, userJwt)
+
+        action.comments = action.comments.filter((c) => {
+            return !c.user._id?.equals(user._id) || c.commentNumber !== commentNumber
+        })
+        await action.save()
+
+        return action
     }
 
     private handleSideEffects = async (data: ClientAction, gameId: string, pointId: string, team: TeamNumberString) => {

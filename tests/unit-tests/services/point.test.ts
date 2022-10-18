@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as Constants from '../../../src/utils/constants'
 import {
     setUpDatabase,
@@ -15,9 +16,11 @@ import { Player, TeamNumber } from '../../../src/types/ultmt'
 import { ApiError } from '../../../src/types/errors'
 import { Types } from 'mongoose'
 import Action from '../../../src/models/action'
-import { saveRedisAction } from '../../../src/utils/redis'
+import { getRedisAction, saveRedisAction } from '../../../src/utils/redis'
 import { ActionType, RedisAction } from '../../../src/types/action'
 import { getActionBaseKey } from '../../../src/utils/utils'
+import IGame from '../../../src/types/game'
+import IPoint from '../../../src/types/point'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -993,5 +996,190 @@ describe('test delete point', () => {
         await expect(
             services.deletePoint(game._id.toString(), point._id.toString(), TeamNumber.ONE),
         ).rejects.toThrowError(new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400))
+    })
+})
+
+describe('test reactivate point', () => {
+    beforeEach(async () => {
+        const action1 = await Action.create({
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'Place1Name1',
+                seasonStart: new Date(),
+                seasonEnd: new Date(),
+            },
+            actionNumber: 1,
+            actionType: 'Pull',
+            playerOne: { firstName: 'Name1', lastName: 'Last1' },
+        })
+        const action2 = await Action.create({
+            team: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'Place1Name1',
+                seasonStart: new Date(),
+                seasonEnd: new Date(),
+            },
+            actionNumber: 2,
+            actionType: 'TeamTwoScore',
+        })
+        const prevPoint = await Point.create({
+            pointNumber: 1,
+            teamOneActive: false,
+            teamTwoActive: false,
+            receivingTeam: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'Place1Name1',
+                seasonStart: new Date(),
+                seasonEnd: new Date(),
+            },
+            pullingTeam: { place: 'Place2', name: 'Name2' },
+            teamOneScore: 1,
+            teamTwoScore: 0,
+        })
+        const initialPoint = await Point.create({
+            pointNumber: 2,
+            teamOneActive: false,
+            teamTwoActive: false,
+            pullingTeam: {
+                _id: new Types.ObjectId(),
+                place: 'Place1',
+                name: 'Name1',
+                teamname: 'Place1Name1',
+                seasonStart: new Date(),
+                seasonEnd: new Date(),
+            },
+            receivingTeam: { place: 'Place2', name: 'Name2' },
+            teamOneScore: 1,
+            teamTwoScore: 1,
+        })
+        initialPoint.teamOneActions = [action1._id, action2._id]
+        await initialPoint.save()
+
+        const game = await Game.create(gameData)
+        game.points = [prevPoint._id, initialPoint._id]
+        await game.save()
+    })
+
+    it('with valid data and team one as only team', async () => {
+        const game = (await Game.findOne({})) as IGame
+        const initialPoint = (await Point.findById(game.points[1])) as IPoint
+        const point = await services.reactivatePoint(game._id.toString(), initialPoint._id.toString(), TeamNumber.ONE)
+
+        expect(point.teamOneActive).toBe(true)
+        expect(point.teamTwoActive).toBe(false)
+        expect(point.teamOneActions.length).toBe(0)
+        expect(point.teamOneScore).toBe(1)
+        expect(point.teamTwoScore).toBe(0)
+        const gameRecord = await Game.findById(game._id)
+        expect(gameRecord?.teamOneScore).toBe(1)
+        expect(gameRecord?.teamTwoScore).toBe(0)
+
+        const actionCount = await client.get(`${game._id}:${initialPoint._id}:one:actions`)
+        expect(actionCount).toBe('2')
+
+        const actionOne = await getRedisAction(client, initialPoint._id.toString(), 1, 'one')
+        expect(actionOne.actionNumber).toBe(1)
+        expect(actionOne.actionType).toBe('Pull')
+
+        const actionTwo = await getRedisAction(client, initialPoint._id.toString(), 2, 'one')
+        expect(actionTwo.actionNumber).toBe(2)
+        expect(actionTwo.actionType).toBe('TeamTwoScore')
+    })
+
+    it('team two with team one saved actions', async () => {
+        const [action1, action2] = await Action.find({})
+        const game = await Game.findOne({})
+        const initialPoint = await Point.findById(game!.points[1])
+        initialPoint!.teamTwoActions = [action1._id, action2._id]
+        initialPoint!.teamOneActions = [action1._id]
+        await initialPoint!.save()
+
+        game!.teamOneScore = 1
+        game!.teamTwoScore = 1
+        await game!.save()
+
+        const point = await services.reactivatePoint(game!._id.toString(), initialPoint!._id.toString(), TeamNumber.TWO)
+
+        expect(point.teamOneActive).toBe(false)
+        expect(point.teamTwoActive).toBe(true)
+        expect(point.teamOneActions.length).toBe(1)
+        expect(point.teamTwoActions.length).toBe(0)
+        expect(point.teamOneScore).toBe(1)
+        expect(point.teamTwoScore).toBe(1)
+        const gameRecord = await Game.findById(game!._id)
+        expect(gameRecord?.teamOneScore).toBe(1)
+        expect(gameRecord?.teamTwoScore).toBe(1)
+
+        const actionCount = await client.get(`${game!._id}:${initialPoint!._id}:two:actions`)
+        expect(actionCount).toBe('2')
+
+        const actionOne = await getRedisAction(client, initialPoint!._id.toString(), 1, 'two')
+        expect(actionOne.actionNumber).toBe(1)
+        expect(actionOne.actionType).toBe('Pull')
+
+        const actionTwo = await getRedisAction(client, initialPoint!._id.toString(), 2, 'two')
+        expect(actionTwo.actionNumber).toBe(2)
+        expect(actionTwo.actionType).toBe('TeamTwoScore')
+    })
+
+    it('with team one and no previous point', async () => {
+        const game = await Game.findOne({})
+        const initialPoint = await Point.findById(game!.points[1])
+
+        initialPoint!.pointNumber = 1
+        await initialPoint!.save()
+        game!.points = [initialPoint!._id]
+        await game!.save()
+
+        const point = await services.reactivatePoint(game!._id.toString(), initialPoint!._id.toString(), TeamNumber.ONE)
+
+        expect(point.teamOneActive).toBe(true)
+        expect(point.teamTwoActive).toBe(false)
+        expect(point.teamOneActions.length).toBe(0)
+        expect(point.teamOneScore).toBe(0)
+        expect(point.teamTwoScore).toBe(0)
+        const gameRecord = await Game.findById(game!._id)
+        expect(gameRecord?.teamOneScore).toBe(0)
+        expect(gameRecord?.teamTwoScore).toBe(0)
+
+        const actionCount = await client.get(`${game!._id}:${initialPoint!._id}:one:actions`)
+        expect(actionCount).toBe('2')
+
+        const actionOne = await getRedisAction(client, initialPoint!._id.toString(), 1, 'one')
+        expect(actionOne.actionNumber).toBe(1)
+        expect(actionOne.actionType).toBe('Pull')
+
+        const actionTwo = await getRedisAction(client, initialPoint!._id.toString(), 2, 'one')
+        expect(actionTwo.actionNumber).toBe(2)
+        expect(actionTwo.actionType).toBe('TeamTwoScore')
+    })
+
+    it('with unfound game', async () => {
+        const game = await Game.findOne({})
+        const initialPoint = await Point.findById(game!.points[1])
+        await expect(
+            services.reactivatePoint(new Types.ObjectId().toString(), initialPoint!._id.toString(), TeamNumber.ONE),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
+    })
+
+    it('with unfound point', async () => {
+        const game = await Game.findOne({})
+        await expect(
+            services.reactivatePoint(game!._id.toString(), new Types.ObjectId().toString(), TeamNumber.ONE),
+        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_POINT, 404))
+    })
+
+    it('with game too far back', async () => {
+        const game = await Game.findOne({})
+        const initialPoint = await Point.findById(game!.points[0])
+        await expect(
+            services.reactivatePoint(game!._id.toString(), initialPoint!._id.toString(), TeamNumber.ONE),
+        ).rejects.toThrowError(new ApiError(Constants.REACTIVATE_POINT_ERROR, 400))
     })
 })

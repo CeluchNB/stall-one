@@ -90,6 +90,24 @@ pointRouter.put(
     },
 )
 
+pointRouter.put(
+    '/point/:id/reactivate',
+    param('id').isString(),
+    passport.authenticate('jwt', { session: false }),
+    async (req: Request, res: Response, next) => {
+        try {
+            const { gameId, team } = req.user as GameAuth
+            const teamNumber = getMyTeamNumber(true, team)
+            const redisClient = await getClient()
+            const services = new PointServices(Point, Game, Action, redisClient)
+            const point = await services.reactivatePoint(gameId, req.params.id, teamNumber)
+            return res.json({ point })
+        } catch (error) {
+            next(error)
+        }
+    },
+)
+
 pointRouter.delete(
     '/point/:id',
     param('id').isString(),

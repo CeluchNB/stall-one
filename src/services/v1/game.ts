@@ -2,9 +2,10 @@ import * as Constants from '../../utils/constants'
 import { IGameModel } from '../../models/game'
 import IGame, { CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
-import axios from 'axios'
 import randomstring from 'randomstring'
 import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
+import { findByIdOrThrow } from '../../utils/mongoose'
+import { authenticateManager, getTeam } from '../../utils/ultmt'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -24,13 +25,7 @@ export default class GameServices {
      * @returns new game value
      */
     createGame = async (gameData: CreateGame, userJwt: string): Promise<{ game: IGame; token: string }> => {
-        const response = await axios.get(`${this.ultmtUrl}/api/v1/auth/manager?team=${gameData.teamOne._id}`, {
-            headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
-        })
-
-        if (response.status === 401) {
-            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
-        }
+        const user = await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, gameData.teamOne._id?.toString())
 
         const safeData: CreateGame = {
             creator: gameData.creator,
@@ -48,28 +43,18 @@ export default class GameServices {
             tournament: gameData.tournament,
         }
 
-        const teamOneResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamOne._id}`, {
-            headers: { 'X-API-Key': this.apiKey },
-        })
-        if (teamOneResponse.status !== 200) {
-            throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
-        }
+        const teamOne = await getTeam(this.ultmtUrl, this.apiKey, safeData.teamOne._id?.toString())
 
-        let teamTwoResponse
+        let teamTwo
         if (safeData.teamTwoDefined) {
-            teamTwoResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo._id}`, {
-                headers: { 'X-API-Key': this.apiKey },
-            })
-            if (teamTwoResponse.status !== 200) {
-                throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
-            }
+            teamTwo = await getTeam(this.ultmtUrl, this.apiKey, safeData.teamTwo._id?.toString())
         }
 
         const game = await this.gameModel.create({
             ...safeData,
-            creator: response.data.user,
-            teamOnePlayers: teamOneResponse.data.team.players,
-            teamTwoPlayers: safeData.teamTwoDefined ? teamTwoResponse?.data?.team.players : [],
+            creator: user,
+            teamOnePlayers: teamOne.players,
+            teamTwoPlayers: safeData.teamTwoDefined ? teamTwo?.players : [],
             resolveCode: randomstring.generate({ length: 6, charset: 'numeric' }),
         })
 
@@ -85,10 +70,7 @@ export default class GameServices {
      * @returns updated game
      */
     updateGame = async (gameId: string, gameData: UpdateGame): Promise<IGame> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         // This does not actually work b/c of 0's
         const safeData: UpdateGame = {
@@ -111,20 +93,12 @@ export default class GameServices {
             }
         }
 
-        let teamTwoResponse
+        let teamTwo
         if (safeData.teamTwoDefined && game.teamTwoPlayers.length === 0) {
-            teamTwoResponse = await axios.get(`${this.ultmtUrl}/api/v1/team/${safeData.teamTwo?._id}`, {
-                headers: { 'X-API-Key': this.apiKey },
-            })
-            if (teamTwoResponse.status !== 200) {
-                throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
-            }
+            teamTwo = await getTeam(this.ultmtUrl, this.apiKey, safeData.teamTwo?._id?.toString())
         }
 
-        await game.updateOne(
-            { ...safeData, teamTwoPlayers: teamTwoResponse?.data.team.players },
-            { omitUndefined: true },
-        )
+        await game.updateOne({ ...safeData, teamTwoPlayers: teamTwo?.players || [] }, { omitUndefined: true })
         const updatedGame = await this.gameModel.findById(game._id)
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -145,16 +119,10 @@ export default class GameServices {
         userJwt: string,
         otp: string,
     ): Promise<{ game: IGame; token: string }> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+        await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, teamId)
 
-        const response = await axios.get(`${this.ultmtUrl}/api/v1/auth/manager?team=${teamId}`, {
-            headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
-        })
-
-        if (response.status === 401 || game?.teamTwo._id?.toString() !== teamId) {
+        if (!game?.teamTwo._id?.equals(teamId)) {
             throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
         }
 
@@ -177,10 +145,7 @@ export default class GameServices {
      * @returns updated game object
      */
     addGuestPlayer = async (gameId: string, team: TeamNumber, player: Player): Promise<IGame> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         const playerData = {
             firstName: player.firstName,
@@ -208,10 +173,7 @@ export default class GameServices {
      * @returns updated game
      */
     finishGame = async (gameId: string, team: TeamNumber): Promise<IGame> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         if (team === TeamNumber.ONE) {
             game.teamOneActive = false
@@ -236,10 +198,7 @@ export default class GameServices {
         userJwt: string,
         teamId: string,
     ): Promise<{ game: IGame; token: string }> => {
-        const game = await this.gameModel.findById(gameId)
-        if (!game) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
-        }
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         let team: TeamNumberString = 'one'
         if (game.teamOne._id?.equals(teamId) && !game.teamTwo._id?.equals(teamId)) {
@@ -250,13 +209,7 @@ export default class GameServices {
             throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 40)
         }
 
-        const response = await axios.get(`${this.ultmtUrl}/api/v1/auth/manager?team=${teamId}`, {
-            headers: { 'X-API-Key': this.apiKey, Authorization: `Bearer ${userJwt}` },
-        })
-
-        if (response.status === 401) {
-            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
-        }
+        await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, teamId)
 
         const token = game.getToken(team)
         if (team === 'one') {

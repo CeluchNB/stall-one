@@ -1,7 +1,7 @@
 import * as Constants from '../../utils/constants'
 import { ITournamentModel } from '../../models/tournament'
-import { ApiError } from '../../types/errors'
 import ITournament, { CreateTournament } from '../../types/tournament'
+import { findByIdOrThrow } from '../../utils/mongoose'
 
 export default class TournamentServices {
     tournamentModel: ITournamentModel
@@ -26,10 +26,11 @@ export default class TournamentServices {
      * @returns tournament document
      */
     getTournament = async (id: string): Promise<ITournament> => {
-        const tournament = await this.tournamentModel.findById(id)
-        if (!tournament) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_TOURNAMENT, 404)
-        }
+        const tournament = await findByIdOrThrow<ITournament>(
+            id,
+            this.tournamentModel,
+            Constants.UNABLE_TO_FIND_TOURNAMENT,
+        )
 
         return tournament
     }
