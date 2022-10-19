@@ -143,4 +143,26 @@ gameRouter.put(
     },
 )
 
+gameRouter.delete(
+    '/game/:id',
+    param('id').escape(),
+    query('team').escape(),
+    async (req: Request, res: Response, next) => {
+        try {
+            const jwt = req.headers?.authorization?.replace('Bearer ', '') as string
+            const services = new GameServices(
+                Game,
+                Point,
+                Action,
+                process.env.ULTMT_API_URL || '',
+                process.env.API_KEY || '',
+            )
+            await services.deleteGame(req.params.id, jwt, req.query.team as string)
+            return res.json()
+        } catch (error) {
+            next(error)
+        }
+    },
+)
+
 gameRouter.use(errorMiddleware)

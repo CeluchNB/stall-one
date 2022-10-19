@@ -7,6 +7,9 @@ import axios from 'axios'
 import { Types } from 'mongoose'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import { ApiError } from '../../../src/types/errors'
+import { Team } from '../../../src/types/ultmt'
+import Action from '../../../src/models/action'
+import Point from '../../../src/models/point'
 
 afterAll(async () => {
     await close()
@@ -300,5 +303,112 @@ describe('test /PUT reactivate game', () => {
             .expect(404)
 
         expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_GAME)
+    })
+})
+
+describe('test /DELETE game', () => {
+    const team: Team = {
+        _id: new Types.ObjectId(),
+        seasonStart: new Date(),
+        seasonEnd: new Date(),
+        place: 'Place 1',
+        name: 'Name 1',
+        teamname: 'placename',
+    }
+    beforeEach(async () => {
+        const action1 = await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'TeamOneScore',
+        })
+        const action2 = await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'Pull',
+        })
+        const action3 = await Action.create({
+            team,
+            actionNumber: 2,
+            actionType: 'TeamOneScore',
+        })
+        await Point.create({
+            pointNumber: 1,
+            teamOneScore: 1,
+            teamTwoScore: 0,
+            pullingTeam: { name: 'Name 2' },
+            receivingTeam: team,
+            scoringTeam: team,
+            teamOneActive: false,
+            teamTwoActive: false,
+            teamOneActions: [action1._id],
+        })
+        await Point.create({
+            pointNumber: 2,
+            teamOneScore: 2,
+            teamTwoScore: 0,
+            pullingTeam: team,
+            receivingTeam: { name: 'Name 2' },
+            scoringTeam: team,
+            teamOneActive: false,
+            teamTwoActive: false,
+            teamOneActions: [action2._id, action3._id],
+        })
+        const [point1, point2] = await Point.find({})
+        await Game.create({
+            teamOne: team,
+            teamTwo: { name: 'Name 2' },
+            teamTwoDefined: false,
+            scoreLimit: 15,
+            halfScore: 8,
+            startTime: new Date(),
+            softcapMins: 75,
+            hardcapMins: 90,
+            playersPerPoint: 7,
+            timeoutPerHalf: 1,
+            floaterTimeout: true,
+            creator: {
+                _id: new Types.ObjectId(),
+                firstName: 'First1',
+                lastName: 'Last1',
+                username: 'first1last1',
+            },
+            points: [point1._id, point2._id],
+        })
+    })
+
+    it('with valid data', async () => {
+        const [game] = await Game.find({})
+
+        await request(app)
+            .delete(`/api/v1/game/${game._id.toString()}?team=${team._id?.toString()}`)
+            .set('Authorization', 'Bearer jwt')
+            .send()
+            .expect(200)
+
+        const actions = await Action.find({})
+        expect(actions.length).toBe(0)
+
+        const points = await Point.find({})
+        expect(points.length).toBe(0)
+
+        const games = await Game.find({})
+        expect(games.length).toBe(0)
+    })
+
+    it('with service error', async () => {
+        await request(app)
+            .delete(`/api/v1/game/${new Types.ObjectId()}?team=${team._id?.toString()}`)
+            .set('Authorization', 'Bearer jwt')
+            .send()
+            .expect(404)
+
+        const actions = await Action.find({})
+        expect(actions.length).toBe(3)
+
+        const points = await Point.find({})
+        expect(points.length).toBe(2)
+
+        const games = await Game.find({})
+        expect(games.length).toBe(1)
     })
 })
