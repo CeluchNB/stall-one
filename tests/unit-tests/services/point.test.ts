@@ -1183,3 +1183,55 @@ describe('test reactivate point', () => {
         ).rejects.toThrowError(new ApiError(Constants.REACTIVATE_POINT_ERROR, 400))
     })
 })
+
+describe('test get points', () => {
+    beforeEach(async () => {
+        await Point.create({
+            pointNumber: 1,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 0,
+            teamTwoScore: 1,
+        })
+        await Point.create({
+            pointNumber: 2,
+            pullingTeam: { name: 'Team 2' },
+            receivingTeam: { name: 'Team 1' },
+            teamOneScore: 1,
+            teamTwoScore: 1,
+        })
+        await Point.create({
+            pointNumber: 3,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 1,
+            teamTwoScore: 2,
+        })
+    })
+
+    it('with multiple found points', async () => {
+        const [point1, point2] = await Point.find({})
+
+        const ids = [point1._id.toString(), point2._id.toString()]
+        const points = await services.getPoints(ids)
+        expect(points.length).toBe(2)
+        expect(points[0].pointNumber).toBe(1)
+        expect(points[0].teamOneScore).toBe(0)
+        expect(points[0].teamTwoScore).toBe(1)
+
+        expect(points[1].pointNumber).toBe(2)
+        expect(points[1].teamOneScore).toBe(1)
+        expect(points[1].teamTwoScore).toBe(1)
+    })
+
+    it('with no found points', async () => {
+        const points = await services.getPoints([])
+        expect(points.length).toBe(0)
+    })
+
+    it('with unfound values in array', async () => {
+        const ids = [new Types.ObjectId().toString(), new Types.ObjectId().toString()]
+        const points = await services.getPoints(ids)
+        expect(points.length).toBe(0)
+    })
+})

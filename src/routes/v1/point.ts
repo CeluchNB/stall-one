@@ -126,4 +126,16 @@ pointRouter.delete(
     },
 )
 
+pointRouter.get('/points', body('ids').isArray(), async (req: Request, res: Response, next) => {
+    try {
+        const ids = req.body.ids
+        const redisClient = await getClient()
+        const services = new PointServices(Point, Game, Action, redisClient)
+        const points = await services.getPoints(ids)
+        return res.json({ points })
+    } catch (error) {
+        next(error)
+    }
+})
+
 pointRouter.use(errorMiddleware)

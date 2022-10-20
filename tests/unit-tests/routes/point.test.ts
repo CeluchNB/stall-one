@@ -13,7 +13,7 @@ import {
     tearDownDatabase,
 } from '../../fixtures/setup-db'
 import Point from '../../../src/models/point'
-import { Types } from 'mongoose'
+import { Model, Types } from 'mongoose'
 import { Player } from '../../../src/types/ultmt'
 import { ActionType, RedisAction } from '../../../src/types/action'
 import { getRedisAction, saveRedisAction } from '../../../src/utils/redis'
@@ -597,5 +597,61 @@ describe('test /DELETE point', () => {
             .expect(400)
 
         expect(response.body.message).toBe(Constants.MODIFY_LIVE_POINT_ERROR)
+    })
+})
+
+describe('test /GET points', () => {
+    it('with found points', async () => {
+        const point1 = await Point.create({
+            pointNumber: 1,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 0,
+            teamTwoScore: 1,
+        })
+        const point2 = await Point.create({
+            pointNumber: 2,
+            pullingTeam: { name: 'Team 2' },
+            receivingTeam: { name: 'Team 1' },
+            teamOneScore: 1,
+            teamTwoScore: 1,
+        })
+        await Point.create({
+            pointNumber: 3,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 1,
+            teamTwoScore: 2,
+        })
+
+        const ids = [point1._id.toString(), point2._id.toString()]
+        const response = await request(app).get('/api/v1/points').send({ ids }).expect(200)
+
+        const { points } = response.body
+
+        expect(points.length).toBe(2)
+        expect(points[0].pointNumber).toBe(1)
+        expect(points[0].teamOneScore).toBe(0)
+        expect(points[0].teamTwoScore).toBe(1)
+
+        expect(points[1].pointNumber).toBe(2)
+        expect(points[1].teamOneScore).toBe(1)
+        expect(points[1].teamTwoScore).toBe(1)
+    })
+
+    it('with no found points', async () => {
+        const response = await request(app).get('/api/v1/points').send({ ids: [] }).expect(200)
+
+        const { points } = response.body
+
+        expect(points.length).toBe(0)
+    })
+
+    it('with service error', async () => {
+        jest.spyOn(Model, 'find').mockImplementationOnce(() => {
+            throw Error()
+        })
+        const response = await request(app).get('/api/v1/points').send({ ids: [] }).expect(500)
+        expect(response.body.message).toBe(Constants.GENERIC_ERROR)
     })
 })

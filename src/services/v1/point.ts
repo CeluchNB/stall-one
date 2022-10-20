@@ -379,6 +379,16 @@ export default class PointServices {
         return point
     }
 
+    /**
+     * Method to get multiple points by their ids.
+     * @param ids array of ids
+     * @returns array of points
+     */
+    getPoints = async (ids: string[]): Promise<IPoint[]> => {
+        const points = await this.pointModel.find().where('_id').in(ids)
+        return points
+    }
+
     private saveActions = async (actions: IAction[], gameId: string, pointId: string, teamNumber: TeamNumber) => {
         await this.redisClient.set(`${gameId}:${pointId}:${teamNumber}:actions`, actions.length)
         for (const action of actions) {
