@@ -889,3 +889,30 @@ describe('test delete game', () => {
         expect(games[0].teamOne.teamname).toBe(team.teamname)
     })
 })
+
+describe('test get game', () => {
+    it('with found game', async () => {
+        const initGame = await Game.create(gameData)
+
+        const game = await services.getGame(initGame._id.toString())
+        expect(game._id.toString()).toBe(initGame._id.toString())
+        expect(game.creator.username).toBe(initGame.creator.username)
+        expect(game.floaterTimeout).toBe(initGame.floaterTimeout)
+        expect(game.halfScore).toBe(initGame.halfScore)
+        expect(game.startTime.toString()).toBe(initGame.startTime.toString())
+        expect(game.softcapMins).toBe(initGame.softcapMins)
+        expect(game.hardcapMins).toBe(initGame.hardcapMins)
+        expect(game.playersPerPoint).toBe(initGame.playersPerPoint)
+        expect(game.timeoutPerHalf).toBe(initGame.timeoutPerHalf)
+        expect(game.teamOneScore).toBe(initGame.teamOneScore)
+        expect(game.teamTwoScore).toBe(initGame.teamTwoScore)
+        expect(game.teamOneActive).toBe(initGame.teamOneActive)
+        expect(game.teamTwoActive).toBe(initGame.teamTwoActive)
+    })
+
+    it('with unfound game', async () => {
+        await expect(services.getGame(new Types.ObjectId().toString())).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
+        )
+    })
+})

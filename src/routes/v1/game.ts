@@ -165,4 +165,20 @@ gameRouter.delete(
     },
 )
 
+gameRouter.get('/game/:id', param('id').escape(), async (req: Request, res: Response, next) => {
+    try {
+        const services = new GameServices(
+            Game,
+            Point,
+            Action,
+            process.env.ULTMT_API_URL || '',
+            process.env.API_KEY || '',
+        )
+        const game = await services.getGame(req.params.id)
+        return res.json({ game })
+    } catch (error) {
+        next(error)
+    }
+})
+
 gameRouter.use(errorMiddleware)

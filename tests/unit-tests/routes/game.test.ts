@@ -412,3 +412,30 @@ describe('test /DELETE game', () => {
         expect(games.length).toBe(1)
     })
 })
+
+describe('test /GET game', () => {
+    it('with found game', async () => {
+        const initGame = await Game.create(gameData)
+
+        const response = await request(app).get(`/api/v1/game/${initGame._id.toString()}`).send().expect(200)
+        const { game } = response.body
+
+        expect(game._id.toString()).toBe(initGame._id.toString())
+        expect(game.creator.username).toBe(initGame.creator.username)
+        expect(game.floaterTimeout).toBe(initGame.floaterTimeout)
+        expect(game.halfScore).toBe(initGame.halfScore)
+        expect(game.softcapMins).toBe(initGame.softcapMins)
+        expect(game.hardcapMins).toBe(initGame.hardcapMins)
+        expect(game.playersPerPoint).toBe(initGame.playersPerPoint)
+        expect(game.timeoutPerHalf).toBe(initGame.timeoutPerHalf)
+        expect(game.teamOneScore).toBe(initGame.teamOneScore)
+        expect(game.teamTwoScore).toBe(initGame.teamTwoScore)
+        expect(game.teamOneActive).toBe(initGame.teamOneActive)
+        expect(game.teamTwoActive).toBe(initGame.teamTwoActive)
+    })
+
+    it('with unfound game', async () => {
+        const response = await request(app).get(`/api/v1/game/${new Types.ObjectId().toString()}`).send().expect(404)
+        expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_GAME)
+    })
+})

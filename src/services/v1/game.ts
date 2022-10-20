@@ -306,4 +306,14 @@ export default class GameServices {
             await game.save()
         }
     }
+
+    /**
+     * Method to get a game by id.
+     * @param gameId id of game to get
+     * @returns game
+     */
+    getGame = async (gameId: string): Promise<IGame> => {
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+        return game
+    }
 }
