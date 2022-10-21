@@ -1184,54 +1184,91 @@ describe('test reactivate point', () => {
     })
 })
 
-describe('test get points', () => {
+describe('test get actions', () => {
+    const team = {
+        _id: new Types.ObjectId(),
+        seasonStart: new Date(),
+        seasonEnd: new Date(),
+        place: 'Place 1',
+        name: 'Name 1',
+        teamname: 'placename',
+    }
     beforeEach(async () => {
-        await Point.create({
+        await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'TeamOneScore',
+        })
+        await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'Pull',
+        })
+        await Action.create({
+            team,
+            actionNumber: 2,
+            actionType: 'TeamOneScore',
+        })
+    })
+    it('with found actions on team one', async () => {
+        const [action1, action2, action3] = await Action.find({})
+        const point = await Point.create({
             pointNumber: 1,
-            pullingTeam: { name: 'Team 1' },
-            receivingTeam: { name: 'Team 2' },
             teamOneScore: 0,
-            teamTwoScore: 1,
-        })
-        await Point.create({
-            pointNumber: 2,
-            pullingTeam: { name: 'Team 2' },
-            receivingTeam: { name: 'Team 1' },
-            teamOneScore: 1,
-            teamTwoScore: 1,
-        })
-        await Point.create({
-            pointNumber: 3,
-            pullingTeam: { name: 'Team 1' },
+            teamTwoScore: 0,
+            teamOnePlayers: [],
+            teamTwoPlayers: [],
+            pullingTeam: team,
             receivingTeam: { name: 'Team 2' },
-            teamOneScore: 1,
-            teamTwoScore: 2,
+            teamTwoActive: false,
+            teamOneActions: [action1._id, action2._id],
+            teamTwoActions: [action3._id],
         })
+
+        const actions = await services.getActionsByPoint(point._id.toString(), 'one')
+        expect(actions.length).toBe(2)
+        expect(actions[0].actionNumber).toBe(1)
+        expect(actions[0].actionType).toBe('TeamOneScore')
+
+        expect(actions[1].actionNumber).toBe(1)
+        expect(actions[1].actionType).toBe('Pull')
     })
 
-    it('with multiple found points', async () => {
-        const [point1, point2] = await Point.find({})
+    it('with actions from two', async () => {
+        const [action1, action2, action3] = await Action.find({})
+        const point = await Point.create({
+            pointNumber: 1,
+            teamOneScore: 0,
+            teamTwoScore: 0,
+            teamOnePlayers: [],
+            teamTwoPlayers: [],
+            pullingTeam: team,
+            receivingTeam: { name: 'Team 2' },
+            teamTwoActive: false,
+            teamOneActions: [action1._id, action2._id],
+            teamTwoActions: [action3._id],
+        })
 
-        const ids = [point1._id.toString(), point2._id.toString()]
-        const points = await services.getPoints(ids)
-        expect(points.length).toBe(2)
-        expect(points[0].pointNumber).toBe(1)
-        expect(points[0].teamOneScore).toBe(0)
-        expect(points[0].teamTwoScore).toBe(1)
-
-        expect(points[1].pointNumber).toBe(2)
-        expect(points[1].teamOneScore).toBe(1)
-        expect(points[1].teamTwoScore).toBe(1)
+        const actions = await services.getActionsByPoint(point._id.toString(), 'two')
+        expect(actions.length).toBe(1)
+        expect(actions[0].actionNumber).toBe(2)
+        expect(actions[0].actionType).toBe('TeamOneScore')
     })
 
-    it('with no found points', async () => {
-        const points = await services.getPoints([])
-        expect(points.length).toBe(0)
-    })
-
-    it('with unfound values in array', async () => {
-        const ids = [new Types.ObjectId().toString(), new Types.ObjectId().toString()]
-        const points = await services.getPoints(ids)
-        expect(points.length).toBe(0)
+    it('with empty array', async () => {
+        const point = await Point.create({
+            pointNumber: 1,
+            teamOneScore: 0,
+            teamTwoScore: 0,
+            teamOnePlayers: [],
+            teamTwoPlayers: [],
+            pullingTeam: team,
+            receivingTeam: { name: 'Team 2' },
+            teamTwoActive: false,
+            teamOneActions: [],
+            teamTwoActions: [],
+        })
+        const actions = await services.getActionsByPoint(point._id.toString(), 'one')
+        expect(actions.length).toBe(0)
     })
 })

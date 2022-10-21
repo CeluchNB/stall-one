@@ -74,21 +74,4 @@ actionRouter.delete(
     },
 )
 
-actionRouter.get('/actions', body('ids').isArray(), async (req: Request, res: Response, next) => {
-    try {
-        const redisClient = await getClient()
-        const services = new ActionServices(
-            redisClient,
-            process.env.ULTMT_API_URL || '',
-            process.env.API_KEY || '',
-            Action,
-        )
-        const { ids } = req.body
-        const actions = await services.getActions(ids)
-        return res.json({ actions })
-    } catch (error) {
-        next(error)
-    }
-})
-
 actionRouter.use(errorMiddleware)

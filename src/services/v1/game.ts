@@ -9,6 +9,7 @@ import { authenticateManager, getTeam } from '../../utils/ultmt'
 import { IPointModel } from '../../models/point'
 import { IActionModel } from '../../models/action'
 import { Types } from 'mongoose'
+import IPoint from '../../types/point'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -315,5 +316,16 @@ export default class GameServices {
     getGame = async (gameId: string): Promise<IGame> => {
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
         return game
+    }
+
+    /**
+     * Method to get all points of a game
+     * @param gameId id of game to get points for
+     * @returns array of points
+     */
+    getPointsByGame = async (gameId: string): Promise<IPoint[]> => {
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+        const points = await this.pointModel.find().where('_id').in(game.points)
+        return points
     }
 }

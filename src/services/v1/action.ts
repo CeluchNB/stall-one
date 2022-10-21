@@ -233,16 +233,6 @@ export default class ActionServices {
         return action
     }
 
-    /**
-     * Method to get points by their ids
-     * @param ids array of ids to get points
-     * @returns array of points
-     */
-    getActions = async (ids: string[]): Promise<IAction[]> => {
-        const actions = await this.actionModel.find().where('_id').in(ids)
-        return actions
-    }
-
     private handleSideEffects = async (data: ClientAction, gameId: string, pointId: string, team: TeamNumberString) => {
         if (data.actionType === ActionType.SUBSTITUTION) {
             await handleSubstitute(data, gameId, pointId, team, this.pointModel, this.gameModel)

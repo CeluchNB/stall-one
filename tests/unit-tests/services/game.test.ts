@@ -916,3 +916,60 @@ describe('test get game', () => {
         )
     })
 })
+
+describe('test get points', () => {
+    beforeEach(async () => {
+        await Point.create({
+            pointNumber: 1,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 0,
+            teamTwoScore: 1,
+        })
+        await Point.create({
+            pointNumber: 2,
+            pullingTeam: { name: 'Team 2' },
+            receivingTeam: { name: 'Team 1' },
+            teamOneScore: 1,
+            teamTwoScore: 1,
+        })
+        await Point.create({
+            pointNumber: 3,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 1,
+            teamTwoScore: 2,
+        })
+    })
+
+    it('with multiple found points', async () => {
+        const [point1, point2] = await Point.find({})
+        const game = await Game.create(createData)
+        game.points = [point1._id, point2._id]
+        await game.save()
+
+        const points = await services.getPointsByGame(game._id.toString())
+        expect(points.length).toBe(2)
+        expect(points[0].pointNumber).toBe(1)
+        expect(points[0].teamOneScore).toBe(0)
+        expect(points[0].teamTwoScore).toBe(1)
+
+        expect(points[1].pointNumber).toBe(2)
+        expect(points[1].teamOneScore).toBe(1)
+        expect(points[1].teamTwoScore).toBe(1)
+    })
+
+    it('with no found points', async () => {
+        const game = await Game.create(createData)
+        const points = await services.getPointsByGame(game._id.toString())
+        expect(points.length).toBe(0)
+    })
+
+    it('with unfound values in array', async () => {
+        const game = await Game.create(createData)
+        game.points = [new Types.ObjectId(), new Types.ObjectId()]
+        await game.save()
+        const points = await services.getPointsByGame(game._id.toString())
+        expect(points.length).toBe(0)
+    })
+})

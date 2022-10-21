@@ -4,7 +4,7 @@ import request from 'supertest'
 import axios from 'axios'
 import Action from '../../../src/models/action'
 import { resetDatabase } from '../../fixtures/setup-db'
-import { Model, Types } from 'mongoose'
+import { Types } from 'mongoose'
 
 afterAll(async () => {
     await close()
@@ -188,62 +188,5 @@ describe('test /DELETE comment', () => {
             .expect(404)
 
         expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_ACTION)
-    })
-})
-
-describe('test /GET actions', () => {
-    beforeEach(async () => {
-        const team = {
-            _id: new Types.ObjectId(),
-            seasonStart: new Date(),
-            seasonEnd: new Date(),
-            place: 'Place 1',
-            name: 'Name 1',
-            teamname: 'placename',
-        }
-        await Action.create({
-            team,
-            actionNumber: 1,
-            actionType: 'TeamOneScore',
-        })
-        await Action.create({
-            team,
-            actionNumber: 1,
-            actionType: 'Pull',
-        })
-        await Action.create({
-            team,
-            actionNumber: 2,
-            actionType: 'TeamOneScore',
-        })
-    })
-
-    it('with found actions', async () => {
-        const [action1, action2] = await Action.find({})
-        const ids = [action1._id.toString(), action2._id.toString()]
-
-        const response = await request(app).get('/api/v1/actions').send({ ids }).expect(200)
-        const { actions } = response.body
-        expect(actions.length).toBe(2)
-        expect(actions[0].actionNumber).toBe(1)
-        expect(actions[0].actionType).toBe('TeamOneScore')
-
-        expect(actions[1].actionNumber).toBe(1)
-        expect(actions[1].actionType).toBe('Pull')
-    })
-
-    it('with unfound actions', async () => {
-        const response = await request(app).get('/api/v1/actions').send({ ids: [] }).expect(200)
-        const { actions } = response.body
-        expect(actions.length).toBe(0)
-    })
-
-    it('with service error', async () => {
-        jest.spyOn(Model, 'find').mockImplementationOnce(() => {
-            throw Error()
-        })
-
-        const response = await request(app).get('/api/v1/actions').send({ ids: [] }).expect(500)
-        expect(response.body.message).toBe(Constants.GENERIC_ERROR)
     })
 })
