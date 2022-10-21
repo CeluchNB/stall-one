@@ -8,7 +8,7 @@ import { findByIdOrThrow } from '../../utils/mongoose'
 import { authenticateManager, getTeam } from '../../utils/ultmt'
 import { IPointModel } from '../../models/point'
 import { IActionModel } from '../../models/action'
-import { Types } from 'mongoose'
+import { FilterQuery, Types } from 'mongoose'
 import IPoint from '../../types/point'
 
 export default class GameServices {
@@ -327,5 +327,43 @@ export default class GameServices {
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
         const points = await this.pointModel.find().where('_id').in(game.points)
         return points
+    }
+
+    /**
+     * Method to search games by text query, live, and date parameters
+     * @param q search query
+     * @param live live game boolean
+     * @param after games starting after this time
+     * @param before games ending after this time
+     * @returns array of games
+     */
+    searchGames = async (
+        q?: string,
+        live?: boolean,
+        after?: Date,
+        before?: Date,
+        pageSize = 10,
+        offset = 0,
+    ): Promise<IGame[]> => {
+        const filter: FilterQuery<IGame> = {}
+        if (q) {
+            filter['$text'] = { $search: q }
+        }
+        if (live !== undefined && live !== null) {
+            if (live) {
+                filter['$or'] = [{ teamOneActive: true }, { teamTwoActive: true }]
+            } else {
+                filter['$and'] = [{ teamOneActive: false }, { teamTwoActive: false }]
+            }
+        }
+        if (after) {
+            filter['startTime'] = { $gte: after }
+        }
+        if (before) {
+            filter['startTime'] = { ...filter['startTime'], $lt: before }
+        }
+
+        const games = await this.gameModel.find(filter).skip(offset).limit(pageSize)
+        return games
     }
 }

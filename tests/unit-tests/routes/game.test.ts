@@ -496,3 +496,117 @@ describe('test /GET game points', () => {
         expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_GAME)
     })
 })
+
+describe('test /GET search games', () => {
+    const gameOneData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            place: 'Pittsburgh',
+            name: 'Temper',
+            teamname: 'pghtemper',
+        },
+        teamTwo: {
+            place: 'Seattle',
+            name: 'Sockeye',
+            teamname: 'seasock',
+        },
+        startTime: new Date('2020-01-01'),
+        teamOneActive: true,
+        tournament: {
+            name: 'Mid-Atlantic Regionals 2020',
+            eventId: 'mareg20',
+        },
+    }
+    const gameTwoData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            place: 'Pittsburgh',
+            name: 'Temper',
+            teamname: 'pghtemper',
+        },
+        teamTwo: {
+            place: 'DC',
+            name: 'Truck Stop',
+            teamname: 'tsgh',
+        },
+        startTime: new Date('2021-06-01'),
+        teamOneActive: true,
+        tournament: {
+            name: 'US Open 2021',
+            eventId: 'usopen21',
+        },
+    }
+    const gameThreeData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            place: 'Virginia',
+            name: 'Vault',
+            teamname: 'vault',
+        },
+        teamTwo: {
+            place: 'DC',
+            name: 'Truck Stop',
+            teamname: 'tsgh',
+        },
+        teamOneActive: false,
+        startTime: new Date('2022-03-01'),
+        tournament: {
+            name: 'Philly Open',
+            eventId: 'philly22',
+        },
+    }
+
+    beforeEach(async () => {
+        await Game.create(gameOneData)
+        await Game.create(gameTwoData)
+        await Game.create(gameThreeData)
+    })
+
+    it('with minimal parameters', async () => {
+        const response = await request(app).get('/api/v1/game/search?q=pghtemper').send().expect(200)
+
+        const { games } = response.body
+        expect(games.length).toBe(2)
+        expect(games[0].teamTwo.teamname).toBe('tsgh')
+        expect(games[1].teamTwo.teamname).toBe('seasock')
+    })
+
+    it('with many params', async () => {
+        const response = await request(app)
+            .get('/api/v1/game/search?q=pghtemper&live&after=2021&before=2022&pageSize=1&offset=0')
+            .send()
+            .expect(200)
+
+        const { games } = response.body
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+    })
+
+    it('with false live', async () => {
+        const response = await request(app).get('/api/v1/game/search?live=false').send().expect(200)
+
+        const { games } = response.body
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('vault')
+    })
+
+    it('with error', async () => {
+        const response = await request(app).get('/api/v1/game/search?q=pghtemper&after=twentytwo').send().expect(500)
+        expect(response.body.message).toBe(Constants.GENERIC_ERROR)
+    })
+})

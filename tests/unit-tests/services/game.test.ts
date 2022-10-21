@@ -973,3 +973,135 @@ describe('test get points', () => {
         expect(points.length).toBe(0)
     })
 })
+
+describe('test search', () => {
+    const gameOneData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            place: 'Pittsburgh',
+            name: 'Temper',
+            teamname: 'pghtemper',
+        },
+        teamTwo: {
+            place: 'Seattle',
+            name: 'Sockeye',
+            teamname: 'seasock',
+        },
+        startTime: new Date('2020-01-01'),
+        teamOneActive: true,
+        tournament: {
+            name: 'Mid-Atlantic Regionals 2020',
+            eventId: 'mareg20',
+        },
+    }
+    const gameTwoData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            place: 'Pittsburgh',
+            name: 'Temper',
+            teamname: 'pghtemper',
+        },
+        teamTwo: {
+            place: 'DC',
+            name: 'Truck Stop',
+            teamname: 'tsgh',
+        },
+        startTime: new Date('2021-06-01'),
+        teamOneActive: false,
+        tournament: {
+            name: 'US Open 2021',
+            eventId: 'usopen21',
+        },
+    }
+    const gameThreeData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            place: 'Virginia',
+            name: 'Vault',
+            teamname: 'vault',
+        },
+        teamTwo: {
+            place: 'DC',
+            name: 'Truck Stop',
+            teamname: 'tsgh',
+        },
+        startTime: new Date('2022-03-01'),
+        tournament: {
+            name: 'Philly Open',
+            eventId: 'philly22',
+        },
+    }
+
+    beforeEach(async () => {
+        await Game.create(gameOneData)
+        await Game.create(gameTwoData)
+        await Game.create(gameThreeData)
+    })
+
+    it('with simple search by team name', async () => {
+        const games = await services.searchGames('temper')
+        expect(games.length).toBe(2)
+        expect(games[0].teamTwo.teamname).toBe('tsgh')
+        expect(games[1].teamTwo.teamname).toBe('seasock')
+    })
+
+    it('with simple search by tournament name', async () => {
+        const games = await services.searchGames('usopen21')
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+        expect(games[0].teamTwo.teamname).toBe('tsgh')
+    })
+
+    it('with simple search for live game', async () => {
+        const games = await services.searchGames(undefined, true)
+        expect(games.length).toBe(2)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+        expect(games[1].teamOne.teamname).toBe('vault')
+    })
+
+    it('with after value', async () => {
+        const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'))
+        expect(games.length).toBe(2)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+        expect(games[1].teamOne.teamname).toBe('vault')
+    })
+
+    it('with before value', async () => {
+        const games = await services.searchGames(undefined, undefined, undefined, new Date('01-01-2021'))
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+    })
+
+    it('with all values', async () => {
+        const games = await services.searchGames('pghtemper', false, new Date('12-01-2020'), new Date('01-01-2022'))
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+    })
+
+    it('with limit', async () => {
+        const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'), undefined, 1, 0)
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+    })
+
+    it('with offset', async () => {
+        const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'), undefined, 1, 1)
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('vault')
+    })
+})

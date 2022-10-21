@@ -165,6 +165,35 @@ gameRouter.delete(
     },
 )
 
+gameRouter.get('/game/search', async (req: Request, res: Response, next) => {
+    try {
+        const { q, live, after, before, pageSize, offset } = req.query
+        const services = new GameServices(
+            Game,
+            Point,
+            Action,
+            process.env.ULTMT_API_URL || '',
+            process.env.API_KEY || '',
+        )
+
+        const liveGame = live === undefined ? undefined : live === 'false' ? false : true
+        const afterDate = after ? new Date(after as string) : undefined
+        const beforeDate = before ? new Date(before as string) : undefined
+
+        const games = await services.searchGames(
+            q as string | undefined,
+            liveGame,
+            afterDate,
+            beforeDate,
+            pageSize ? Number(pageSize) : undefined,
+            offset ? Number(offset) : undefined,
+        )
+        return res.json({ games })
+    } catch (error) {
+        next(error)
+    }
+})
+
 gameRouter.get('/game/:id', param('id').escape(), async (req: Request, res: Response, next) => {
     try {
         const services = new GameServices(
