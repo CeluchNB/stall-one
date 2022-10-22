@@ -45,6 +45,14 @@ export default class ActionServices {
         this.gameModel = gameModel
     }
 
+    /**
+     * Method to create a live action, stored in redis.
+     * @param data content of action
+     * @param gameId id of game action belongs to
+     * @param pointId id of point action belongs to
+     * @param team team reporting action
+     * @returns redis action
+     */
     createLiveAction = async (
         data: ClientAction,
         gameId: string,
@@ -71,10 +79,24 @@ export default class ActionServices {
         return action
     }
 
+    /**
+     * Method to get an action stored in redis.
+     * @param pointId id of point action belongs to
+     * @param actionNumber number of action on point
+     * @param team team reporting action
+     * @returns redis action
+     */
     getLiveAction = async (pointId: string, actionNumber: number, team: TeamNumberString): Promise<RedisAction> => {
         return await getRedisAction(this.redisClient, pointId, actionNumber, team)
     }
 
+    /**
+     * Method to undo (delete) an action stored in redis.
+     * @param gameId id of game action belongs to
+     * @param pointId id of point action belongs to
+     * @param team team reporting action
+     * @returns deleted action or undefined if not found
+     */
     undoAction = async (gameId: string, pointId: string, team: TeamNumberString): Promise<RedisAction | undefined> => {
         const totalActions = await this.redisClient.get(`${gameId}:${pointId}:${team}:actions`)
         const game = await this.gameModel.findById(gameId)
@@ -92,6 +114,14 @@ export default class ActionServices {
         return
     }
 
+    /**
+     * Method to add a comment to a live action
+     * @param pointId id of point action belongs to
+     * @param actionNumber action number to comment on
+     * @param data content of comment
+     * @param team team that reported action
+     * @returns updated redis action
+     */
     addLiveComment = async (
         pointId: string,
         actionNumber: number,
@@ -112,6 +142,15 @@ export default class ActionServices {
         return await getRedisAction(this.redisClient, pointId, actionNumber, team)
     }
 
+    /**
+     * Method to delete a live comment of action stored in redis
+     * @param pointId id of point the action belongs to
+     * @param actionNumber number of action on this point
+     * @param commentNumber comment number on action
+     * @param jwt jwt of commentor
+     * @param team team of action
+     * @returns updated redis action
+     */
     deleteLiveComment = async (
         pointId: string,
         actionNumber: number,
@@ -130,6 +169,14 @@ export default class ActionServices {
         return await getRedisAction(this.redisClient, pointId, actionNumber, team)
     }
 
+    /**
+     * Method to edit the players involved in a mongodb saved action.
+     * @param actionId id of action to edit
+     * @param userJwt jwt of editing user (must be team manager)
+     * @param playerOne new player one
+     * @param playerTwo new player two
+     * @returns updated action
+     */
     editSavedAction = async (
         actionId: string,
         userJwt?: string,
@@ -145,6 +192,13 @@ export default class ActionServices {
         return action
     }
 
+    /**
+     * Method to save comment on an action in mongodb
+     * @param actionId id of action to comment on
+     * @param userJwt jwt of commenting user
+     * @param comment content of comment
+     * @returns updated actio
+     */
     addSavedComment = async (actionId: string, userJwt: string, comment: string): Promise<IAction> => {
         const action = await findByIdOrThrow<IAction>(actionId, this.actionModel, Constants.UNABLE_TO_FIND_ACTION)
         const user = await getUser(this.ultmtUrl, this.apiKey, userJwt)
@@ -160,6 +214,13 @@ export default class ActionServices {
         return action
     }
 
+    /**
+     * Method to delete a comment saved on an action in mongodb
+     * @param actionId id of action to delete comment on
+     * @param userJwt jwt of commenting user
+     * @param commentNumber number of comment to delete
+     * @returns updated action
+     */
     deleteSavedComment = async (actionId: string, userJwt: string, commentNumber: number): Promise<IAction> => {
         const action = await findByIdOrThrow<IAction>(actionId, this.actionModel, Constants.UNABLE_TO_FIND_ACTION)
         const user = await getUser(this.ultmtUrl, this.apiKey, userJwt)

@@ -6,14 +6,28 @@ import randomstring from 'randomstring'
 import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
 import { findByIdOrThrow } from '../../utils/mongoose'
 import { authenticateManager, getTeam } from '../../utils/ultmt'
+import { IPointModel } from '../../models/point'
+import { IActionModel } from '../../models/action'
+import { FilterQuery, Types } from 'mongoose'
+import IPoint from '../../types/point'
 
 export default class GameServices {
     gameModel: IGameModel
+    pointModel: IPointModel
+    actionModel: IActionModel
     ultmtUrl: string
     apiKey: string
 
-    constructor(gameModel: IGameModel, ultmtUrl: string, apiKey: string) {
+    constructor(
+        gameModel: IGameModel,
+        pointModel: IPointModel,
+        actionModel: IActionModel,
+        ultmtUrl: string,
+        apiKey: string,
+    ) {
         this.gameModel = gameModel
+        this.pointModel = pointModel
+        this.actionModel = actionModel
         this.ultmtUrl = ultmtUrl
         this.apiKey = apiKey
     }
@@ -220,5 +234,136 @@ export default class GameServices {
         await game.save()
 
         return { game, token }
+    }
+
+    /**
+     * Method to delete a game. Does not simply delete game,
+     * but correctly handles behavior if other team is resolved.
+     * @param gameId id of game to delete
+     * @param userJwt jwt of deleting user
+     * @param teamId team of deleting user
+     */
+    deleteGame = async (gameId: string, userJwt: string, teamId: string): Promise<void> => {
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+        await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, teamId)
+
+        // get all points for this game
+        const points = await this.pointModel.find().where('_id').in(game.points)
+        // dereference all points for this team
+        for (const point of points) {
+            if (point.receivingTeam._id?.equals(teamId)) {
+                point.receivingTeam._id = undefined
+                point.receivingTeam.teamname = undefined
+            } else if (point.pullingTeam._id?.equals(teamId)) {
+                point.pullingTeam._id = undefined
+                point.pullingTeam.teamname = undefined
+            }
+            if (point.scoringTeam?._id?.equals(teamId)) {
+                point.scoringTeam._id = undefined
+                point.scoringTeam.teamname = undefined
+            }
+            await point.save()
+        }
+        // if team one calling delete
+        if (game.teamOne._id?.equals(teamId)) {
+            // delete all team one actions
+            const actionIds = points.reduce(
+                (prev: Types.ObjectId[], current) => prev.concat(current.teamOneActions),
+                [],
+            )
+            await this.actionModel.deleteMany().where('_id').in(actionIds)
+
+            // remove team one action ids from point
+            for (const point of points) {
+                point.teamOneActions = []
+                await point.save()
+            }
+
+            // 'dereference' team if the other team is defined
+            if (game.teamTwoDefined) {
+                game.teamOne._id = undefined
+                game.teamOne.teamname = undefined
+                await game.save()
+            } else {
+                // fully delete game if team two is not defined
+                await this.pointModel.deleteMany().where('_id').in(game.points)
+                await game.delete()
+            }
+        } else if (game.teamTwo._id?.equals(teamId)) {
+            // just 'dereference' team since the other team definitely exists
+            game.teamTwo._id = undefined
+            game.teamTwo.teamname = undefined
+            const actionIds = points.reduce(
+                (prev: Types.ObjectId[], current) => prev.concat(current.teamTwoActions),
+                [],
+            )
+            await this.actionModel.deleteMany().where('_id').in(actionIds)
+
+            for (const point of points) {
+                point.teamTwoActions = []
+                await point.save()
+            }
+
+            await game.save()
+        }
+    }
+
+    /**
+     * Method to get a game by id.
+     * @param gameId id of game to get
+     * @returns game
+     */
+    getGame = async (gameId: string): Promise<IGame> => {
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+        return game
+    }
+
+    /**
+     * Method to get all points of a game
+     * @param gameId id of game to get points for
+     * @returns array of points
+     */
+    getPointsByGame = async (gameId: string): Promise<IPoint[]> => {
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+        const points = await this.pointModel.find().where('_id').in(game.points)
+        return points
+    }
+
+    /**
+     * Method to search games by text query, live, and date parameters
+     * @param q search query
+     * @param live live game boolean
+     * @param after games starting after this time
+     * @param before games ending after this time
+     * @returns array of games
+     */
+    searchGames = async (
+        q?: string,
+        live?: boolean,
+        after?: Date,
+        before?: Date,
+        pageSize = 10,
+        offset = 0,
+    ): Promise<IGame[]> => {
+        const filter: FilterQuery<IGame> = {}
+        if (q) {
+            filter['$text'] = { $search: q }
+        }
+        if (live !== undefined && live !== null) {
+            if (live) {
+                filter['$or'] = [{ teamOneActive: true }, { teamTwoActive: true }]
+            } else {
+                filter['$and'] = [{ teamOneActive: false }, { teamTwoActive: false }]
+            }
+        }
+        if (after) {
+            filter['startTime'] = { $gte: after }
+        }
+        if (before) {
+            filter['startTime'] = { ...filter['startTime'], $lt: before }
+        }
+
+        const games = await this.gameModel.find(filter).skip(offset).limit(pageSize)
+        return games
     }
 }

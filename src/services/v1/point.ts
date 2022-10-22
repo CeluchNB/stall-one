@@ -1,7 +1,7 @@
 import * as Constants from '../../utils/constants'
 import { IPointModel } from '../../models/point'
 import { IGameModel } from '../../models/game'
-import { Player, TeamNumber } from '../../types/ultmt'
+import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
 import { ApiError } from '../../types/errors'
 import IPoint from '../../types/point'
 import IAction, { ActionType, RedisAction, RedisClientType } from '../../types/action'
@@ -317,10 +317,10 @@ export default class PointServices {
 
     /**
      * Method to reactivate a recent point to make it live again
-     * @param gameId
-     * @param pointId
-     * @param team
-     * @returns
+     * @param gameId id of game point belongs to
+     * @param pointId id of point to reactive
+     * @param team team reactivating point
+     * @returns updated point
      */
     reactivatePoint = async (gameId: string, pointId: string, team: TeamNumber): Promise<IPoint> => {
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
@@ -377,6 +377,19 @@ export default class PointServices {
         await game.save()
 
         return point
+    }
+
+    /**
+     * Method to get the actions related to a point by team.
+     * @param pointId id of point to get actions
+     * @param team actions of team
+     * @returns array of actions
+     */
+    getActionsByPoint = async (pointId: string, team: TeamNumberString): Promise<IAction[]> => {
+        const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
+        const ids = team === 'one' ? point.teamOneActions : point.teamTwoActions
+        const actions = await this.actionModel.find().where('_id').in(ids)
+        return actions
     }
 
     private saveActions = async (actions: IAction[], gameId: string, pointId: string, teamNumber: TeamNumber) => {

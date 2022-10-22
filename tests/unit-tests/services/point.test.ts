@@ -1183,3 +1183,92 @@ describe('test reactivate point', () => {
         ).rejects.toThrowError(new ApiError(Constants.REACTIVATE_POINT_ERROR, 400))
     })
 })
+
+describe('test get actions', () => {
+    const team = {
+        _id: new Types.ObjectId(),
+        seasonStart: new Date(),
+        seasonEnd: new Date(),
+        place: 'Place 1',
+        name: 'Name 1',
+        teamname: 'placename',
+    }
+    beforeEach(async () => {
+        await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'TeamOneScore',
+        })
+        await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'Pull',
+        })
+        await Action.create({
+            team,
+            actionNumber: 2,
+            actionType: 'TeamOneScore',
+        })
+    })
+    it('with found actions on team one', async () => {
+        const [action1, action2, action3] = await Action.find({})
+        const point = await Point.create({
+            pointNumber: 1,
+            teamOneScore: 0,
+            teamTwoScore: 0,
+            teamOnePlayers: [],
+            teamTwoPlayers: [],
+            pullingTeam: team,
+            receivingTeam: { name: 'Team 2' },
+            teamTwoActive: false,
+            teamOneActions: [action1._id, action2._id],
+            teamTwoActions: [action3._id],
+        })
+
+        const actions = await services.getActionsByPoint(point._id.toString(), 'one')
+        expect(actions.length).toBe(2)
+        expect(actions[0].actionNumber).toBe(1)
+        expect(actions[0].actionType).toBe('TeamOneScore')
+
+        expect(actions[1].actionNumber).toBe(1)
+        expect(actions[1].actionType).toBe('Pull')
+    })
+
+    it('with actions from two', async () => {
+        const [action1, action2, action3] = await Action.find({})
+        const point = await Point.create({
+            pointNumber: 1,
+            teamOneScore: 0,
+            teamTwoScore: 0,
+            teamOnePlayers: [],
+            teamTwoPlayers: [],
+            pullingTeam: team,
+            receivingTeam: { name: 'Team 2' },
+            teamTwoActive: false,
+            teamOneActions: [action1._id, action2._id],
+            teamTwoActions: [action3._id],
+        })
+
+        const actions = await services.getActionsByPoint(point._id.toString(), 'two')
+        expect(actions.length).toBe(1)
+        expect(actions[0].actionNumber).toBe(2)
+        expect(actions[0].actionType).toBe('TeamOneScore')
+    })
+
+    it('with empty array', async () => {
+        const point = await Point.create({
+            pointNumber: 1,
+            teamOneScore: 0,
+            teamTwoScore: 0,
+            teamOnePlayers: [],
+            teamTwoPlayers: [],
+            pullingTeam: team,
+            receivingTeam: { name: 'Team 2' },
+            teamTwoActive: false,
+            teamOneActions: [],
+            teamTwoActions: [],
+        })
+        const actions = await services.getActionsByPoint(point._id.toString(), 'one')
+        expect(actions.length).toBe(0)
+    })
+})

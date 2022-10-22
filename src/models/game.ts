@@ -84,6 +84,17 @@ schema.methods.getToken = function (team: TeamNumber) {
     return token
 }
 
+schema.index({
+    'teamOne.place': 'text',
+    'teamOne.name': 'text',
+    'teamOne.teamname': 'text',
+    'teamTwo.place': 'text',
+    'teamTwo.name': 'text',
+    'teamTwo.teamname': 'text',
+    'tournament.name': 'text',
+    'tournament.eventId': 'text',
+})
+
 const Game = model<IGame>('Game', schema)
 export type IGameModel = typeof Game
 export default Game

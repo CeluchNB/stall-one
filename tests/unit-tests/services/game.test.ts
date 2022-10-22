@@ -4,13 +4,15 @@ import GameServices from '../../../src/services/v1/game'
 import Game from '../../../src/models/game'
 import { ApiError } from '../../../src/types/errors'
 import { CreateGame } from '../../../src/types/game'
-import { TeamNumber } from '../../../src/types/ultmt'
+import { Team, TeamNumber } from '../../../src/types/ultmt'
 import { Types } from 'mongoose'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import axios from 'axios'
 import randomstring from 'randomstring'
 import Tournament from '../../../src/models/tournament'
 import { CreateTournament } from '../../../src/types/tournament'
+import Point from '../../../src/models/point'
+import Action from '../../../src/models/action'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -39,7 +41,7 @@ const userData = {
     openToRequests: false,
 }
 
-const services = new GameServices(Game, '', '')
+const services = new GameServices(Game, Point, Action, '', '')
 
 beforeEach(() => {
     jest.spyOn(axios, 'get').mockImplementation(getMock)
@@ -634,5 +636,472 @@ describe('test reactivate game', () => {
         await expect(
             services.reactivateGame(initGame._id.toString(), 'jwt', initGame.teamOne._id?.toString() || ''),
         ).rejects.toThrowError(new ApiError(Constants.UNAUTHENTICATED_USER, 401))
+    })
+})
+
+describe('test delete game', () => {
+    const team: Team = {
+        _id: new Types.ObjectId(),
+        seasonStart: new Date(),
+        seasonEnd: new Date(),
+        place: 'Place 1',
+        name: 'Name 1',
+        teamname: 'placename',
+    }
+    const team2: Team = {
+        _id: new Types.ObjectId(),
+        seasonStart: new Date(),
+        seasonEnd: new Date(),
+        place: 'Place 2',
+        name: 'Name 2',
+        teamname: 'placename2',
+    }
+    beforeAll(() => {
+        getMock.mockImplementationOnce(() => {
+            return Promise.resolve({ data: { user: userData }, status: 200 })
+        })
+    })
+
+    beforeEach(async () => {
+        const action1 = await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'TeamOneScore',
+        })
+        const action2 = await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'Pull',
+        })
+        const action3 = await Action.create({
+            team,
+            actionNumber: 2,
+            actionType: 'TeamOneScore',
+        })
+        await Point.create({
+            pointNumber: 1,
+            teamOneScore: 1,
+            teamTwoScore: 0,
+            pullingTeam: { name: 'Name 2' },
+            receivingTeam: team,
+            scoringTeam: team,
+            teamOneActive: false,
+            teamTwoActive: false,
+            teamOneActions: [action1._id],
+        })
+        await Point.create({
+            pointNumber: 2,
+            teamOneScore: 2,
+            teamTwoScore: 0,
+            pullingTeam: team,
+            receivingTeam: { name: 'Name 2' },
+            scoringTeam: team,
+            teamOneActive: false,
+            teamTwoActive: false,
+            teamOneActions: [action2._id, action3._id],
+        })
+    })
+    it('with team one and team two not defined', async () => {
+        const [point1, point2] = await Point.find({})
+        const game = await Game.create({
+            teamOne: team,
+            teamTwo: { name: 'Name 2' },
+            teamTwoDefined: false,
+            scoreLimit: 15,
+            halfScore: 8,
+            startTime: new Date(),
+            softcapMins: 75,
+            hardcapMins: 90,
+            playersPerPoint: 7,
+            timeoutPerHalf: 1,
+            floaterTimeout: true,
+            creator: {
+                _id: new Types.ObjectId(),
+                firstName: 'First1',
+                lastName: 'Last1',
+                username: 'first1last1',
+            },
+            points: [point1._id, point2._id],
+        })
+        await services.deleteGame(game._id.toString(), 'jwt', team._id?.toString() || '')
+        const actions = await Action.find({})
+        expect(actions.length).toBe(0)
+
+        const points = await Point.find({})
+        expect(points.length).toBe(0)
+
+        const games = await Game.find({})
+        expect(games.length).toBe(0)
+    })
+
+    it('with team one and team two defined', async () => {
+        const action4 = await Action.create({
+            team: team2,
+            actionNumber: 1,
+            actionType: 'Drop',
+        })
+        const action5 = await Action.create({
+            team: team2,
+            actionNumber: 1,
+            actionType: 'TeamOneScore',
+        })
+        const [point1, point2] = await Point.find({})
+        point1.pullingTeam = team2
+        await point1.save()
+        point2.teamTwoActions = [action4._id, action5._id]
+        point2.receivingTeam = team2
+        await point2.save()
+        const game = await Game.create({
+            teamOne: team,
+            teamTwo: team2,
+            teamTwoDefined: true,
+            scoreLimit: 15,
+            halfScore: 8,
+            startTime: new Date(),
+            softcapMins: 75,
+            hardcapMins: 90,
+            playersPerPoint: 7,
+            timeoutPerHalf: 1,
+            floaterTimeout: true,
+            creator: {
+                _id: new Types.ObjectId(),
+                firstName: 'First1',
+                lastName: 'Last1',
+                username: 'first1last1',
+            },
+            points: [point1._id, point2._id],
+        })
+
+        await services.deleteGame(game._id.toString(), 'jwt', team._id?.toString() || '')
+        const actions = await Action.find({})
+        expect(actions.length).toBe(2)
+        expect(actions[0].team.teamname).toBe(action4.team.teamname)
+        expect(actions[0].actionType).toBe(action4.actionType)
+        expect(actions[1].team.teamname).toBe(action5.team.teamname)
+        expect(actions[1].actionType).toBe(action5.actionType)
+
+        const points = await Point.find({})
+        expect(points.length).toBe(2)
+        expect(points[0].teamOneActions.length).toBe(0)
+        expect(points[0].receivingTeam._id).toBeUndefined()
+        expect(points[0].receivingTeam.teamname).toBeUndefined()
+        expect(points[0].receivingTeam.name).toBe(team.name)
+        expect(points[0].scoringTeam?._id).toBeUndefined()
+        expect(points[0].scoringTeam?.teamname).toBeUndefined()
+        expect(points[0].scoringTeam?.name).toBe(team.name)
+        expect(points[0].pullingTeam.teamname).toBe(team2.teamname)
+
+        expect(points[1].teamOneActions.length).toBe(0)
+        expect(points[1].teamTwoActions.length).toBe(2)
+        expect(points[1].pullingTeam._id).toBeUndefined()
+        expect(points[1].pullingTeam.teamname).toBeUndefined()
+        expect(points[1].pullingTeam.name).toBe(team.name)
+        expect(points[1].scoringTeam?._id).toBeUndefined()
+        expect(points[1].scoringTeam?.teamname).toBeUndefined()
+        expect(points[1].scoringTeam?.name).toBe(team.name)
+        expect(points[1].receivingTeam.teamname).toBe(team2.teamname)
+
+        const games = await Game.find({})
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne._id).toBeUndefined()
+        expect(games[0].teamOne.teamname).toBeUndefined()
+        expect(games[0].teamOne.name).toBe(team.name)
+        expect(games[0].teamTwo._id?.toString()).toBe(team2._id?.toString())
+        expect(games[0].teamTwo.teamname).toBe(team2.teamname)
+    })
+
+    it('with team two', async () => {
+        const [action1, action2, action3] = await Action.find({})
+        const action4 = await Action.create({
+            team: team2,
+            actionNumber: 1,
+            actionType: 'Drop',
+        })
+        const action5 = await Action.create({
+            team: team2,
+            actionNumber: 1,
+            actionType: 'TeamOneScore',
+        })
+        const [point1, point2] = await Point.find({})
+        point1.pullingTeam = team2
+        await point1.save()
+        point2.teamTwoActions = [action4._id, action5._id]
+        point2.receivingTeam = team2
+        await point2.save()
+        const game = await Game.create({
+            teamOne: team,
+            teamTwo: team2,
+            teamTwoDefined: true,
+            scoreLimit: 15,
+            halfScore: 8,
+            startTime: new Date(),
+            softcapMins: 75,
+            hardcapMins: 90,
+            playersPerPoint: 7,
+            timeoutPerHalf: 1,
+            floaterTimeout: true,
+            creator: {
+                _id: new Types.ObjectId(),
+                firstName: 'First1',
+                lastName: 'Last1',
+                username: 'first1last1',
+            },
+            points: [point1._id, point2._id],
+        })
+
+        await services.deleteGame(game._id.toString(), 'jwt', team2._id?.toString() || '')
+        const actions = await Action.find({})
+        expect(actions.length).toBe(3)
+        expect(actions[0].team.teamname).toBe(action1.team.teamname)
+        expect(actions[0].actionType).toBe(action1.actionType)
+        expect(actions[1].team.teamname).toBe(action2.team.teamname)
+        expect(actions[1].actionType).toBe(action2.actionType)
+        expect(actions[2].team.teamname).toBe(action3.team.teamname)
+        expect(actions[2].actionType).toBe(action3.actionType)
+
+        const points = await Point.find({})
+        expect(points.length).toBe(2)
+        expect(points[0].teamOneActions.length).toBe(1)
+        expect(points[0].pullingTeam._id).toBeUndefined()
+        expect(points[0].pullingTeam.teamname).toBeUndefined()
+        expect(points[0].pullingTeam.name).toBe(team2.name)
+        expect(points[0].scoringTeam?._id?.toString()).toBe(team._id?.toString())
+        expect(points[0].scoringTeam?.teamname).toBe(team.teamname)
+        expect(points[0].scoringTeam?.name).toBe(team.name)
+        expect(points[0].receivingTeam.teamname).toBe(team.teamname)
+
+        expect(points[1].teamOneActions.length).toBe(2)
+        expect(points[1].teamTwoActions.length).toBe(0)
+        expect(points[1].receivingTeam._id).toBeUndefined()
+        expect(points[1].receivingTeam.teamname).toBeUndefined()
+        expect(points[1].receivingTeam.name).toBe(team2.name)
+        expect(points[1].scoringTeam?._id?.toString()).toBe(team._id?.toString())
+        expect(points[1].scoringTeam?.teamname).toBe(team.teamname)
+        expect(points[1].scoringTeam?.name).toBe(team.name)
+        expect(points[1].pullingTeam.teamname).toBe(team.teamname)
+
+        const games = await Game.find({})
+        expect(games.length).toBe(1)
+        expect(games[0].teamTwo._id).toBeUndefined()
+        expect(games[0].teamTwo.teamname).toBeUndefined()
+        expect(games[0].teamTwo.name).toBe(team2.name)
+        expect(games[0].teamOne._id?.toString()).toBe(team._id?.toString())
+        expect(games[0].teamOne.teamname).toBe(team.teamname)
+    })
+})
+
+describe('test get game', () => {
+    it('with found game', async () => {
+        const initGame = await Game.create(gameData)
+
+        const game = await services.getGame(initGame._id.toString())
+        expect(game._id.toString()).toBe(initGame._id.toString())
+        expect(game.creator.username).toBe(initGame.creator.username)
+        expect(game.floaterTimeout).toBe(initGame.floaterTimeout)
+        expect(game.halfScore).toBe(initGame.halfScore)
+        expect(game.startTime.toString()).toBe(initGame.startTime.toString())
+        expect(game.softcapMins).toBe(initGame.softcapMins)
+        expect(game.hardcapMins).toBe(initGame.hardcapMins)
+        expect(game.playersPerPoint).toBe(initGame.playersPerPoint)
+        expect(game.timeoutPerHalf).toBe(initGame.timeoutPerHalf)
+        expect(game.teamOneScore).toBe(initGame.teamOneScore)
+        expect(game.teamTwoScore).toBe(initGame.teamTwoScore)
+        expect(game.teamOneActive).toBe(initGame.teamOneActive)
+        expect(game.teamTwoActive).toBe(initGame.teamTwoActive)
+    })
+
+    it('with unfound game', async () => {
+        await expect(services.getGame(new Types.ObjectId().toString())).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
+        )
+    })
+})
+
+describe('test get points', () => {
+    beforeEach(async () => {
+        await Point.create({
+            pointNumber: 1,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 0,
+            teamTwoScore: 1,
+        })
+        await Point.create({
+            pointNumber: 2,
+            pullingTeam: { name: 'Team 2' },
+            receivingTeam: { name: 'Team 1' },
+            teamOneScore: 1,
+            teamTwoScore: 1,
+        })
+        await Point.create({
+            pointNumber: 3,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 1,
+            teamTwoScore: 2,
+        })
+    })
+
+    it('with multiple found points', async () => {
+        const [point1, point2] = await Point.find({})
+        const game = await Game.create(createData)
+        game.points = [point1._id, point2._id]
+        await game.save()
+
+        const points = await services.getPointsByGame(game._id.toString())
+        expect(points.length).toBe(2)
+        expect(points[0].pointNumber).toBe(1)
+        expect(points[0].teamOneScore).toBe(0)
+        expect(points[0].teamTwoScore).toBe(1)
+
+        expect(points[1].pointNumber).toBe(2)
+        expect(points[1].teamOneScore).toBe(1)
+        expect(points[1].teamTwoScore).toBe(1)
+    })
+
+    it('with no found points', async () => {
+        const game = await Game.create(createData)
+        const points = await services.getPointsByGame(game._id.toString())
+        expect(points.length).toBe(0)
+    })
+
+    it('with unfound values in array', async () => {
+        const game = await Game.create(createData)
+        game.points = [new Types.ObjectId(), new Types.ObjectId()]
+        await game.save()
+        const points = await services.getPointsByGame(game._id.toString())
+        expect(points.length).toBe(0)
+    })
+})
+
+describe('test search', () => {
+    const gameOneData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            place: 'Pittsburgh',
+            name: 'Temper',
+            teamname: 'pghtemper',
+        },
+        teamTwo: {
+            place: 'Seattle',
+            name: 'Sockeye',
+            teamname: 'seasock',
+        },
+        startTime: new Date('2020-01-01'),
+        teamOneActive: true,
+        tournament: {
+            name: 'Mid-Atlantic Regionals 2020',
+            eventId: 'mareg20',
+        },
+    }
+    const gameTwoData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            place: 'Pittsburgh',
+            name: 'Temper',
+            teamname: 'pghtemper',
+        },
+        teamTwo: {
+            place: 'DC',
+            name: 'Truck Stop',
+            teamname: 'tsgh',
+        },
+        startTime: new Date('2021-06-01'),
+        teamOneActive: false,
+        tournament: {
+            name: 'US Open 2021',
+            eventId: 'usopen21',
+        },
+    }
+    const gameThreeData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            place: 'Virginia',
+            name: 'Vault',
+            teamname: 'vault',
+        },
+        teamTwo: {
+            place: 'DC',
+            name: 'Truck Stop',
+            teamname: 'tsgh',
+        },
+        startTime: new Date('2022-03-01'),
+        tournament: {
+            name: 'Philly Open',
+            eventId: 'philly22',
+        },
+    }
+
+    beforeEach(async () => {
+        await Game.create(gameOneData)
+        await Game.create(gameTwoData)
+        await Game.create(gameThreeData)
+    })
+
+    it('with simple search by team name', async () => {
+        const games = await services.searchGames('temper')
+        expect(games.length).toBe(2)
+        expect(games[0].teamTwo.teamname).toBe('tsgh')
+        expect(games[1].teamTwo.teamname).toBe('seasock')
+    })
+
+    it('with simple search by tournament name', async () => {
+        const games = await services.searchGames('usopen21')
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+        expect(games[0].teamTwo.teamname).toBe('tsgh')
+    })
+
+    it('with simple search for live game', async () => {
+        const games = await services.searchGames(undefined, true)
+        expect(games.length).toBe(2)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+        expect(games[1].teamOne.teamname).toBe('vault')
+    })
+
+    it('with after value', async () => {
+        const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'))
+        expect(games.length).toBe(2)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+        expect(games[1].teamOne.teamname).toBe('vault')
+    })
+
+    it('with before value', async () => {
+        const games = await services.searchGames(undefined, undefined, undefined, new Date('01-01-2021'))
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+    })
+
+    it('with all values', async () => {
+        const games = await services.searchGames('pghtemper', false, new Date('12-01-2020'), new Date('01-01-2022'))
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+    })
+
+    it('with limit', async () => {
+        const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'), undefined, 1, 0)
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
+    })
+
+    it('with offset', async () => {
+        const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'), undefined, 1, 1)
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('vault')
     })
 })
