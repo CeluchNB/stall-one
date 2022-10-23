@@ -3,7 +3,7 @@ import { setUpDatabase, tearDownDatabase, createData, gameData, getMock, resetDa
 import GameServices from '../../../src/services/v1/game'
 import Game from '../../../src/models/game'
 import { ApiError } from '../../../src/types/errors'
-import { CreateGame } from '../../../src/types/game'
+import { CreateFullGame, CreateGame } from '../../../src/types/game'
 import { Team, TeamNumber } from '../../../src/types/ultmt'
 import { Types } from 'mongoose'
 import jwt, { JwtPayload } from 'jsonwebtoken'
@@ -13,6 +13,7 @@ import Tournament from '../../../src/models/tournament'
 import { CreateTournament } from '../../../src/types/tournament'
 import Point from '../../../src/models/point'
 import Action from '../../../src/models/action'
+import { ActionType } from '../../../src/types/action'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -1103,5 +1104,205 @@ describe('test search', () => {
         const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'), undefined, 1, 1)
         expect(games.length).toBe(1)
         expect(games[0].teamOne.teamname).toBe('vault')
+    })
+})
+
+describe('test create full game', () => {
+    it('with valid data', async () => {
+        const fullGame: CreateFullGame = {
+            ...createData,
+            teamOneScore: 2,
+            teamTwoScore: 1,
+            teamOnePlayers: [
+                {
+                    _id: new Types.ObjectId(),
+                    firstName: 'First 1',
+                    lastName: 'Last 1',
+                    username: 'firstlast1',
+                },
+                { firstName: 'First 2', lastName: 'Last 2' },
+                { firstName: 'First 3', lastName: 'Last 3' },
+                { firstName: 'First 4', lastName: 'Last 4' },
+                { firstName: 'First 5', lastName: 'Last 5' },
+                { firstName: 'First 6', lastName: 'Last 6' },
+                { firstName: 'First 7', lastName: 'Last 7' },
+            ],
+            points: [
+                {
+                    pointNumber: 1,
+                    teamOneScore: 1,
+                    teamTwoScore: 0,
+                    pullingTeam: createData.teamTwo,
+                    receivingTeam: createData.teamOne,
+                    scoringTeam: createData.teamOne,
+                    teamOnePlayers: [
+                        {
+                            _id: new Types.ObjectId(),
+                            firstName: 'First 1',
+                            lastName: 'Last 1',
+                            username: 'firstlast1',
+                        },
+                        { firstName: 'First 2', lastName: 'Last 2' },
+                        { firstName: 'First 3', lastName: 'Last 3' },
+                        { firstName: 'First 4', lastName: 'Last 4' },
+                        { firstName: 'First 5', lastName: 'Last 5' },
+                        { firstName: 'First 6', lastName: 'Last 6' },
+                        { firstName: 'First 7', lastName: 'Last 7' },
+                    ],
+                    actions: [
+                        {
+                            actionType: ActionType.CATCH,
+                            playerOne: {
+                                _id: new Types.ObjectId(),
+                                firstName: 'First 1',
+                                lastName: 'Last 1',
+                                username: 'firstlast1',
+                            },
+                            tags: ['Huck'],
+                        },
+                        {
+                            actionType: ActionType.CATCH,
+                            playerOne: {
+                                _id: new Types.ObjectId(),
+                                firstName: 'First 1',
+                                lastName: 'Last 1',
+                                username: 'firstlast1',
+                            },
+                            playerTwo: {
+                                firstName: 'First 2',
+                                lastName: 'Last 2',
+                            },
+                            tags: ['Huck'],
+                        },
+                        {
+                            actionType: ActionType.TEAM_ONE_SCORE,
+                            playerOne: {
+                                firstName: 'First 2',
+                                lastName: 'Last 2',
+                            },
+                            playerTwo: {
+                                firstName: 'First 3',
+                                lastName: 'Last 3',
+                            },
+                            tags: [],
+                        },
+                    ],
+                },
+                {
+                    pointNumber: 2,
+                    teamOneScore: 1,
+                    teamTwoScore: 1,
+                    pullingTeam: createData.teamOne,
+                    receivingTeam: createData.teamTwo,
+                    scoringTeam: createData.teamTwo,
+                    teamOnePlayers: [
+                        {
+                            _id: new Types.ObjectId(),
+                            firstName: 'First 1',
+                            lastName: 'Last 1',
+                            username: 'firstlast1',
+                        },
+                        { firstName: 'First 2', lastName: 'Last 2' },
+                        { firstName: 'First 3', lastName: 'Last 3' },
+                        { firstName: 'First 4', lastName: 'Last 4' },
+                        { firstName: 'First 5', lastName: 'Last 5' },
+                        { firstName: 'First 6', lastName: 'Last 6' },
+                        { firstName: 'First 7', lastName: 'Last 7' },
+                    ],
+                    actions: [
+                        {
+                            actionType: ActionType.PULL,
+                            playerOne: {
+                                _id: new Types.ObjectId(),
+                                firstName: 'First 1',
+                                lastName: 'Last 1',
+                                username: 'firstlast1',
+                            },
+                            tags: ['Huck'],
+                        },
+                        {
+                            actionType: ActionType.TEAM_TWO_SCORE,
+                            tags: ['Huck'],
+                        },
+                    ],
+                },
+                {
+                    pointNumber: 3,
+                    teamOneScore: 2,
+                    teamTwoScore: 1,
+                    pullingTeam: createData.teamTwo,
+                    receivingTeam: createData.teamOne,
+                    scoringTeam: createData.teamOne,
+                    teamOnePlayers: [
+                        {
+                            _id: new Types.ObjectId(),
+                            firstName: 'First 1',
+                            lastName: 'Last 1',
+                            username: 'firstlast1',
+                        },
+                        { firstName: 'First 2', lastName: 'Last 2' },
+                        { firstName: 'First 3', lastName: 'Last 3' },
+                        { firstName: 'First 4', lastName: 'Last 4' },
+                        { firstName: 'First 5', lastName: 'Last 5' },
+                        { firstName: 'First 6', lastName: 'Last 6' },
+                        { firstName: 'First 7', lastName: 'Last 7' },
+                    ],
+                    actions: [
+                        {
+                            actionType: ActionType.CATCH,
+                            playerOne: {
+                                firstName: 'First 2',
+                                lastName: 'Last 2',
+                            },
+                            tags: ['Huck'],
+                        },
+                        {
+                            actionType: ActionType.TEAM_ONE_SCORE,
+                            playerOne: {
+                                firstName: 'First 2',
+                                lastName: 'Last 2',
+                            },
+                            playerTwo: {
+                                firstName: 'First 3',
+                                lastName: 'Last 3',
+                            },
+                            tags: [],
+                        },
+                    ],
+                },
+            ],
+        }
+
+        const gameResponse = await services.createFullGame(fullGame, 'jwt')
+
+        expect(gameResponse.teamOnePlayers.length).toBe(7)
+        expect(gameResponse.teamOneActive).toBe(false)
+        expect(gameResponse.teamTwoActive).toBe(false)
+        expect(gameResponse.creator.username).toBe('firstlast')
+        expect(gameResponse.teamTwoPlayers.length).toBe(0)
+        expect(gameResponse.teamOneScore).toBe(2)
+        expect(gameResponse.teamTwoScore).toBe(1)
+        expect(gameResponse.points.length).toBe(3)
+
+        const game = await Game.findOne({})
+        expect(game?.points.length).toBe(3)
+        const [point1, point2, point3] = await Point.find({})
+        expect(gameResponse.points[0].toString()).toBe(point1._id.toString())
+        expect(point1.teamOneActions.length).toBe(3)
+        expect(point1.teamTwoActions.length).toBe(0)
+        expect(point1.teamOneScore).toBe(1)
+        expect(point1.teamTwoScore).toBe(0)
+        expect(gameResponse.points[1].toString()).toBe(point2._id.toString())
+        expect(point2.teamOneActions.length).toBe(2)
+        expect(point2.teamTwoActions.length).toBe(0)
+        expect(point2.teamOneScore).toBe(1)
+        expect(point2.teamTwoScore).toBe(1)
+        expect(gameResponse.points[2].toString()).toBe(point3._id.toString())
+        expect(point3.teamOneActions.length).toBe(2)
+        expect(point3.teamTwoActions.length).toBe(0)
+        expect(point3.teamOneScore).toBe(2)
+        expect(point3.teamTwoScore).toBe(1)
+        const actions = await Action.find({})
+        expect(actions.length).toBe(7)
     })
 })

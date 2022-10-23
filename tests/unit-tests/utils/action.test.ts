@@ -203,10 +203,30 @@ describe('test validate action data', () => {
         }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
     })
 
-    it('with missing player two on drop', () => {
-        action.actionType = ActionType.DROP
+    it('with missing player one on substitution', () => {
+        action.actionType = ActionType.SUBSTITUTION
+        action.playerOne = undefined
+        action.playerTwo = playerTwo
+        prevAction.actionType = ActionType.PICKUP
+        expect(() => {
+            validateActionData(action, true, prevAction)
+        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
+    })
+
+    it('with missing player two on substitution', () => {
+        action.actionType = ActionType.SUBSTITUTION
         action.playerOne = playerOne
         action.playerTwo = undefined
+        prevAction.actionType = ActionType.PICKUP
+        expect(() => {
+            validateActionData(action, true, prevAction)
+        }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
+    })
+
+    it('with no player one on drop', () => {
+        action.actionType = ActionType.DROP
+        action.playerOne = undefined
+        action.playerTwo = playerTwo
         prevAction.actionType = ActionType.PICKUP
         expect(() => {
             validateActionData(action, true, prevAction)

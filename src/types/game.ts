@@ -1,6 +1,7 @@
 import { Types } from 'mongoose'
 import ITournament from './tournament'
 import { Player, Team } from './ultmt'
+import { ClientPoint } from './point'
 
 export interface UpdateGame {
     teamTwo?: Team
@@ -57,6 +58,13 @@ interface IGame extends CreateGame {
     resolveCode: string
     points: Types.ObjectId[]
     getToken: (team: 'one' | 'two') => string
+}
+
+export interface CreateFullGame extends CreateGame {
+    teamOneScore: number
+    teamTwoScore: number
+    teamOnePlayers: Player[]
+    points: ClientPoint[]
 }
 
 export interface GameAuth {
