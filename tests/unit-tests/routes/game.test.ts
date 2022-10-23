@@ -10,6 +10,8 @@ import { ApiError } from '../../../src/types/errors'
 import { Team } from '../../../src/types/ultmt'
 import Action from '../../../src/models/action'
 import Point from '../../../src/models/point'
+import { CreateFullGame } from '../../../src/types/game'
+import { ActionType } from '../../../src/types/action'
 
 afterAll(async () => {
     await close()
@@ -607,6 +609,106 @@ describe('test /GET search games', () => {
 
     it('with error', async () => {
         const response = await request(app).get('/api/v1/game/search?q=pghtemper&after=twentytwo').send().expect(500)
+        expect(response.body.message).toBe(Constants.GENERIC_ERROR)
+    })
+})
+
+describe('test /POST full game', () => {
+    it('with valid data', async () => {
+        const fullGame: CreateFullGame = {
+            ...createData,
+            teamOneScore: 1,
+            teamTwoScore: 0,
+            teamOnePlayers: [
+                {
+                    _id: new Types.ObjectId(),
+                    firstName: 'First 1',
+                    lastName: 'Last 1',
+                    username: 'firstlast1',
+                },
+                { firstName: 'First 2', lastName: 'Last 2' },
+                { firstName: 'First 3', lastName: 'Last 3' },
+                { firstName: 'First 4', lastName: 'Last 4' },
+                { firstName: 'First 5', lastName: 'Last 5' },
+                { firstName: 'First 6', lastName: 'Last 6' },
+                { firstName: 'First 7', lastName: 'Last 7' },
+            ],
+            points: [
+                {
+                    pointNumber: 1,
+                    teamOneScore: 1,
+                    teamTwoScore: 0,
+                    pullingTeam: createData.teamTwo,
+                    receivingTeam: createData.teamOne,
+                    scoringTeam: createData.teamOne,
+                    teamOnePlayers: [
+                        {
+                            _id: new Types.ObjectId(),
+                            firstName: 'First 1',
+                            lastName: 'Last 1',
+                            username: 'firstlast1',
+                        },
+                        { firstName: 'First 2', lastName: 'Last 2' },
+                        { firstName: 'First 3', lastName: 'Last 3' },
+                        { firstName: 'First 4', lastName: 'Last 4' },
+                        { firstName: 'First 5', lastName: 'Last 5' },
+                        { firstName: 'First 6', lastName: 'Last 6' },
+                        { firstName: 'First 7', lastName: 'Last 7' },
+                    ],
+                    actions: [
+                        {
+                            actionType: ActionType.CATCH,
+                            playerOne: {
+                                _id: new Types.ObjectId(),
+                                firstName: 'First 1',
+                                lastName: 'Last 1',
+                                username: 'firstlast1',
+                            },
+                            tags: ['Huck'],
+                        },
+                        {
+                            actionType: ActionType.TEAM_ONE_SCORE,
+                            playerOne: {
+                                firstName: 'First 2',
+                                lastName: 'Last 2',
+                            },
+                            playerTwo: {
+                                firstName: 'First 3',
+                                lastName: 'Last 3',
+                            },
+                            tags: [],
+                        },
+                    ],
+                },
+            ],
+        }
+
+        const response = await request(app)
+            .post('/api/v1/game/full')
+            .set('Authorization', `Bearer jwt`)
+            .send({ gameData: fullGame })
+            .expect(201)
+
+        const { game } = response.body
+        expect(game.teamOnePlayers.length).toBe(7)
+        expect(game.teamOneActive).toBe(false)
+        expect(game.teamTwoActive).toBe(false)
+        expect(game.creator.username).toBe('firstlast')
+        expect(game.teamTwoPlayers.length).toBe(0)
+        expect(game.teamOneScore).toBe(1)
+        expect(game.teamTwoScore).toBe(0)
+        expect(game.points.length).toBe(1)
+    })
+
+    it('with invalid data', async () => {
+        const fullGame = { points: [], actions: [], teamOneScore: 0, teamTwoScore: 0 }
+
+        const response = await request(app)
+            .post('/api/v1/game/full')
+            .set('Authorization', `Bearer jwt`)
+            .send({ gameData: fullGame })
+            .expect(500)
+
         expect(response.body.message).toBe(Constants.GENERIC_ERROR)
     })
 })
