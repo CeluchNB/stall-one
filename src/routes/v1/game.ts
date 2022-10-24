@@ -226,4 +226,21 @@ gameRouter.get('/game/:id/points', param('id').escape(), async (req: Request, re
     }
 })
 
+gameRouter.post('/game/full', body('gameData').isObject(), async (req: Request, res: Response, next) => {
+    try {
+        const jwt = req.headers.authorization?.replace('Bearer ', '') as string
+        const services = new GameServices(
+            Game,
+            Point,
+            Action,
+            process.env.ULTMT_API_URL || '',
+            process.env.API_KEY || '',
+        )
+        const game = await services.createFullGame(req.body.gameData, jwt)
+        return res.status(201).json({ game })
+    } catch (error) {
+        next(error)
+    }
+})
+
 gameRouter.use(errorMiddleware)

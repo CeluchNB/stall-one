@@ -1,6 +1,6 @@
 import * as Constants from '../../utils/constants'
 import { IGameModel } from '../../models/game'
-import IGame, { CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
+import IGame, { CreateFullGame, CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import randomstring from 'randomstring'
 import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
@@ -365,5 +365,51 @@ export default class GameServices {
 
         const games = await this.gameModel.find(filter).skip(offset).limit(pageSize)
         return games
+    }
+
+    /**
+     * Method to create a full game if the game cannot be created live for any reason.
+     * @param gameData full game data
+     * @param userJwt creating user's jwt
+     * @returns game object
+     */
+    createFullGame = async (gameData: CreateFullGame, userJwt: string): Promise<IGame> => {
+        const user = await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, gameData.teamOne._id?.toString())
+        const safeData = {
+            creator: user,
+            teamOne: gameData.teamOne,
+            teamTwo: gameData.teamTwo,
+            teamTwoDefined: gameData.teamTwoDefined,
+            scoreLimit: gameData.scoreLimit,
+            halfScore: gameData.halfScore,
+            startTime: new Date(gameData.startTime),
+            softcapMins: gameData.softcapMins,
+            hardcapMins: gameData.hardcapMins,
+            playersPerPoint: gameData.playersPerPoint,
+            timeoutPerHalf: gameData.timeoutPerHalf,
+            floaterTimeout: gameData.floaterTimeout,
+            tournament: gameData.tournament,
+            teamOneScore: gameData.teamOneScore,
+            teamTwoScore: gameData.teamTwoScore,
+            teamOnePlayers: gameData.teamOnePlayers,
+            teamOneActive: false,
+            teamTwoActive: false,
+        }
+
+        const game = await this.gameModel.create(safeData)
+
+        const points = gameData.points
+        for (const p of points) {
+            const point = await this.pointModel.create(p)
+            for (const [i, a] of p.actions.entries()) {
+                const action = await this.actionModel.create({ ...a, actionNumber: i + 1, team: gameData.teamOne })
+                point.teamOneActions.push(action._id)
+            }
+            game.points.push(point._id)
+            await point.save()
+        }
+
+        await game.save()
+        return game
     }
 }

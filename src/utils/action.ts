@@ -39,11 +39,14 @@ export const validateActionData = (
                 throw new ApiError(Constants.INVALID_DATA, 400)
             }
             break
-        case ActionType.CATCH:
-        case ActionType.DROP:
-        case ActionType.TEAM_ONE_SCORE:
         case ActionType.SUBSTITUTION:
             if (!playerOne || !playerTwo) {
+                throw new ApiError(Constants.INVALID_DATA, 400)
+            }
+            break
+        case ActionType.CATCH:
+        case ActionType.DROP:
+            if (!playerOne) {
                 throw new ApiError(Constants.INVALID_DATA, 400)
             }
             break
