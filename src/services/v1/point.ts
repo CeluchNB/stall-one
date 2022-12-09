@@ -392,6 +392,30 @@ export default class PointServices {
         return actions
     }
 
+    /**
+     * Method to get all current live actions of a single point
+     * @param gameId id of game
+     * @param pointId id of point
+     * @returns list of redis actions
+     */
+    getLiveActionsByPoint = async (gameId: string, pointId: string): Promise<RedisAction[]> => {
+        const teamOneTotal = await this.redisClient.get(`${gameId}:${pointId}:one:actions`)
+        const teamTwoTotal = await this.redisClient.get(`${gameId}:${pointId}:two:actions`)
+
+        const onePromises = []
+        const twoPromises = []
+        for (let i = 1; i <= Number(teamOneTotal); i++) {
+            onePromises.push(getRedisAction(this.redisClient, pointId, i, 'one'))
+        }
+        for (let i = 1; i <= Number(teamTwoTotal); i++) {
+            twoPromises.push(getRedisAction(this.redisClient, pointId, i, 'two'))
+        }
+        const teamOneActions = await Promise.all(onePromises)
+        const teamTwoActions = await Promise.all(twoPromises)
+
+        return [...teamOneActions, ...teamTwoActions]
+    }
+
     private saveActions = async (actions: IAction[], gameId: string, pointId: string, teamNumber: TeamNumber) => {
         await this.redisClient.set(`${gameId}:${pointId}:${teamNumber}:actions`, actions.length)
         for (const action of actions) {

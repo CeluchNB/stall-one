@@ -1272,3 +1272,86 @@ describe('test get actions', () => {
         expect(actions.length).toBe(0)
     })
 })
+
+describe('test get live actions', () => {
+    it('with team one and team two actions', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        const action1: RedisAction = {
+            actionNumber: 1,
+            teamNumber: TeamNumber.ONE,
+            actionType: ActionType.CATCH,
+            tags: [],
+            comments: [],
+        }
+
+        const action2: RedisAction = {
+            actionNumber: 2,
+            teamNumber: TeamNumber.TWO,
+            actionType: ActionType.BLOCK,
+            tags: [],
+            comments: [],
+        }
+
+        const action3: RedisAction = {
+            actionNumber: 3,
+            teamNumber: TeamNumber.TWO,
+            actionType: ActionType.DROP,
+            tags: [],
+            comments: [],
+        }
+
+        const action4: RedisAction = {
+            actionNumber: 4,
+            teamNumber: TeamNumber.ONE,
+            actionType: ActionType.TEAM_ONE_SCORE,
+            tags: [],
+            comments: [],
+        }
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:pulling`, 'two')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:receiving`, 'one')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:two:actions`, 2)
+        await saveRedisAction(client, action1, point._id.toString())
+        await saveRedisAction(client, action2, point._id.toString())
+        await saveRedisAction(client, action3, point._id.toString())
+        await saveRedisAction(client, action4, point._id.toString())
+
+        const actions = await services.getLiveActionsByPoint(game._id.toString(), point._id.toString())
+        expect(actions.length).toBe(4)
+    })
+
+    it('with unfound game id', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:pulling`, 'two')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:receiving`, 'one')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:two:actions`, 2)
+
+        const actions = await services.getLiveActionsByPoint('randomid1', point._id.toString())
+        expect(actions.length).toBe(0)
+    })
+
+    it('with unfound point id', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        game.points.push(point._id)
+        await game.save()
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:pulling`, 'two')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:receiving`, 'one')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:two:actions`, 2)
+
+        const actions = await services.getLiveActionsByPoint(game._id.toString(), 'pointid')
+        expect(actions.length).toBe(0)
+    })
+})
