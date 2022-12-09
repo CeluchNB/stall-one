@@ -142,4 +142,16 @@ pointRouter.get(
     },
 )
 
+pointRouter.get(
+    '/point/:id/live/actions',
+    param('id').escape(),
+    query('gameId').escape(),
+    async (req: Request, res: Response) => {
+        const redisClient = await getClient()
+        const services = new PointServices(Point, Game, Action, redisClient)
+        const actions = await services.getLiveActionsByPoint(req.query.gameId as string, req.params.id)
+        return res.json({ actions })
+    },
+)
+
 pointRouter.use(errorMiddleware)

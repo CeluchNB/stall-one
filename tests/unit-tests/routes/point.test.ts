@@ -707,3 +707,71 @@ describe('test /GET actions by point', () => {
         expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_POINT)
     })
 })
+
+describe('test /GET live actions of a point', () => {
+    it('with valid response', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create(createPointData)
+        point.teamTwoActive = true
+        game.points.push(point._id)
+        await game.save()
+        await point.save()
+
+        const action1: RedisAction = {
+            actionNumber: 1,
+            actionType: ActionType.CATCH,
+            teamNumber: 'one',
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Connor',
+                lastName: 'Tipping',
+                username: 'connor',
+            },
+            comments: [],
+            tags: ['Huck'],
+        }
+
+        const action2: RedisAction = {
+            actionNumber: 1,
+            actionType: ActionType.TEAM_ONE_SCORE,
+            teamNumber: 'two',
+            playerTwo: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Connor',
+                lastName: 'Tipping',
+                username: 'connor',
+            },
+            comments: [],
+            tags: ['Break'],
+        }
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 1)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:two:actions`, 1)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:pulling`, 'one')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:receiving`, 'two')
+        await saveRedisAction(client, action1, point._id.toString())
+        await saveRedisAction(client, action2, point._id.toString())
+
+        const response = await request(app)
+            .get(`/api/v1/point/${point._id.toString()}/live/actions?gameId=${game._id.toString()}`)
+            .send()
+            .expect(200)
+
+        const { actions } = response.body
+        expect(actions.length).toBe(2)
+        expect(actions[0].actionType).toBe(ActionType.CATCH)
+        expect(actions[1].actionType).toBe(ActionType.TEAM_ONE_SCORE)
+    })
+})
