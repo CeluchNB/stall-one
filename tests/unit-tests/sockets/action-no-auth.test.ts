@@ -518,3 +518,21 @@ describe('test action undo server', () => {
         clientSocket.emit('action:undo:server', '{ asdf54: ')
     })
 })
+
+describe('test next point server', () => {
+    it('should be handle valid data', (done) => {
+        clientSocket.on('point:next:client', (data) => {
+            expect(data).toBeUndefined()
+            done()
+        })
+        clientSocket.emit('point:next:server', JSON.stringify({ gameId, pointId }))
+    })
+
+    it('should handle invalid data', (done) => {
+        clientSocket.on('action:error', (error) => {
+            expect(error).toBeDefined()
+            done()
+        })
+        clientSocket.emit('point:next:server')
+    })
+})

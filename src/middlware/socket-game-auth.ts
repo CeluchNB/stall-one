@@ -15,7 +15,7 @@ export const gameAuth = async (socket: Socket): Promise<GameAuth> => {
         const gameId = payload.sub as string
         const team = (payload as JwtPayload).team
         if (!gameId || !team) {
-            throw new Error()
+            throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
         }
 
         return { gameId, team }

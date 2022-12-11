@@ -157,6 +157,27 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             handleSocketError(socket, error)
         }
     })
+
+    // next point event so viewer client can get the next point
+    socket.on('point:next', async (data) => {
+        try {
+            const { gameId } = await gameAuth(socket)
+            const { pointId } = JSON.parse(data)
+            liveIo.to(`${gameId}:${pointId}`).emit('point:next:client')
+            liveIo.to('servers').emit('point:next:server', { gameId, pointId })
+        } catch (error) {
+            handleSocketError(socket, error)
+        }
+    })
+
+    socket.on('point:next:server', async (data) => {
+        try {
+            const { gameId, pointId } = JSON.parse(data)
+            liveIo.to(`${gameId}:${pointId}`).emit('point:next:client')
+        } catch (error) {
+            handleSocketError(socket, error)
+        }
+    })
 }
 
 export default registerActionHandlers
