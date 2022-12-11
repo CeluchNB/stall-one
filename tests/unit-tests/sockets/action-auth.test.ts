@@ -180,3 +180,21 @@ describe('test client undo action', () => {
         clientSocket.emit('action:undo', JSON.stringify({ pointId: point._id }))
     })
 })
+
+describe('test next point', () => {
+    it('with valid data', (done) => {
+        clientSocket.on('point:next:client', (action) => {
+            expect(action).toBeUndefined()
+            done()
+        })
+        clientSocket.emit('point:next', JSON.stringify({ pointId }))
+    })
+
+    it('without a point', (done) => {
+        clientSocket.on('action:error', (error) => {
+            expect(error).toBeDefined()
+            done()
+        })
+        clientSocket.emit('point:next')
+    })
+})
