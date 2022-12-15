@@ -220,7 +220,7 @@ export default class PointServices {
         } else if (team === TeamNumber.TWO && point.teamOneActions.length > 0) {
             // verify same score
             const reportedScore = await this.actionModel
-                .findOne({ actionNumber: point.teamTwoActions.length })
+                .findOne({ actionNumber: point.teamOneActions.length })
                 .where('_id')
                 .in(point.teamOneActions)
 
