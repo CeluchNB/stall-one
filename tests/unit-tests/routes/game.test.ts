@@ -197,7 +197,12 @@ describe('test /PUT add guest player', () => {
 
         const { game: gameResponse } = response.body
         expect(gameResponse.teamOnePlayers.length).toBe(1)
-        expect(gameResponse.teamOnePlayers[0]).toEqual({ firstName: 'Noah', lastName: 'Celuch', username: 'guest' })
+        expect(gameResponse.teamOnePlayers[0]).toMatchObject({
+            firstName: 'Noah',
+            lastName: 'Celuch',
+            username: 'guest',
+        })
+        expect(gameResponse.teamOnePlayers[0]._id).toBeDefined()
     })
 
     it('with bad token', async () => {
