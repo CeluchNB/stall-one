@@ -455,14 +455,14 @@ describe('test add guest player to team', () => {
         })
 
         expect(gameResult.teamOnePlayers.length).toBe(1)
-        expect(gameResult.teamOnePlayers[0]._id).toBeUndefined()
+        expect(gameResult.teamOnePlayers[0]._id).toBeDefined()
         expect(gameResult.teamOnePlayers[0].firstName).toBe('Noah')
         expect(gameResult.teamOnePlayers[0].lastName).toBe('Celuch')
         expect(gameResult.teamOnePlayers[0].username).toBe('guest')
 
         const gameRecord = await Game.findById(game._id)
         expect(gameRecord?.teamOnePlayers.length).toBe(1)
-        expect(gameRecord?.teamOnePlayers[0]._id).toBeUndefined()
+        expect(gameRecord?.teamOnePlayers[0]._id).toBeDefined()
         expect(gameRecord?.teamOnePlayers[0].firstName).toBe('Noah')
         expect(gameRecord?.teamOnePlayers[0].lastName).toBe('Celuch')
         expect(gameRecord?.teamOnePlayers[0].username).toBe('guest')
@@ -480,14 +480,14 @@ describe('test add guest player to team', () => {
         })
 
         expect(gameResult.teamTwoPlayers.length).toBe(1)
-        expect(gameResult.teamTwoPlayers[0]._id).toBeUndefined()
+        expect(gameResult.teamTwoPlayers[0]._id).toBeDefined()
         expect(gameResult.teamTwoPlayers[0].firstName).toBe('Noah')
         expect(gameResult.teamTwoPlayers[0].lastName).toBe('Celuch')
         expect(gameResult.teamTwoPlayers[0].username).toBe('guest')
 
         const gameRecord = await Game.findById(game._id)
         expect(gameRecord?.teamTwoPlayers.length).toBe(1)
-        expect(gameRecord?.teamTwoPlayers[0]._id).toBeUndefined()
+        expect(gameRecord?.teamTwoPlayers[0]._id).toBeDefined()
         expect(gameRecord?.teamTwoPlayers[0].firstName).toBe('Noah')
         expect(gameRecord?.teamTwoPlayers[0].lastName).toBe('Celuch')
         expect(gameRecord?.teamTwoPlayers[0].username).toBe('guest')

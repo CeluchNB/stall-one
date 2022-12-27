@@ -164,7 +164,7 @@ export default class GameServices {
         const playerData = {
             firstName: player.firstName,
             lastName: player.lastName,
-            _id: undefined,
+            _id: new Types.ObjectId(),
             username: 'guest',
         }
         if (team === TeamNumber.ONE) {
