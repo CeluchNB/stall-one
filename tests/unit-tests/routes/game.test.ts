@@ -618,6 +618,87 @@ describe('test /GET search games', () => {
     })
 })
 
+describe('test /GET games by team id', () => {
+    const teamOneId = new Types.ObjectId()
+    const teamTwoId = new Types.ObjectId()
+    const teamThreeId = new Types.ObjectId()
+
+    const gameOneData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            _id: teamOneId,
+            place: 'Pittsburgh',
+            name: 'Temper',
+            teamname: 'pghtemper',
+        },
+        teamTwo: {
+            _id: teamTwoId,
+            place: 'Seattle',
+            name: 'Sockeye',
+            teamname: 'seasock',
+        },
+        startTime: new Date('2020-01-01'),
+        teamOneActive: true,
+        tournament: {
+            name: 'Mid-Atlantic Regionals 2020',
+            eventId: 'mareg20',
+        },
+    }
+    const gameTwoData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            _id: teamTwoId,
+            place: 'Seattle',
+            name: 'Sockeye',
+            teamname: 'seasock',
+        },
+        teamTwo: {
+            _id: teamThreeId,
+            place: 'DC',
+            name: 'Truck Stop',
+            teamname: 'tsgh',
+        },
+        startTime: new Date('2022-03-01'),
+        tournament: {
+            name: 'Philly Open',
+            eventId: 'philly22',
+        },
+    }
+
+    beforeEach(async () => {
+        await Game.create(gameOneData)
+        await Game.create(gameTwoData)
+    })
+
+    it('with valid response', async () => {
+        const response = await request(app).get(`/api/v1/game/team/${teamTwoId}`).send().expect(200)
+        const { games } = response.body
+        expect(games.length).toBe(2)
+        expect(games[0].teamOne.teamname).toBe(gameOneData.teamOne.teamname)
+        expect(games[0].teamTwo.teamname).toBe(gameOneData.teamTwo.teamname)
+        expect(games[1].teamOne.teamname).toBe(gameTwoData.teamOne.teamname)
+        expect(games[1].teamTwo.teamname).toBe(gameTwoData.teamTwo.teamname)
+    })
+
+    it('with error response', async () => {
+        jest.spyOn(Game, 'find').mockImplementationOnce(() => {
+            throw new ApiError(Constants.GENERIC_ERROR, 500)
+        })
+        const response = await request(app).get(`/api/v1/game/team/${teamTwoId}`).send().expect(500)
+        expect(response.body.message).toBe(Constants.GENERIC_ERROR)
+    })
+})
+
 describe('test /POST full game', () => {
     it('with valid data', async () => {
         const fullGame: CreateFullGame = {

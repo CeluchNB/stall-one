@@ -1107,6 +1107,127 @@ describe('test search', () => {
     })
 })
 
+describe('test get game by team', () => {
+    const teamOneId = new Types.ObjectId()
+    const teamTwoId = new Types.ObjectId()
+    const teamThreeId = new Types.ObjectId()
+
+    const gameOneData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            _id: teamOneId,
+            place: 'Pittsburgh',
+            name: 'Temper',
+            teamname: 'pghtemper',
+        },
+        teamTwo: {
+            _id: teamTwoId,
+            place: 'Seattle',
+            name: 'Sockeye',
+            teamname: 'seasock',
+        },
+        startTime: new Date('2020-01-01'),
+        teamOneActive: true,
+        tournament: {
+            name: 'Mid-Atlantic Regionals 2020',
+            eventId: 'mareg20',
+        },
+    }
+    const gameTwoData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            _id: teamOneId,
+            place: 'Pittsburgh',
+            name: 'Temper',
+            teamname: 'pghtemper',
+        },
+        teamTwo: {
+            _id: teamThreeId,
+            place: 'DC',
+            name: 'Truck Stop',
+            teamname: 'tsgh',
+        },
+        startTime: new Date('2021-06-01'),
+        teamOneActive: false,
+        tournament: {
+            name: 'US Open 2021',
+            eventId: 'usopen21',
+        },
+    }
+    const gameThreeData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            _id: teamTwoId,
+            place: 'Seattle',
+            name: 'Sockeye',
+            teamname: 'seasock',
+        },
+        teamTwo: {
+            _id: teamThreeId,
+            place: 'DC',
+            name: 'Truck Stop',
+            teamname: 'tsgh',
+        },
+        startTime: new Date('2022-03-01'),
+        tournament: {
+            name: 'Philly Open',
+            eventId: 'philly22',
+        },
+    }
+
+    beforeEach(async () => {
+        await Game.create(gameOneData)
+        await Game.create(gameTwoData)
+        await Game.create(gameThreeData)
+    })
+
+    it('with many team one games', async () => {
+        const result = await services.getGamesByTeamId(teamOneId.toString())
+        expect(result.length).toBe(2)
+        expect(result[0]).toMatchObject(gameOneData)
+        expect(result[1]).toMatchObject(gameTwoData)
+    })
+
+    it('with many team two games', async () => {
+        const result = await services.getGamesByTeamId(teamThreeId.toString())
+        expect(result.length).toBe(2)
+        expect(result[0]).toMatchObject(gameTwoData)
+        expect(result[1]).toMatchObject(gameThreeData)
+    })
+
+    it('with team one and team two games', async () => {
+        const result = await services.getGamesByTeamId(teamTwoId.toString())
+        expect(result.length).toBe(2)
+        expect(result[0]).toMatchObject(gameOneData)
+        expect(result[1]).toMatchObject(gameThreeData)
+    })
+
+    it('with no games return', async () => {
+        const result = await services.getGamesByTeamId(new Types.ObjectId().toString())
+        expect(result.length).toBe(0)
+    })
+
+    it('with error', async () => {
+        const result = await services.getGamesByTeamId('badid')
+        expect(result.length).toBe(0)
+    })
+})
+
 describe('test create full game', () => {
     it('with valid data', async () => {
         const fullGame: CreateFullGame = {

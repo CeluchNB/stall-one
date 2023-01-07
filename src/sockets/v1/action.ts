@@ -101,8 +101,10 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             if (action) {
                 liveIo
                     .to(`${gameId}:${pointId}`)
-                    .emit('action:undo:client', { pointId, actionNumber: action.actionNumber })
-                liveIo.to('servers').emit('action:undo:server', { gameId, pointId, actionNumber: action.actionNumber })
+                    .emit('action:undo:client', { pointId, actionNumber: action.actionNumber, team })
+                liveIo
+                    .to('servers')
+                    .emit('action:undo:server', { gameId, pointId, actionNumber: action.actionNumber, team })
             } else {
                 throw new ApiError(Constants.INVALID_DATA, 400)
             }

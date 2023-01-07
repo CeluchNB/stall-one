@@ -243,4 +243,20 @@ gameRouter.post('/game/full', body('gameData').isObject(), async (req: Request, 
     }
 })
 
+gameRouter.get('/game/team/:id', async (req: Request, res: Response, next) => {
+    try {
+        const services = new GameServices(
+            Game,
+            Point,
+            Action,
+            process.env.ULTMT_API_URL || '',
+            process.env.API_KEY || '',
+        )
+        const games = await services.getGamesByTeamId(req.params.id)
+        return res.json({ games })
+    } catch (error) {
+        next(error)
+    }
+})
+
 gameRouter.use(errorMiddleware)

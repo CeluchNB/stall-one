@@ -368,6 +368,20 @@ export default class GameServices {
     }
 
     /**
+     * Method to get all games a team is associated with
+     * @param teamId id of team
+     * @returns array of games belonging to teams
+     */
+    getGamesByTeamId = async (teamId: string): Promise<IGame[]> => {
+        if (!Types.ObjectId.isValid(teamId)) {
+            return []
+        }
+        const id = new Types.ObjectId(teamId)
+        const games = await this.gameModel.find().or([{ 'teamOne._id': id }, { 'teamTwo._id': id }])
+        return games
+    }
+
+    /**
      * Method to create a full game if the game cannot be created live for any reason.
      * @param gameData full game data
      * @param userJwt creating user's jwt
