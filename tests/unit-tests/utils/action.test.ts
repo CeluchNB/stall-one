@@ -257,7 +257,7 @@ describe('test handle substitute', () => {
             },
             tags: ['good'],
         }
-        await handleSubstitute(actionData, game._id.toString(), point._id.toString(), 'one', Point, Game)
+        await handleSubstitute(actionData, point._id.toString(), 'one', Point)
 
         const updatedPoint = await Point.findById(point._id)
         expect(updatedPoint?.teamOnePlayers.length).toBe(1)
@@ -287,7 +287,7 @@ describe('test handle substitute', () => {
             },
             tags: ['good'],
         }
-        await handleSubstitute(actionData, game._id.toString(), point._id.toString(), 'two', Point, Game)
+        await handleSubstitute(actionData, point._id.toString(), 'two', Point)
 
         const updatedPoint = await Point.findById(point._id)
         expect(updatedPoint?.teamTwoPlayers.length).toBe(1)
@@ -316,35 +316,8 @@ describe('test handle substitute', () => {
             },
             tags: ['good'],
         }
-        await expect(
-            handleSubstitute(actionData, game._id.toString(), new Types.ObjectId().toString(), 'one', Point, Game),
-        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_POINT, 404))
-    })
-
-    it('with unfound game error', async () => {
-        const game = await Game.create(gameData)
-        const point = await Point.create({ ...createPointData, gameId: new Types.ObjectId() })
-        game.teamOne = createPointData.pullingTeam
-        await game.save()
-        const actionData: ClientAction = {
-            actionType: ActionType.SUBSTITUTION,
-            playerOne: {
-                _id: new Types.ObjectId(),
-                firstName: 'Noah',
-                lastName: 'Celuch',
-                username: 'noah',
-            },
-            playerTwo: {
-                _id: new Types.ObjectId(),
-                firstName: 'Amy',
-                lastName: 'Celuch',
-                username: 'amy',
-            },
-            tags: ['good'],
-        }
-
-        await expect(
-            handleSubstitute(actionData, new Types.ObjectId().toString(), point._id.toString(), 'one', Point, Game),
-        ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
+        await expect(handleSubstitute(actionData, new Types.ObjectId().toString(), 'one', Point)).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_POINT, 404),
+        )
     })
 })

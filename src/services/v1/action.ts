@@ -72,7 +72,7 @@ export default class ActionServices {
         const actionNumber = await this.redisClient.incr(`${gameId}:${pointId}:${team}:actions`)
         const actionData = parseActionData(data, actionNumber, team)
         await saveRedisAction(this.redisClient, actionData, pointId)
-        await this.handleSideEffects(data, gameId, pointId, team)
+        await this.handleSideEffects(data, pointId, team)
         // treat redis as source of truth always
         const action = await getRedisAction(this.redisClient, pointId, actionData.actionNumber, team)
 
@@ -233,9 +233,9 @@ export default class ActionServices {
         return action
     }
 
-    private handleSideEffects = async (data: ClientAction, gameId: string, pointId: string, team: TeamNumberString) => {
+    private handleSideEffects = async (data: ClientAction, pointId: string, team: TeamNumberString) => {
         if (data.actionType === ActionType.SUBSTITUTION) {
-            await handleSubstitute(data, gameId, pointId, team, this.pointModel, this.gameModel)
+            await handleSubstitute(data, pointId, team, this.pointModel)
         }
     }
 }
