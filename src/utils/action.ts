@@ -3,7 +3,6 @@ import { ClientAction, ActionType, VALID_ACTIONS, RedisAction } from '../types/a
 import { Player, TeamNumberString } from '../types/ultmt'
 import { ApiError } from '../types/errors'
 import { IPointModel } from '../models/point'
-import { IGameModel } from '../models/game'
 
 export const validateActionData = (
     action: ClientAction,
@@ -81,19 +80,13 @@ export const getDisplayMessage = (type: ActionType, playerOne?: Player, playerTw
 
 export const handleSubstitute = async (
     data: ClientAction,
-    gameId: string,
     pointId: string,
     team: TeamNumberString,
     pointModel: IPointModel,
-    gameModel: IGameModel,
 ) => {
     const point = await pointModel.findById(pointId)
     if (!point) {
         throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
-    }
-    const game = await gameModel.findById(gameId)
-    if (!game) {
-        throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
     }
     if (team === 'one') {
         point.teamOnePlayers.push(data.playerTwo as Player)
