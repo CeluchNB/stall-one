@@ -550,6 +550,8 @@ describe('test finish point', () => {
     it('with team one first finishing and scoring', async () => {
         const game = await Game.create(createData)
         const point = await Point.create(createPointData)
+        game.teamTwoActive = true
+        game.teamTwoDefined = true
         game.points.push(point._id)
         await game.save()
 

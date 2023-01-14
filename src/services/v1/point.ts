@@ -252,7 +252,12 @@ export default class PointServices {
             }
             await deleteRedisAction(this.redisClient, pointId, i, team)
         }
+
         await this.redisClient.del(`${gameId}:${pointId}:${team}:actions`)
+        if (!game.teamTwoActive) {
+            await this.redisClient.del(`${gameId}:${pointId}:two:actions`)
+        }
+
         if (team === TeamNumber.ONE) {
             point.teamOneActive = false
         } else {
