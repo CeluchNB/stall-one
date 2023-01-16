@@ -76,12 +76,16 @@ describe('test parse action data', () => {
 
 const action: ClientAction = {
     playerOne: {
+        _id: new Types.ObjectId(),
         firstName: 'First 1',
         lastName: 'Last 1',
+        username: 'firstlast1',
     },
     playerTwo: {
+        _id: new Types.ObjectId(),
         firstName: 'First 2',
         lastName: 'Last 2',
+        username: 'firstlast2',
     },
     actionType: ActionType.PULL,
     tags: [],
@@ -89,24 +93,32 @@ const action: ClientAction = {
 
 const prevAction: ClientAction = {
     playerOne: {
+        _id: new Types.ObjectId(),
         firstName: 'First 1',
         lastName: 'Last 1',
+        username: 'firstlast1',
     },
     playerTwo: {
+        _id: new Types.ObjectId(),
         firstName: 'First 2',
         lastName: 'Last 2',
+        username: 'firstlast2',
     },
     actionType: ActionType.CATCH,
     tags: [],
 }
 
 const playerOne: Player = {
+    _id: new Types.ObjectId(),
     firstName: 'First 1',
     lastName: 'Last 1',
+    username: 'firstlast1',
 }
 const playerTwo: Player = {
+    _id: new Types.ObjectId(),
     firstName: 'First 2',
     lastName: 'Last 2',
+    username: 'firstlast2',
 }
 describe('test validate action data', () => {
     it('test valid initial action for pulling team', () => {

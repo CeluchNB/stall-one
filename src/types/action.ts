@@ -84,6 +84,7 @@ export const VALID_ACTIONS = {
         ActionType.THROWAWAY,
         ActionType.TIMEOUT,
         ActionType.CALL_ON_FIELD,
+        ActionType.SUBSTITUTION,
     ],
     CallOnField: [
         ActionType.PULL,

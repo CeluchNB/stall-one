@@ -1,10 +1,10 @@
 import { Types } from 'mongoose'
 
 export interface Player {
-    _id?: Types.ObjectId
+    _id: Types.ObjectId
     firstName: string
     lastName: string
-    username?: string
+    username: string
 }
 
 export interface UserResponse {

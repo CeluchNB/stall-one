@@ -340,6 +340,104 @@ describe('test undo action', () => {
         const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:one:actions`)
         expect(Number(totalActions)).toBe(1)
     })
+
+    it('with subtitutions', async () => {
+        const playerOne = {
+            _id: new Types.ObjectId(),
+            firstName: 'Noah',
+            lastName: 'Celuch',
+            username: 'noah',
+        }
+        const playerTwo = {
+            _id: new Types.ObjectId(),
+            firstName: 'Amy',
+            lastName: 'Celuch',
+            username: 'amy',
+        }
+        const game = await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        point.teamOnePlayers.push(playerOne)
+        point.teamOnePlayers.push(playerTwo)
+        point.teamTwoPlayers.push(playerOne)
+        point.teamTwoPlayers.push(playerTwo)
+        await point.save()
+        const actionData: ClientAction = {
+            actionType: ActionType.SUBSTITUTION,
+            playerOne,
+            playerTwo,
+            tags: ['good'],
+        }
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 1)
+        await saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())
+        await client.set(`${game._id.toString()}:${point._id.toString()}:two:actions`, 1)
+        await saveRedisAction(client, parseActionData(actionData, 1, 'two'), point._id.toString())
+
+        const action = await services.undoAction(game._id.toString(), point._id.toString(), 'one')
+        expect(action?.actionType).toBe(actionData.actionType)
+        expect(action?.tags[0]).toBe(actionData.tags[0])
+
+        const key = getActionBaseKey(point._id.toString(), 1, 'one')
+        const oldType = await client.get(`${key}:type`)
+        expect(oldType).toBeNull()
+        const totalActions = await client.get(`${game._id.toString()}:${point._id.toString()}:one:actions`)
+        expect(Number(totalActions)).toBe(0)
+
+        const resultPoint = await Point.findById(point._id)
+        expect(resultPoint?.teamOnePlayers.length).toBe(1)
+        expect(resultPoint?.teamOnePlayers[0]._id?.toString()).toBe(playerOne._id.toString())
+
+        const action2 = await services.undoAction(game._id.toString(), point._id.toString(), 'two')
+        expect(action2?.actionType).toBe(actionData.actionType)
+        expect(action2?.tags[0]).toBe(actionData.tags[0])
+
+        const key2 = getActionBaseKey(point._id.toString(), 1, 'two')
+        const oldType2 = await client.get(`${key2}:type`)
+        expect(oldType2).toBeNull()
+        const totalActions2 = await client.get(`${game._id.toString()}:${point._id.toString()}:two:actions`)
+        expect(Number(totalActions2)).toBe(0)
+
+        const resultPoint2 = await Point.findById(point._id)
+        expect(resultPoint2?.teamTwoPlayers.length).toBe(1)
+        expect(resultPoint2?.teamTwoPlayers[0]._id?.toString()).toBe(playerOne._id.toString())
+    })
+
+    it('with malformed substitution', async () => {
+        const playerOne = {
+            _id: new Types.ObjectId(),
+            firstName: 'Noah',
+            lastName: 'Celuch',
+            username: 'noah',
+        }
+        const playerTwo = {
+            _id: new Types.ObjectId(),
+            firstName: 'Amy',
+            lastName: 'Celuch',
+            username: 'amy',
+        }
+        const game = await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        point.teamOnePlayers.push(playerOne)
+        point.teamOnePlayers.push(playerTwo)
+        point.teamTwoPlayers.push(playerOne)
+        point.teamTwoPlayers.push(playerTwo)
+        await point.save()
+        const actionData: ClientAction = {
+            actionType: ActionType.SUBSTITUTION,
+            playerOne,
+            tags: ['good'],
+        }
+
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 1)
+        await saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())
+
+        const action = await services.undoAction(game._id.toString(), point._id.toString(), 'one')
+        expect(action?.actionType).toBe(actionData.actionType)
+        expect(action?.tags[0]).toBe(actionData.tags[0])
+
+        const resultPoint = await Point.findById(point._id)
+        expect(resultPoint?.teamOnePlayers.length).toBe(2)
+    })
 })
 
 describe('test add live comment', () => {

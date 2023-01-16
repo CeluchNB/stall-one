@@ -3,6 +3,8 @@ import { ClientAction, ActionType, VALID_ACTIONS, RedisAction } from '../types/a
 import { Player, TeamNumberString } from '../types/ultmt'
 import { ApiError } from '../types/errors'
 import { IPointModel } from '../models/point'
+import { findByIdOrThrow } from './mongoose'
+import IPoint from '../types/point'
 
 export const validateActionData = (
     action: ClientAction,
@@ -88,10 +90,32 @@ export const handleSubstitute = async (
     if (!point) {
         throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
     }
+
     if (team === 'one') {
         point.teamOnePlayers.push(data.playerTwo as Player)
     } else {
         point.teamTwoPlayers.push(data.playerTwo as Player)
+    }
+    await point.save()
+}
+
+export const undoSubstitute = async (
+    data: ClientAction,
+    pointId: string,
+    team: TeamNumberString,
+    pointModel: IPointModel,
+) => {
+    const point = await findByIdOrThrow<IPoint>(pointId, pointModel, Constants.UNABLE_TO_FIND_POINT)
+
+    const subToRemove = data.playerTwo
+    if (!subToRemove) {
+        return
+    }
+
+    if (team === 'one') {
+        point.teamOnePlayers = point.teamOnePlayers.filter((player) => !player._id?.equals(subToRemove._id))
+    } else {
+        point.teamTwoPlayers = point.teamTwoPlayers.filter((player) => !player._id?.equals(subToRemove._id))
     }
     await point.save()
 }

@@ -111,12 +111,16 @@ describe('test save redis action', () => {
     it('with minimal data', async () => {
         const actionData: RedisAction = {
             playerOne: {
+                _id: new Types.ObjectId(),
                 firstName: 'First',
                 lastName: 'Last',
+                username: 'firstlast',
             },
             playerTwo: {
+                _id: new Types.ObjectId(),
                 firstName: 'Last',
                 lastName: 'First',
+                username: 'lastfirst',
             },
             teamNumber: 'one',
             actionNumber: 1,
@@ -132,16 +136,16 @@ describe('test save redis action', () => {
         expect(totalKeys.length).toBe(4)
 
         const playerOne = await client.hGetAll(`${baseKey}:playerone`)
-        expect(playerOne.id).toBeUndefined()
+        expect(playerOne.id).toBeDefined()
         expect(playerOne.firstName).toBe(actionData.playerOne?.firstName)
         expect(playerOne.lastName).toBe(actionData.playerOne?.lastName)
-        expect(playerOne.username).toBeUndefined()
+        expect(playerOne.username).toBe('firstlast')
 
         const playerTwo = await client.hGetAll(`${baseKey}:playertwo`)
-        expect(playerTwo.id).toBeUndefined()
+        expect(playerTwo.id).toBeDefined()
         expect(playerTwo.firstName).toBe(actionData.playerTwo?.firstName)
         expect(playerTwo.lastName).toBe(actionData.playerTwo?.lastName)
-        expect(playerTwo.username).toBeUndefined()
+        expect(playerTwo.username).toBe('lastfirst')
 
         const type = await client.get(`${baseKey}:type`)
         expect(type).toBe(actionData.actionType)
@@ -251,12 +255,16 @@ describe('test get redis action', () => {
     it('with minimal data', async () => {
         const actionData: RedisAction = {
             playerOne: {
+                _id: new Types.ObjectId(),
                 firstName: 'First',
                 lastName: 'Last',
+                username: 'firstlast',
             },
             playerTwo: {
+                _id: new Types.ObjectId(),
                 firstName: 'Last',
                 lastName: 'First',
+                username: 'lastfirst',
             },
             teamNumber: 'one',
             actionNumber: 1,
@@ -267,10 +275,14 @@ describe('test get redis action', () => {
 
         const baseKey = getActionBaseKey(pointId, actionData.actionNumber, 'one')
         await client.set(`${baseKey}:type`, actionData.actionType)
+        await client.hSet(`${baseKey}:playerone`, 'id', actionData.playerOne!._id.toString())
         await client.hSet(`${baseKey}:playerone`, 'firstName', actionData.playerOne!.firstName)
         await client.hSet(`${baseKey}:playerone`, 'lastName', actionData.playerOne!.lastName)
+        await client.hSet(`${baseKey}:playerone`, 'username', actionData.playerOne!.username)
+        await client.hSet(`${baseKey}:playertwo`, 'id', actionData.playerOne!._id.toString())
         await client.hSet(`${baseKey}:playertwo`, 'firstName', actionData.playerTwo!.firstName)
         await client.hSet(`${baseKey}:playertwo`, 'lastName', actionData.playerTwo!.lastName)
+        await client.hSet(`${baseKey}:playertwo`, 'username', actionData.playerTwo!.username)
         for (const tag of actionData.tags) {
             await client.rPush(`${baseKey}:tags`, tag)
         }
@@ -278,14 +290,14 @@ describe('test get redis action', () => {
         const action = await getRedisAction(client, pointId, actionData.actionNumber, 'one')
         expect(action.actionType).toBe(actionData.actionType)
         expect(action.actionNumber).toBe(actionData.actionNumber)
-        expect(action.playerOne?._id).toBeUndefined()
+        expect(action.playerOne?._id).toBeDefined()
         expect(action.playerOne?.firstName).toBe(actionData.playerOne?.firstName)
         expect(action.playerOne?.lastName).toBe(actionData.playerOne?.lastName)
-        expect(action.playerOne?.username).toBeUndefined()
-        expect(action.playerTwo?._id).toBeUndefined()
+        expect(action.playerOne?.username).toBe('firstlast')
+        expect(action.playerTwo?._id).toBeDefined()
         expect(action.playerTwo?.firstName).toBe(actionData.playerTwo?.firstName)
         expect(action.playerTwo?.lastName).toBe(actionData.playerTwo?.lastName)
-        expect(action.playerTwo?.username).toBeUndefined()
+        expect(action.playerTwo?.username).toBe('lastfirst')
         expect(action.tags.length).toBe(actionData.tags.length)
         expect(action.tags[0]).toBe(actionData.tags[0])
         expect(action.tags[1]).toBe(actionData.tags[1])
@@ -394,7 +406,7 @@ describe('test save redis comment', () => {
     it('without unnecessary user properties', async () => {
         const commentData: Comment = {
             comment: 'That was a wild huck',
-            user: { firstName: 'Noah', lastName: 'Celuch' },
+            user: { _id: new Types.ObjectId(), firstName: 'Noah', lastName: 'Celuch', username: 'noah' },
             commentNumber: 1,
         }
         await saveRedisComment(client, 'point1', 1, commentData, 'one')
@@ -405,10 +417,10 @@ describe('test save redis comment', () => {
         const user = await client.hGetAll(`${key}:comments:1:user`)
         expect(totalComments).toBe('1')
         expect(comment).toBe(commentData.comment)
-        expect(user.id).toBeUndefined()
+        expect(user.id).toBeDefined()
         expect(user.firstName).toBe(commentData.user.firstName)
         expect(user.lastName).toBe(commentData.user.lastName)
-        expect(user.username).toBeUndefined()
+        expect(user.username).toBe('noah')
     })
 })
 
