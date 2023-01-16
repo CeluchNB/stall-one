@@ -37,14 +37,10 @@ export const parseRedisUser = (redisUser: { [x: string]: string }): Player | und
     if (Object.keys(redisUser).length > 0) {
         const { id, firstName, lastName, username } = redisUser
         const player: Player = {
+            _id: new Types.ObjectId(id),
             firstName: firstName,
             lastName: lastName,
-        }
-        if (id) {
-            player._id = new Types.ObjectId(id)
-        }
-        if (username) {
-            player.username = username
+            username: username,
         }
 
         return player

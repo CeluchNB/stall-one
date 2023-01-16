@@ -450,8 +450,10 @@ describe('test add guest player to team', () => {
         const game = await Game.create(gameData)
 
         const gameResult = await services.addGuestPlayer(game._id.toString(), TeamNumber.ONE, {
+            _id: new Types.ObjectId(),
             firstName: 'Noah',
             lastName: 'Celuch',
+            username: 'noah',
         })
 
         expect(gameResult.teamOnePlayers.length).toBe(1)
@@ -475,8 +477,10 @@ describe('test add guest player to team', () => {
         await game.save()
 
         const gameResult = await services.addGuestPlayer(game._id.toString(), TeamNumber.TWO, {
+            _id: new Types.ObjectId(),
             firstName: 'Noah',
             lastName: 'Celuch',
+            username: 'noah',
         })
 
         expect(gameResult.teamTwoPlayers.length).toBe(1)
@@ -498,8 +502,10 @@ describe('test add guest player to team', () => {
 
         await expect(
             services.addGuestPlayer(new Types.ObjectId().toString(), TeamNumber.ONE, {
+                _id: new Types.ObjectId(),
                 firstName: 'Noah',
                 lastName: 'Celuch',
+                username: 'noah',
             }),
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
     })
@@ -509,8 +515,10 @@ describe('test add guest player to team', () => {
 
         await expect(
             services.addGuestPlayer(game._id.toString(), TeamNumber.TWO, {
+                _id: new Types.ObjectId(),
                 firstName: 'Noah',
                 lastName: 'Celuch',
+                username: 'noah',
             }),
         ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400))
     })
@@ -1235,18 +1243,13 @@ describe('test create full game', () => {
             teamOneScore: 2,
             teamTwoScore: 1,
             teamOnePlayers: [
-                {
-                    _id: new Types.ObjectId(),
-                    firstName: 'First 1',
-                    lastName: 'Last 1',
-                    username: 'firstlast1',
-                },
-                { firstName: 'First 2', lastName: 'Last 2' },
-                { firstName: 'First 3', lastName: 'Last 3' },
-                { firstName: 'First 4', lastName: 'Last 4' },
-                { firstName: 'First 5', lastName: 'Last 5' },
-                { firstName: 'First 6', lastName: 'Last 6' },
-                { firstName: 'First 7', lastName: 'Last 7' },
+                { _id: new Types.ObjectId(), firstName: 'First 1', lastName: 'Last 1', username: 'firstlast1' },
+                { _id: new Types.ObjectId(), firstName: 'First 2', lastName: 'Last 2', username: 'firstlast2' },
+                { _id: new Types.ObjectId(), firstName: 'First 3', lastName: 'Last 3', username: 'firstlast3' },
+                { _id: new Types.ObjectId(), firstName: 'First 4', lastName: 'Last 4', username: 'firstlast4' },
+                { _id: new Types.ObjectId(), firstName: 'First 5', lastName: 'Last 5', username: 'firstlast5' },
+                { _id: new Types.ObjectId(), firstName: 'First 6', lastName: 'Last 6', username: 'firstlast6' },
+                { _id: new Types.ObjectId(), firstName: 'First 7', lastName: 'Last 7', username: 'firstlast7' },
             ],
             points: [
                 {
@@ -1257,18 +1260,13 @@ describe('test create full game', () => {
                     receivingTeam: createData.teamOne,
                     scoringTeam: createData.teamOne,
                     teamOnePlayers: [
-                        {
-                            _id: new Types.ObjectId(),
-                            firstName: 'First 1',
-                            lastName: 'Last 1',
-                            username: 'firstlast1',
-                        },
-                        { firstName: 'First 2', lastName: 'Last 2' },
-                        { firstName: 'First 3', lastName: 'Last 3' },
-                        { firstName: 'First 4', lastName: 'Last 4' },
-                        { firstName: 'First 5', lastName: 'Last 5' },
-                        { firstName: 'First 6', lastName: 'Last 6' },
-                        { firstName: 'First 7', lastName: 'Last 7' },
+                        { _id: new Types.ObjectId(), firstName: 'First 1', lastName: 'Last 1', username: 'firstlast1' },
+                        { _id: new Types.ObjectId(), firstName: 'First 2', lastName: 'Last 2', username: 'firstlast2' },
+                        { _id: new Types.ObjectId(), firstName: 'First 3', lastName: 'Last 3', username: 'firstlast3' },
+                        { _id: new Types.ObjectId(), firstName: 'First 4', lastName: 'Last 4', username: 'firstlast4' },
+                        { _id: new Types.ObjectId(), firstName: 'First 5', lastName: 'Last 5', username: 'firstlast5' },
+                        { _id: new Types.ObjectId(), firstName: 'First 6', lastName: 'Last 6', username: 'firstlast6' },
+                        { _id: new Types.ObjectId(), firstName: 'First 7', lastName: 'Last 7', username: 'firstlast7' },
                     ],
                     actions: [
                         {
@@ -1290,20 +1288,26 @@ describe('test create full game', () => {
                                 username: 'firstlast1',
                             },
                             playerTwo: {
+                                _id: new Types.ObjectId(),
                                 firstName: 'First 2',
                                 lastName: 'Last 2',
+                                username: 'firstlast2',
                             },
                             tags: ['Huck'],
                         },
                         {
                             actionType: ActionType.TEAM_ONE_SCORE,
                             playerOne: {
+                                _id: new Types.ObjectId(),
                                 firstName: 'First 2',
                                 lastName: 'Last 2',
+                                username: 'firstlast2',
                             },
                             playerTwo: {
+                                _id: new Types.ObjectId(),
                                 firstName: 'First 3',
                                 lastName: 'Last 3',
+                                username: 'firstlast3',
                             },
                             tags: [],
                         },
@@ -1317,18 +1321,13 @@ describe('test create full game', () => {
                     receivingTeam: createData.teamTwo,
                     scoringTeam: createData.teamTwo,
                     teamOnePlayers: [
-                        {
-                            _id: new Types.ObjectId(),
-                            firstName: 'First 1',
-                            lastName: 'Last 1',
-                            username: 'firstlast1',
-                        },
-                        { firstName: 'First 2', lastName: 'Last 2' },
-                        { firstName: 'First 3', lastName: 'Last 3' },
-                        { firstName: 'First 4', lastName: 'Last 4' },
-                        { firstName: 'First 5', lastName: 'Last 5' },
-                        { firstName: 'First 6', lastName: 'Last 6' },
-                        { firstName: 'First 7', lastName: 'Last 7' },
+                        { _id: new Types.ObjectId(), firstName: 'First 1', lastName: 'Last 1', username: 'firstlast1' },
+                        { _id: new Types.ObjectId(), firstName: 'First 2', lastName: 'Last 2', username: 'firstlast2' },
+                        { _id: new Types.ObjectId(), firstName: 'First 3', lastName: 'Last 3', username: 'firstlast3' },
+                        { _id: new Types.ObjectId(), firstName: 'First 4', lastName: 'Last 4', username: 'firstlast4' },
+                        { _id: new Types.ObjectId(), firstName: 'First 5', lastName: 'Last 5', username: 'firstlast5' },
+                        { _id: new Types.ObjectId(), firstName: 'First 6', lastName: 'Last 6', username: 'firstlast6' },
+                        { _id: new Types.ObjectId(), firstName: 'First 7', lastName: 'Last 7', username: 'firstlast7' },
                     ],
                     actions: [
                         {
@@ -1355,37 +1354,38 @@ describe('test create full game', () => {
                     receivingTeam: createData.teamOne,
                     scoringTeam: createData.teamOne,
                     teamOnePlayers: [
-                        {
-                            _id: new Types.ObjectId(),
-                            firstName: 'First 1',
-                            lastName: 'Last 1',
-                            username: 'firstlast1',
-                        },
-                        { firstName: 'First 2', lastName: 'Last 2' },
-                        { firstName: 'First 3', lastName: 'Last 3' },
-                        { firstName: 'First 4', lastName: 'Last 4' },
-                        { firstName: 'First 5', lastName: 'Last 5' },
-                        { firstName: 'First 6', lastName: 'Last 6' },
-                        { firstName: 'First 7', lastName: 'Last 7' },
+                        { _id: new Types.ObjectId(), firstName: 'First 1', lastName: 'Last 1', username: 'firstlast1' },
+                        { _id: new Types.ObjectId(), firstName: 'First 2', lastName: 'Last 2', username: 'firstlast2' },
+                        { _id: new Types.ObjectId(), firstName: 'First 3', lastName: 'Last 3', username: 'firstlast3' },
+                        { _id: new Types.ObjectId(), firstName: 'First 4', lastName: 'Last 4', username: 'firstlast4' },
+                        { _id: new Types.ObjectId(), firstName: 'First 5', lastName: 'Last 5', username: 'firstlast5' },
+                        { _id: new Types.ObjectId(), firstName: 'First 6', lastName: 'Last 6', username: 'firstlast6' },
+                        { _id: new Types.ObjectId(), firstName: 'First 7', lastName: 'Last 7', username: 'firstlast7' },
                     ],
                     actions: [
                         {
                             actionType: ActionType.CATCH,
                             playerOne: {
+                                _id: new Types.ObjectId(),
                                 firstName: 'First 2',
                                 lastName: 'Last 2',
+                                username: 'firstlast2',
                             },
                             tags: ['Huck'],
                         },
                         {
                             actionType: ActionType.TEAM_ONE_SCORE,
                             playerOne: {
+                                _id: new Types.ObjectId(),
                                 firstName: 'First 2',
                                 lastName: 'Last 2',
+                                username: 'firstlast2',
                             },
                             playerTwo: {
+                                _id: new Types.ObjectId(),
                                 firstName: 'First 3',
                                 lastName: 'Last 3',
+                                username: 'firstlast3',
                             },
                             tags: [],
                         },

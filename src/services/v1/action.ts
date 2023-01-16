@@ -12,7 +12,7 @@ import {
     getLastRedisAction,
     isPullingTeam,
 } from '../../utils/redis'
-import { handleSubstitute, parseActionData, validateActionData } from '../../utils/action'
+import { handleSubstitute, parseActionData, undoSubstitute, validateActionData } from '../../utils/action'
 import Point, { IPointModel } from '../../models/point'
 import Game, { IGameModel } from '../../models/game'
 import { Player, TeamNumberString } from '../../types/ultmt'
@@ -107,6 +107,7 @@ export default class ActionServices {
         const foundAction = await actionExists(this.redisClient, pointId, Number(totalActions), team)
         if (foundAction) {
             const action = await getRedisAction(this.redisClient, pointId, Number(totalActions), team)
+            this.handleUndoSideEffects(action, pointId, team)
             await deleteRedisAction(this.redisClient, pointId, Number(totalActions), team)
             await this.redisClient.decr(`${gameId}:${pointId}:${team}:actions`)
             return action
@@ -236,6 +237,12 @@ export default class ActionServices {
     private handleSideEffects = async (data: ClientAction, pointId: string, team: TeamNumberString) => {
         if (data.actionType === ActionType.SUBSTITUTION) {
             await handleSubstitute(data, pointId, team, this.pointModel)
+        }
+    }
+
+    private handleUndoSideEffects = async (data: ClientAction, pointId: string, team: TeamNumberString) => {
+        if (data.actionType === ActionType.SUBSTITUTION) {
+            await undoSubstitute(data, pointId, team, this.pointModel)
         }
     }
 }
