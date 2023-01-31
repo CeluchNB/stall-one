@@ -39,7 +39,6 @@ beforeAll((done) => {
                 extraHeaders: { authorization: `Bearer ${token}` },
             })
             clientSocket.on('connect', () => {
-                clientSocket.emit('join:point', gameId, pointId)
                 done()
             })
         })
@@ -47,6 +46,10 @@ beforeAll((done) => {
 })
 beforeAll(async () => {
     await setUpDatabase()
+})
+
+beforeEach(async () => {
+    clientSocket.emit('join:point', gameId, pointId)
 })
 
 afterEach(async () => {
@@ -60,10 +63,6 @@ afterAll(async () => {
     await tearDownDatabase()
     clientSocket.close()
     app.close()
-})
-
-it('placeholder', () => {
-    expect(1 + 1).toBe(2)
 })
 
 describe('test client action sent', () => {
@@ -132,6 +131,24 @@ describe('test client action sent', () => {
     })
 })
 
+describe('test next point', () => {
+    it('with valid data', (done) => {
+        clientSocket.on('point:next:client', (action) => {
+            expect(action).toBeUndefined()
+            done()
+        })
+        clientSocket.emit('point:next', JSON.stringify({ pointId }))
+    })
+
+    it('without a point', (done) => {
+        clientSocket.on('action:error', (error) => {
+            expect(error).toBeDefined()
+            done()
+        })
+        clientSocket.emit('point:next')
+    })
+})
+
 describe('test client undo action', () => {
     let game: IGame | null
     let point: IPoint
@@ -148,10 +165,13 @@ describe('test client undo action', () => {
     beforeAll(async () => {
         game = await Game.findOne({})
         point = await Point.create({ ...createPointData })
-        clientSocket.emit('join:point', game?._id.toString(), point._id.toString())
 
         await client.set(`${game?._id.toString()}:${point._id.toString()}:one:actions`, '1')
         await RedisUtils.saveRedisAction(client, parseActionData(actionData, 1, 'one'), point._id.toString())
+    })
+
+    beforeEach(() => {
+        clientSocket.emit('join:point', game?._id.toString(), point._id.toString())
     })
 
     it('with valid data', (done) => {
@@ -178,23 +198,5 @@ describe('test client undo action', () => {
             done()
         })
         clientSocket.emit('action:undo', JSON.stringify({ pointId: point._id }))
-    })
-})
-
-describe('test next point', () => {
-    it('with valid data', (done) => {
-        clientSocket.on('point:next:client', (action) => {
-            expect(action).toBeUndefined()
-            done()
-        })
-        clientSocket.emit('point:next', JSON.stringify({ pointId }))
-    })
-
-    it('without a point', (done) => {
-        clientSocket.on('action:error', (error) => {
-            expect(error).toBeDefined()
-            done()
-        })
-        clientSocket.emit('point:next')
     })
 })
