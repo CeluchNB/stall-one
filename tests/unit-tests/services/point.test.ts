@@ -1028,12 +1028,13 @@ describe('test reactivate point', () => {
             actionNumber: 2,
             actionType: 'TeamTwoScore',
         })
+        const game = await Game.create(gameData)
         const prevPoint = await Point.create({
             pointNumber: 1,
             teamOneActive: false,
             teamTwoActive: false,
             receivingTeam: {
-                _id: new Types.ObjectId(),
+                _id: game.teamOne._id,
                 place: 'Place1',
                 name: 'Name1',
                 teamname: 'Place1Name1',
@@ -1049,7 +1050,7 @@ describe('test reactivate point', () => {
             teamOneActive: false,
             teamTwoActive: false,
             pullingTeam: {
-                _id: new Types.ObjectId(),
+                _id: game.teamOne._id,
                 place: 'Place1',
                 name: 'Name1',
                 teamname: 'Place1Name1',
@@ -1063,7 +1064,6 @@ describe('test reactivate point', () => {
         initialPoint.teamOneActions = [action1._id, action2._id]
         await initialPoint.save()
 
-        const game = await Game.create(gameData)
         game.points = [prevPoint._id, initialPoint._id]
         await game.save()
     })
@@ -1084,6 +1084,10 @@ describe('test reactivate point', () => {
 
         const actionCount = await client.get(`${game._id}:${initialPoint._id}:one:actions`)
         expect(actionCount).toBe('2')
+        const pullingTeam = await client.get(`${game._id}:${initialPoint._id}:pulling`)
+        expect(pullingTeam).toBe('one')
+        const receivingTeam = await client.get(`${game._id}:${initialPoint._id}:receiving`)
+        expect(receivingTeam).toBe('two')
 
         const actionOne = await getRedisAction(client, initialPoint._id.toString(), 1, 'one')
         expect(actionOne.actionNumber).toBe(1)
@@ -1100,7 +1104,11 @@ describe('test reactivate point', () => {
         const initialPoint = await Point.findById(game!.points[1])
         initialPoint!.teamTwoActions = [action1._id, action2._id]
         initialPoint!.teamOneActions = [action1._id]
+        initialPoint!.pullingTeam._id = undefined
+        initialPoint!.receivingTeam._id = game!.teamOne._id
         await initialPoint!.save()
+        game!.teamOne._id = undefined
+        await game!.save()
 
         game!.teamOneScore = 1
         game!.teamTwoScore = 1
@@ -1120,6 +1128,10 @@ describe('test reactivate point', () => {
 
         const actionCount = await client.get(`${game!._id}:${initialPoint!._id}:two:actions`)
         expect(actionCount).toBe('2')
+        const pullingTeam = await client.get(`${game!._id}:${initialPoint!._id}:pulling`)
+        expect(pullingTeam).toBe('two')
+        const receivingTeam = await client.get(`${game!._id}:${initialPoint!._id}:receiving`)
+        expect(receivingTeam).toBe('one')
 
         const actionOne = await getRedisAction(client, initialPoint!._id.toString(), 1, 'two')
         expect(actionOne.actionNumber).toBe(1)

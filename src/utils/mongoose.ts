@@ -12,3 +12,11 @@ export const findByIdOrThrow = async <R>(
     }
     return doc
 }
+
+export const idsAreEqual = (idOne: Types.ObjectId | undefined, idTwo: Types.ObjectId | string | undefined): boolean => {
+    if (!idOne || !idTwo) {
+        return false
+    }
+
+    return idOne.equals(idTwo)
+}
