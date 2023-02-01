@@ -74,6 +74,10 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
     const liveIo = io.of('/live')
 
     socket.on('join:point', (gameId: string, pointId: string) => {
+        // can only join one point at a time
+        for (const room of socket.rooms) {
+            socket.leave(room)
+        }
         socket.join(`${gameId}:${pointId}`)
     })
 

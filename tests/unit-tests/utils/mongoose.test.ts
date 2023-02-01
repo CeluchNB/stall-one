@@ -1,4 +1,4 @@
-import { findByIdOrThrow } from '../../../src/utils/mongoose'
+import { findByIdOrThrow, idsAreEqual } from '../../../src/utils/mongoose'
 import Tournament from '../../../src/models/tournament'
 import ITournament from '../../../src/types/tournament'
 import { Types } from 'mongoose'
@@ -36,5 +36,29 @@ describe('test find by id or throw', () => {
         await expect(
             findByIdOrThrow<ITournament>(new Types.ObjectId(), Tournament, 'Cannot find tournament'),
         ).rejects.toThrowError(new ApiError('Cannot find tournament', 404))
+    })
+})
+
+describe('ids are equal', () => {
+    it('with undefined first value', () => {
+        const id = new Types.ObjectId()
+        expect(idsAreEqual(undefined, id)).toBe(false)
+    })
+
+    it('with undefined second value', () => {
+        const id = new Types.ObjectId()
+        expect(idsAreEqual(id, undefined)).toBe(false)
+    })
+
+    it('with equal values', () => {
+        const id = new Types.ObjectId()
+        const id2 = new Types.ObjectId(id)
+        expect(idsAreEqual(id, id2)).toBe(true)
+    })
+
+    it('with unequal values', () => {
+        const id = new Types.ObjectId()
+        const id2 = new Types.ObjectId()
+        expect(idsAreEqual(id, id2)).toBe(false)
     })
 })

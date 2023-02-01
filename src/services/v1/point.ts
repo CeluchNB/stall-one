@@ -7,7 +7,7 @@ import IPoint from '../../types/point'
 import IAction, { ActionType, RedisAction, RedisClientType } from '../../types/action'
 import { IActionModel } from '../../models/action'
 import { deleteRedisAction, getRedisAction, saveRedisAction } from '../../utils/redis'
-import { findByIdOrThrow } from '../../utils/mongoose'
+import { findByIdOrThrow, idsAreEqual } from '../../utils/mongoose'
 import IGame from '../../types/game'
 
 export default class PointServices {
@@ -354,6 +354,10 @@ export default class PointServices {
             // delete actions from model
             point.teamTwoActions = []
         }
+        const pullingTeam = idsAreEqual(point.pullingTeam._id, game.teamOne._id) ? 'one' : 'two'
+        const receivingTeam = pullingTeam === 'one' ? 'two' : 'one'
+        await this.redisClient.set(`${gameId}:${pointId}:pulling`, pullingTeam)
+        await this.redisClient.set(`${gameId}:${pointId}:receiving`, receivingTeam)
 
         // only reduce score if the other team has no actions
         // because finishPoint only updates score on first team reporting
