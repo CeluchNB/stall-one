@@ -25,6 +25,7 @@ jobs:
           echo vars.WORKLOAD_IDENTITY_PROVIDER
           echo "Service Account ${{ vars.SERVICE_ACCOUNT }}"
           echo vars.SERVICE_ACCOUNT
+          echo "WIA ${{ env.WORKLOAD_IDENTITY_PROVIDER }}"
       
       - name: 'Authenticate to GCP'
         uses: 'google-github-actions/auth@v0'
