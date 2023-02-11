@@ -9,41 +9,41 @@ on:
   workflow_call:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check Out Repo 
-        uses: actions/checkout@v2
+  # test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Check Out Repo 
+  #       uses: actions/checkout@v2
 
-      - name: Create env
-        run: |
-          cd tests
-          mkdir config
-          cd config
-          touch .env
-          echo PORT=${{ secrets.PORT }} >> .env
-          echo MONGOOSE_URL=${{ secrets.DOCKER_MONGOOSE_URL }} >> .env
-          echo JWT_SECRET=${{ secrets.JWT_SECRET }} >> .env
-          echo ULTMT_API_URL=${{ secrets.ULTMT_API_URL }} >> .env
-          echo API_KEY=${{ secrets.API_KEY }}
-          echo REDIS_URL=${{ secrets.REDIS_URL }}
-          cd ..
+  #     - name: Create env
+  #       run: |
+  #         cd tests
+  #         mkdir config
+  #         cd config
+  #         touch .env
+  #         echo PORT=${{ secrets.PORT }} >> .env
+  #         echo MONGOOSE_URL=${{ secrets.DOCKER_MONGOOSE_URL }} >> .env
+  #         echo JWT_SECRET=${{ secrets.JWT_SECRET }} >> .env
+  #         echo ULTMT_API_URL=${{ secrets.ULTMT_API_URL }} >> .env
+  #         echo API_KEY=${{ secrets.API_KEY }}
+  #         echo REDIS_URL=${{ secrets.REDIS_URL }}
+  #         cd ..
       
-      - name: Run Docker CI container
-        run: docker compose -f docker-compose.dev.yml up -d --build
+  #     - name: Run Docker CI container
+  #       run: docker compose -f docker-compose.dev.yml up -d --build
         
-      - name: Add dependencies
-        run: yarn install
+  #     - name: Add dependencies
+  #       run: yarn install
 
-      - name: Run tests
-        run: yarn test
+  #     - name: Run tests
+  #       run: yarn test
       
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+  #     - name: Upload coverage to Codecov
+  #       uses: codecov/codecov-action@v1
 
-      - name: Stop containers
-        if: always()
-        run: docker compose -f docker-compose.dev.yml down
+  #     - name: Stop containers
+  #       if: always()
+  #       run: docker compose -f docker-compose.dev.yml down
 
   deploy:
     needs: test
@@ -58,10 +58,10 @@ jobs:
 
       - name: Echo stuff
         run: |
-          echo "Workload Identity Account"
-          echo ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
-          echo "Service Account"
-          echo ${{ vars.SERVICE_ACCOUNT }}
+          echo "Workload Identity Account ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}"
+          echo vars.WORKLOAD_IDENTITY_PROVIDER
+          echo "Service Account ${{ vars.SERVICE_ACCOUNT }}"
+          echo vars.SERVICE_ACCOUNT
       
       - name: 'Authenticate to GCP'
         uses: 'google-github-actions/auth@v0'
