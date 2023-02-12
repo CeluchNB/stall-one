@@ -39,7 +39,6 @@ jobs:
       
       - name: "Deploy Registry"
         run: |
-          gcloud auth login
           gcloud builds submit --config=cloudbuild.ci-dev.yml .
 
       - name: "Deploy Cloud Run"
