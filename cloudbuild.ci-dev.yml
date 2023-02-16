@@ -1,7 +1,0 @@
-steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'us-east4-docker.pkg.dev/ultmt-app-dev/cloud-run/stall-one', '.']
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'us-east4-docker.pkg.dev/ultmt-app-dev/cloud-run/stall-one']
-options:
-  logging: CLOUD_LOGGING_ONLY

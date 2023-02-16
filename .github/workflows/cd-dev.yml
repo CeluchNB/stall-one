@@ -84,7 +84,7 @@ jobs:
       
       - name: "Deploy Registry"
         run: |
-          gcloud builds submit --config=cloudbuild.ci-dev.yml .
+          gcloud builds submit --config=cloudbuild.${{ needs.get-environment.outputs.env_name }}.yml .
 
       - name: "Deploy Cloud Run"
         uses: 'google-github-actions/deploy-cloudrun@v0'
