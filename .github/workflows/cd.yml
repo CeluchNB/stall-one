@@ -87,7 +87,7 @@ jobs:
           gcloud builds submit --config=cloudbuild.${{ needs.get-environment.outputs.env_name }}.yml .
 
       - name: "Deploy Cloud Run"
-        uses: 'google-github-actions/deploy-cloudrun@v0'
+        uses: 'google-github-actions/deploy-cloudrun@v1'
         with:
           service: 'stall-one'
           image: ${{ vars.CONTAINER_REPOSITORY }}
