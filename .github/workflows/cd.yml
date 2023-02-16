@@ -91,6 +91,13 @@ jobs:
         with:
           service: 'stall-one'
           image: ${{ vars.CONTAINER_REPOSITORY }}
+          region: us-east4
+          secrets: |
+            ULTMT_API_URL=GATEWAY_URL:latest
+            MONGOOSE_URL=STALL_ONE_MONGOOSE_URL:latest
+            API_KEY=GATEWAY_API_KEY:latest
+            JWT_SECRET=STALL_ONE_JWT_SECRET:latest
+            REDIS_ULR=REDIS_URL:latest
   
 
 
