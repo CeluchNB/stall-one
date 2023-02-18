@@ -264,6 +264,9 @@ export default class GameServices {
             }
             await point.save()
         }
+
+        // TODO: more robust delete logic: only prevent delete if other
+        // team has saved actions - otherwise can be safely deleted
         // if team one calling delete
         if (game.teamOne._id?.equals(teamId)) {
             // delete all team one actions
