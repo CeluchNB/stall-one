@@ -1079,15 +1079,15 @@ describe('test search', () => {
     it('with simple search for live game', async () => {
         const games = await services.searchGames(undefined, true)
         expect(games.length).toBe(2)
-        expect(games[0].teamOne.teamname).toBe('pghtemper')
-        expect(games[1].teamOne.teamname).toBe('vault')
+        expect(games[0].teamOne.teamname).toBe('vault')
+        expect(games[1].teamOne.teamname).toBe('pghtemper')
     })
 
     it('with after value', async () => {
         const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'))
         expect(games.length).toBe(2)
-        expect(games[0].teamOne.teamname).toBe('pghtemper')
-        expect(games[1].teamOne.teamname).toBe('vault')
+        expect(games[0].teamOne.teamname).toBe('vault')
+        expect(games[1].teamOne.teamname).toBe('pghtemper')
     })
 
     it('with before value', async () => {
@@ -1112,6 +1112,29 @@ describe('test search', () => {
         const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'), undefined, 1, 1)
         expect(games.length).toBe(1)
         expect(games[0].teamOne.teamname).toBe('vault')
+    })
+
+    it('with short value', async () => {
+        const games = await services.searchGames('ts')
+        expect(games.length).toBe(3)
+        expect(games[0].teamOne.teamname).toBe('vault')
+        expect(games[1].teamOne.teamname).toBe('pghtemper')
+        expect(games[2].teamOne.teamname).toBe('pghtemper')
+    })
+
+    it('with partial text', async () => {
+        const games = await services.searchGames('tsg')
+        expect(games.length).toBe(2)
+        expect(games[0].teamOne.teamname).toBe('vault')
+        expect(games[1].teamOne.teamname).toBe('pghtemper')
+    })
+
+    it('with multiple partial text', async () => {
+        const games = await services.searchGames('temp vaul')
+        expect(games.length).toBe(3)
+        expect(games[0].teamOne.teamname).toBe('vault')
+        expect(games[1].teamOne.teamname).toBe('pghtemper')
+        expect(games[2].teamOne.teamname).toBe('pghtemper')
     })
 })
 
