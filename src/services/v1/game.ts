@@ -350,11 +350,32 @@ export default class GameServices {
     ): Promise<IGame[]> => {
         const filter: FilterQuery<IGame> = {}
         if (q) {
-            filter['$text'] = { $search: q }
+            const terms = q.split(' ')
+            const regexes = terms.map((t) => {
+                if (t.length >= 3) {
+                    return new RegExp(`^${t}`, 'i')
+                }
+            })
+            const tests = []
+            for (const r of regexes) {
+                if (r) {
+                    tests.push({ 'teamOne.place': { $regex: r } })
+                    tests.push({ 'teamOne.teamname': { $regex: r } })
+                    tests.push({ 'teamOne.name': { $regex: r } })
+                    tests.push({ 'teamTwo.place': { $regex: r } })
+                    tests.push({ 'teamTwo.name': { $regex: r } })
+                    tests.push({ 'teamTwo.teamname': { $regex: r } })
+                    tests.push({ 'tournament.name': { $regex: r } })
+                    tests.push({ 'tournament.eventId': { $regex: r } })
+                }
+            }
+            if (tests.length > 0) {
+                filter.$or = [...(filter.$or || []), ...tests]
+            }
         }
         if (live !== undefined && live !== null) {
             if (live) {
-                filter['$or'] = [{ teamOneActive: true }, { teamTwoActive: true }]
+                filter.$or = [...(filter.$or || []), { teamOneActive: true }, { teamTwoActive: true }]
             } else {
                 filter['$and'] = [{ teamOneActive: false }, { teamTwoActive: false }]
             }
@@ -367,7 +388,10 @@ export default class GameServices {
         }
 
         const games = await this.gameModel.find(filter).skip(offset).limit(pageSize)
-        return games
+
+        return games.sort((g1, g2) => {
+            return g2.startTime.getTime() - g1.startTime.getTime()
+        })
     }
 
     /**
