@@ -146,6 +146,7 @@ export default class GameServices {
 
         const token = game.getToken('two')
         game.teamTwoActive = true
+        game.teamTwoJoined = true
         await game.save()
 
         return { game, token }
@@ -265,8 +266,6 @@ export default class GameServices {
             await point.save()
         }
 
-        // TODO: more robust delete logic: only prevent delete if other
-        // team has saved actions - otherwise can be safely deleted
         // if team one calling delete
         if (game.teamOne._id?.equals(teamId)) {
             // delete all team one actions
@@ -282,8 +281,8 @@ export default class GameServices {
                 await point.save()
             }
 
-            // 'dereference' team if the other team is defined
-            if (game.teamTwoDefined) {
+            // 'dereference' team if the other team is joined
+            if (game.teamTwoJoined) {
                 game.teamOne._id = undefined
                 game.teamOne.teamname = undefined
                 await game.save()

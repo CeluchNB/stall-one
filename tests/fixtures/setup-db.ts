@@ -70,6 +70,7 @@ export const gameData: IGame = {
     resolveCode: '123456',
     teamOneActive: true,
     teamTwoActive: false,
+    teamTwoJoined: false,
     points: [],
     getToken: () => '',
 }
