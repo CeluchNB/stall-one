@@ -64,6 +64,7 @@ const schema = new Schema<IGame>({
     resolveCode: String,
     timeoutPerHalf: Number,
     floaterTimeout: Boolean,
+    teamTwoJoined: Boolean,
     points: [SchemaTypes.ObjectId],
     tournament: {
         type: {

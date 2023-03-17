@@ -146,6 +146,7 @@ export default class GameServices {
 
         const token = game.getToken('two')
         game.teamTwoActive = true
+        game.teamTwoJoined = true
         await game.save()
 
         return { game, token }
@@ -265,8 +266,6 @@ export default class GameServices {
             await point.save()
         }
 
-        // TODO: more robust delete logic: only prevent delete if other
-        // team has saved actions - otherwise can be safely deleted
         // if team one calling delete
         if (game.teamOne._id?.equals(teamId)) {
             // delete all team one actions
@@ -282,8 +281,8 @@ export default class GameServices {
                 await point.save()
             }
 
-            // 'dereference' team if the other team is defined
-            if (game.teamTwoDefined) {
+            // 'dereference' team if the other team is joined
+            if (game.teamTwoJoined) {
                 game.teamOne._id = undefined
                 game.teamOne.teamname = undefined
                 await game.save()
@@ -350,11 +349,32 @@ export default class GameServices {
     ): Promise<IGame[]> => {
         const filter: FilterQuery<IGame> = {}
         if (q) {
-            filter['$text'] = { $search: q }
+            const terms = q.split(' ')
+            const regexes = terms.map((t) => {
+                if (t.length >= 3) {
+                    return new RegExp(`^${t}`, 'i')
+                }
+            })
+            const tests = []
+            for (const r of regexes) {
+                if (r) {
+                    tests.push({ 'teamOne.place': { $regex: r } })
+                    tests.push({ 'teamOne.teamname': { $regex: r } })
+                    tests.push({ 'teamOne.name': { $regex: r } })
+                    tests.push({ 'teamTwo.place': { $regex: r } })
+                    tests.push({ 'teamTwo.name': { $regex: r } })
+                    tests.push({ 'teamTwo.teamname': { $regex: r } })
+                    tests.push({ 'tournament.name': { $regex: r } })
+                    tests.push({ 'tournament.eventId': { $regex: r } })
+                }
+            }
+            if (tests.length > 0) {
+                filter.$or = [...(filter.$or || []), ...tests]
+            }
         }
         if (live !== undefined && live !== null) {
             if (live) {
-                filter['$or'] = [{ teamOneActive: true }, { teamTwoActive: true }]
+                filter.$or = [...(filter.$or || []), { teamOneActive: true }, { teamTwoActive: true }]
             } else {
                 filter['$and'] = [{ teamOneActive: false }, { teamTwoActive: false }]
             }
@@ -367,7 +387,10 @@ export default class GameServices {
         }
 
         const games = await this.gameModel.find(filter).skip(offset).limit(pageSize)
-        return games
+
+        return games.sort((g1, g2) => {
+            return g2.startTime.getTime() - g1.startTime.getTime()
+        })
     }
 
     /**

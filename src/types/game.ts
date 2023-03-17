@@ -55,6 +55,7 @@ interface IGame extends CreateGame {
     teamTwoActive: boolean
     teamOnePlayers: Player[]
     teamTwoPlayers: Player[]
+    teamTwoJoined: boolean
     resolveCode: string
     points: Types.ObjectId[]
     getToken: (team: 'one' | 'two') => string
