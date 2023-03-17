@@ -333,6 +333,7 @@ describe('test team two join', () => {
         const gameRecord = await Game.findById(initialGame._id)
         expect(game._id).toEqual(initialGame._id)
         expect(gameRecord?.teamTwoActive).toBe(true)
+        expect(gameRecord?.teamTwoJoined).toBe(true)
         const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
         expect(payload.sub).toBe(game._id.toString())
         expect(payload.team).toBe('two')
@@ -710,7 +711,7 @@ describe('test delete game', () => {
             teamOneActions: [action2._id, action3._id],
         })
     })
-    it('with team one and team two not defined', async () => {
+    it('with team one and team two not joined', async () => {
         const [point1, point2] = await Point.find({})
         const game = await Game.create({
             teamOne: team,
@@ -724,6 +725,7 @@ describe('test delete game', () => {
             playersPerPoint: 7,
             timeoutPerHalf: 1,
             floaterTimeout: true,
+            teamTwoJoined: false,
             creator: {
                 _id: new Types.ObjectId(),
                 firstName: 'First1',
@@ -743,7 +745,7 @@ describe('test delete game', () => {
         expect(games.length).toBe(0)
     })
 
-    it('with team one and team two defined', async () => {
+    it('with team one and team two joined', async () => {
         const action4 = await Action.create({
             team: team2,
             actionNumber: 1,
@@ -772,6 +774,7 @@ describe('test delete game', () => {
             playersPerPoint: 7,
             timeoutPerHalf: 1,
             floaterTimeout: true,
+            teamTwoJoined: true,
             creator: {
                 _id: new Types.ObjectId(),
                 firstName: 'First1',
