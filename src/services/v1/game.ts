@@ -10,6 +10,7 @@ import { IPointModel } from '../../models/point'
 import { IActionModel } from '../../models/action'
 import { FilterQuery, Types } from 'mongoose'
 import IPoint from '../../types/point'
+import { sendCloudTask } from '../../utils/cloud-tasks'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -64,7 +65,7 @@ export default class GameServices {
             teamTwo = await getTeam(this.ultmtUrl, this.apiKey, safeData.teamTwo._id?.toString())
         }
 
-        const game = await this.gameModel.create({
+        const game: IGame = await this.gameModel.create({
             ...safeData,
             creator: user,
             teamOnePlayers: teamOne.players,
@@ -73,6 +74,13 @@ export default class GameServices {
         })
 
         const token = game.getToken('one')
+        await sendCloudTask('stats/game/create', {
+            _id: game._id,
+            teamOne: game.teamOne,
+            teamTwo: game.teamTwo,
+            teamOnePlayers: game.teamOnePlayers,
+            teamTwoPlayers: game.teamTwoPlayers,
+        })
 
         return { game, token }
     }
@@ -197,6 +205,9 @@ export default class GameServices {
         }
 
         await game.save()
+        await sendCloudTask('/stats/game/finish', {
+            _id: game._id,
+        })
 
         return game
     }
