@@ -279,6 +279,7 @@ export default class PointServices {
         const teamTwoActions = await this.actionModel.find().where('_id').in(point.teamTwoActions)
         await sendCloudTask('/stats/point/ingest', {
             _id: point._id,
+            gameId,
             pullingTeam: point.pullingTeam,
             receivingTeam: point.receivingTeam,
             scoringTeam: point.scoringTeam,
@@ -360,6 +361,16 @@ export default class PointServices {
             // load actions back into redis
             const actions = await this.actionModel.find().where('_id').in(point.teamOneActions)
             await this.saveActions(actions, gameId, pointId, team)
+
+            // delete any stats related to this point
+            const teamOneActions = await this.actionModel.find().where('_id').in(point.teamOneActions)
+            await sendCloudTask('/stats/point/delete', {
+                _id: point._id,
+                teamId: game.teamOne._id,
+                teamOneActions,
+                teamOnePlayers: point.teamOnePlayers,
+            })
+
             // delete actions from model
             point.teamOneActions = []
         } else {
@@ -368,6 +379,14 @@ export default class PointServices {
             // load actions back into redis
             const actions = await this.actionModel.find().where('_id').in(point.teamTwoActions)
             await this.saveActions(actions, gameId, pointId, team)
+
+            const teamTwoActions = await this.actionModel.find().where('_id').in(point.teamTwoActions)
+            await sendCloudTask('/stats/point/delete', {
+                _id: point._id,
+                teamId: game.teamTwo._id,
+                teamTwoActions,
+                teamTwoPlayers: point.teamTwoPlayers,
+            })
 
             // delete actions from model
             point.teamTwoActions = []
@@ -402,18 +421,6 @@ export default class PointServices {
 
         await point.save()
         await game.save()
-
-        const teamOneActions = await this.actionModel.find().where('_id').in(point.teamOneActions)
-        const teamTwoActions = await this.actionModel.find().where('_id').in(point.teamTwoActions)
-
-        // delete data from point
-        await sendCloudTask('/stats/point/delete', {
-            _id: point._id,
-            teamOnePlayers: point.teamOnePlayers,
-            teamTwoPlayers: point.teamTwoPlayers,
-            teamOneActions,
-            teamTwoActions,
-        })
 
         return point
     }
