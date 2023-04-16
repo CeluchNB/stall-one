@@ -15,6 +15,8 @@ import Point from '../../../src/models/point'
 import Action from '../../../src/models/action'
 import { ActionType } from '../../../src/types/action'
 
+jest.mock('@google-cloud/tasks/build/src/v2')
+
 beforeAll(async () => {
     await setUpDatabase()
 })

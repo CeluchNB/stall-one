@@ -13,6 +13,8 @@ import Point from '../../../src/models/point'
 import { CreateFullGame } from '../../../src/types/game'
 import { ActionType } from '../../../src/types/action'
 
+jest.mock('@google-cloud/tasks/build/src/v2')
+
 afterAll(async () => {
     await close()
 })
