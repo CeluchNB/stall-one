@@ -370,11 +370,11 @@ export default class PointServices {
 
             // delete any stats related to this point
             await sendCloudTask(
-                `/api/v1/stats/point/${point._id}`,
+                `/api/v1/stats/point/${point._id}/delete`,
                 {
                     gameId: game._id,
                 },
-                'DELETE',
+                'PUT',
             )
 
             // delete actions from model
@@ -387,11 +387,11 @@ export default class PointServices {
             await this.saveActions(actions, gameId, pointId, team)
 
             await sendCloudTask(
-                `/api/v1/stats/point/${point._id}`,
+                `/api/v1/stats/point/${point._id}/delete`,
                 {
                     gameId: game._id,
                 },
-                'DELETE',
+                'PUT',
             )
 
             // delete actions from model
