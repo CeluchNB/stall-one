@@ -278,7 +278,7 @@ export default class PointServices {
         const teamOneActions = await this.actionModel.find().where('_id').in(point.teamOneActions)
         const teamTwoActions = await this.actionModel.find().where('_id').in(point.teamTwoActions)
         await sendCloudTask(
-            '/api/v1/stats/point/ingest',
+            '/api/v1/stats/point',
             {
                 point: {
                     pointId: point._id,
