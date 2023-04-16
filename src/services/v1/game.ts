@@ -75,7 +75,7 @@ export default class GameServices {
 
         const token = game.getToken('one')
         await sendCloudTask(
-            '/stats/game',
+            '/api/v1/stats/game',
             {
                 game: {
                     _id: game._id,
@@ -212,7 +212,7 @@ export default class GameServices {
         }
 
         await game.save()
-        await sendCloudTask(`/stats/game/finish/${gameId}`, {}, 'PUT')
+        await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
 
         return game
     }
