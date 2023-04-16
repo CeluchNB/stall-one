@@ -365,7 +365,7 @@ export default class PointServices {
             game.teamOneActive = true
             point.teamOneActive = true
             // load actions back into redis
-            const actions = await this.actionModel.find().where('_id').in(point.teamOneActions)
+            const actions = await this.actionModel.where({ _id: { $in: point.teamOneActions } })
             await this.saveActions(actions, gameId, pointId, team)
 
             // delete any stats related to this point
@@ -383,7 +383,7 @@ export default class PointServices {
             game.teamTwoActive = true
             point.teamTwoActive = true
             // load actions back into redis
-            const actions = await this.actionModel.find().where('_id').in(point.teamTwoActions)
+            const actions = await this.actionModel.where({ _id: { $in: point.teamTwoActions } })
             await this.saveActions(actions, gameId, pointId, team)
 
             await sendCloudTask(
