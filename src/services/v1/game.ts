@@ -74,13 +74,20 @@ export default class GameServices {
         })
 
         const token = game.getToken('one')
-        await sendCloudTask('stats/game/create', {
-            _id: game._id,
-            teamOne: game.teamOne,
-            teamTwo: game.teamTwo,
-            teamOnePlayers: game.teamOnePlayers,
-            teamTwoPlayers: game.teamTwoPlayers,
-        })
+        await sendCloudTask(
+            '/stats/game',
+            {
+                game: {
+                    _id: game._id,
+                    startTime: game.startTime,
+                    teamOne: game.teamOne,
+                    teamTwo: game.teamTwo,
+                    teamOnePlayers: game.teamOnePlayers,
+                    teamTwoPlayers: game.teamTwoPlayers,
+                },
+            },
+            'POST',
+        )
 
         return { game, token }
     }
@@ -205,9 +212,7 @@ export default class GameServices {
         }
 
         await game.save()
-        await sendCloudTask('/stats/game/finish', {
-            _id: game._id,
-        })
+        await sendCloudTask(`/stats/game/finish/${gameId}`, {}, 'PUT')
 
         return game
     }
