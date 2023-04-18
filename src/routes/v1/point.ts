@@ -103,7 +103,6 @@ pointRouter.put(
             const point = await services.reactivatePoint(gameId, req.params.id, teamNumber)
             return res.json({ point })
         } catch (error) {
-            console.log('reactive got error', error)
             next(error)
         }
     },

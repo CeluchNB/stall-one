@@ -275,27 +275,29 @@ export default class PointServices {
         await point.save()
         await game.save()
 
-        const teamOneActions = await this.actionModel.find().where('_id').in(point.teamOneActions)
-        const teamTwoActions = await this.actionModel.find().where('_id').in(point.teamTwoActions)
-        await sendCloudTask(
-            '/api/v1/stats/point',
-            {
-                point: {
-                    pointId: point._id,
-                    gameId,
-                    pullingTeam: point.pullingTeam,
-                    receivingTeam: point.receivingTeam,
-                    scoringTeam: point.scoringTeam,
-                    teamOnePlayers: point.teamOnePlayers,
-                    teamTwoPlayers: point.teamTwoPlayers,
-                    teamOneScore: point.teamOneScore,
-                    teamTwoScore: point.teamTwoScore,
-                    teamOneActions,
-                    teamTwoActions,
+        if (!point.teamOneActive && !point.teamTwoActive) {
+            const teamOneActions = await this.actionModel.find().where('_id').in(point.teamOneActions)
+            const teamTwoActions = await this.actionModel.find().where('_id').in(point.teamTwoActions)
+            await sendCloudTask(
+                '/api/v1/stats/point',
+                {
+                    point: {
+                        pointId: point._id,
+                        gameId,
+                        pullingTeam: point.pullingTeam,
+                        receivingTeam: point.receivingTeam,
+                        scoringTeam: point.scoringTeam,
+                        teamOnePlayers: point.teamOnePlayers,
+                        teamTwoPlayers: point.teamTwoPlayers,
+                        teamOneScore: point.teamOneScore,
+                        teamTwoScore: point.teamTwoScore,
+                        teamOneActions,
+                        teamTwoActions,
+                    },
                 },
-            },
-            'POST',
-        )
+                'POST',
+            )
+        }
 
         return point
     }
@@ -368,15 +370,6 @@ export default class PointServices {
             const actions = await this.actionModel.where({ _id: { $in: point.teamOneActions } })
             await this.saveActions(actions, gameId, pointId, team)
 
-            // delete any stats related to this point
-            await sendCloudTask(
-                `/api/v1/stats/point/${point._id}/delete`,
-                {
-                    gameId: game._id,
-                },
-                'PUT',
-            )
-
             // delete actions from model
             point.teamOneActions = []
         } else {
@@ -385,14 +378,6 @@ export default class PointServices {
             // load actions back into redis
             const actions = await this.actionModel.where({ _id: { $in: point.teamTwoActions } })
             await this.saveActions(actions, gameId, pointId, team)
-
-            await sendCloudTask(
-                `/api/v1/stats/point/${point._id}/delete`,
-                {
-                    gameId: game._id,
-                },
-                'PUT',
-            )
 
             // delete actions from model
             point.teamTwoActions = []
@@ -427,6 +412,14 @@ export default class PointServices {
 
         await point.save()
         await game.save()
+
+        await sendCloudTask(
+            `/api/v1/stats/point/${point._id}/delete`,
+            {
+                gameId: game._id,
+            },
+            'PUT',
+        )
 
         return point
     }
