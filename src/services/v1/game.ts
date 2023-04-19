@@ -11,6 +11,7 @@ import { IActionModel } from '../../models/action'
 import { FilterQuery, Types } from 'mongoose'
 import IPoint from '../../types/point'
 import { sendCloudTask } from '../../utils/cloud-tasks'
+import IAction from '../../types/action'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -445,16 +446,19 @@ export default class GameServices {
         const points = gameData.points
         for (const p of points) {
             const point = await this.pointModel.create({ ...p, teamOneActive: false, teamTwoActive: false })
+            const actions = []
             for (const [i, a] of p.actions.entries()) {
                 const action = await this.actionModel.create({ ...a, actionNumber: i + 1, team: gameData.teamOne })
+                actions.push(action)
                 point.teamOneActions.push(action._id)
             }
             game.points.push(point._id)
             await point.save()
-            await createStatsPoint(point, game._id.toHexString())
+            await createStatsPoint(point, game._id.toHexString(), actions)
         }
 
         await game.save()
+        await sendCloudTask(`/api/v1/stats/game/finish/${game._id}`, {}, 'PUT')
         return game
     }
 }
@@ -476,7 +480,7 @@ const createStatsGame = async (game: IGame) => {
     )
 }
 
-const createStatsPoint = async (point: IPoint, gameId: string) => {
+const createStatsPoint = async (point: IPoint, gameId: string, actions: IAction[]) => {
     await sendCloudTask(
         '/api/v1/stats/point',
         {
@@ -490,7 +494,7 @@ const createStatsPoint = async (point: IPoint, gameId: string) => {
                 teamTwoPlayers: point.teamTwoPlayers,
                 teamOneScore: point.teamOneScore,
                 teamTwoScore: point.teamTwoScore,
-                teamOneActions: point.teamOneActions,
+                teamOneActions: actions,
                 teamTwoActions: [],
             },
         },
