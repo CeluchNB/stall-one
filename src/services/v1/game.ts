@@ -74,20 +74,7 @@ export default class GameServices {
         })
 
         const token = game.getToken('one')
-        await sendCloudTask(
-            '/api/v1/stats/game',
-            {
-                game: {
-                    _id: game._id,
-                    startTime: game.startTime,
-                    teamOne: game.teamOne,
-                    teamTwo: game.teamTwo,
-                    teamOnePlayers: game.teamOnePlayers,
-                    teamTwoPlayers: game.teamTwoPlayers,
-                },
-            },
-            'POST',
-        )
+        await createStatsGame(game)
 
         return { game, token }
     }
@@ -453,6 +440,7 @@ export default class GameServices {
         }
 
         const game = await this.gameModel.create(safeData)
+        await createStatsGame(game)
 
         const points = gameData.points
         for (const p of points) {
@@ -463,9 +451,49 @@ export default class GameServices {
             }
             game.points.push(point._id)
             await point.save()
+            await createStatsPoint(point, game._id.toHexString())
         }
 
         await game.save()
         return game
     }
+}
+
+const createStatsGame = async (game: IGame) => {
+    await sendCloudTask(
+        '/api/v1/stats/game',
+        {
+            game: {
+                _id: game._id,
+                startTime: game.startTime,
+                teamOne: game.teamOne,
+                teamTwo: game.teamTwo,
+                teamOnePlayers: game.teamOnePlayers,
+                teamTwoPlayers: game.teamTwoPlayers,
+            },
+        },
+        'POST',
+    )
+}
+
+const createStatsPoint = async (point: IPoint, gameId: string) => {
+    await sendCloudTask(
+        '/api/v1/stats/point',
+        {
+            point: {
+                pointId: point._id,
+                gameId,
+                pullingTeam: point.pullingTeam,
+                receivingTeam: point.receivingTeam,
+                scoringTeam: point.scoringTeam,
+                teamOnePlayers: point.teamOnePlayers,
+                teamTwoPlayers: point.teamTwoPlayers,
+                teamOneScore: point.teamOneScore,
+                teamTwoScore: point.teamTwoScore,
+                teamOneActions: point.teamOneActions,
+                teamTwoActions: [],
+            },
+        },
+        'POST',
+    )
 }
