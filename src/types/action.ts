@@ -79,6 +79,7 @@ export const VALID_ACTIONS = {
         ActionType.TIMEOUT,
         ActionType.SUBSTITUTION,
         ActionType.CALL_ON_FIELD,
+        ActionType.STALL,
     ],
     Substitution: [
         ActionType.PULL,
