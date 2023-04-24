@@ -47,6 +47,7 @@ export const validateActionData = (
             break
         case ActionType.CATCH:
         case ActionType.DROP:
+        case ActionType.STALL:
             if (!playerOne) {
                 throw new ApiError(Constants.INVALID_DATA, 400)
             }
@@ -66,17 +67,6 @@ export const parseActionData = (
         actionNumber,
         teamNumber,
         comments: [],
-    }
-}
-
-export const getDisplayMessage = (type: ActionType, playerOne?: Player, playerTwo?: Player): string => {
-    switch (type) {
-        case ActionType.PULL:
-            return `${playerOne?.firstName} ${playerOne?.lastName} pulls the disc`
-        case ActionType.CATCH:
-            return `${playerOne?.firstName} ${playerOne?.lastName} throws to ${playerTwo?.firstName} ${playerTwo?.lastName}`
-        default:
-            return 'An action occurred'
     }
 }
 

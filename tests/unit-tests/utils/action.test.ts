@@ -1,5 +1,5 @@
 import * as Constants from '../../../src/utils/constants'
-import { getDisplayMessage, handleSubstitute, parseActionData, validateActionData } from '../../../src/utils/action'
+import { handleSubstitute, parseActionData, validateActionData } from '../../../src/utils/action'
 import { Types } from 'mongoose'
 import { ActionType, ClientAction } from '../../../src/types/action'
 import { ApiError } from '../../../src/types/errors'
@@ -18,42 +18,6 @@ afterAll(async () => {
 
 afterEach(async () => {
     await resetDatabase()
-})
-
-describe('test get display message', () => {
-    it('with pull', () => {
-        const message = getDisplayMessage(ActionType.PULL, {
-            _id: new Types.ObjectId(),
-            firstName: 'Noah',
-            lastName: 'Celuch',
-            username: 'noah',
-        })
-        expect(message).toBe('Noah Celuch pulls the disc')
-    })
-
-    it('with catch', () => {
-        const message = getDisplayMessage(
-            ActionType.CATCH,
-            {
-                _id: new Types.ObjectId(),
-                firstName: 'Noah',
-                lastName: 'Celuch',
-                username: 'noahc',
-            },
-            {
-                _id: new Types.ObjectId(),
-                firstName: 'Amy',
-                lastName: 'Celuch',
-                username: 'amyc',
-            },
-        )
-        expect(message).toBe('Noah Celuch throws to Amy Celuch')
-    })
-
-    it('with default', () => {
-        const message = getDisplayMessage(ActionType.CALL_ON_FIELD)
-        expect(message).toBe('An action occurred')
-    })
 })
 
 describe('test parse action data', () => {
