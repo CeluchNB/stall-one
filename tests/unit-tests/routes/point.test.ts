@@ -19,6 +19,8 @@ import { ActionType, RedisAction } from '../../../src/types/action'
 import { getRedisAction, saveRedisAction } from '../../../src/utils/redis'
 import Action from '../../../src/models/action'
 
+jest.mock('@google-cloud/tasks/build/src/v2')
+
 beforeAll(async () => {
     await setUpDatabase()
 })
