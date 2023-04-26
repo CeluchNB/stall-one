@@ -10,6 +10,8 @@ import { IPointModel } from '../../models/point'
 import { IActionModel } from '../../models/action'
 import { FilterQuery, Types } from 'mongoose'
 import IPoint from '../../types/point'
+import { sendCloudTask } from '../../utils/cloud-tasks'
+import IAction from '../../types/action'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -64,7 +66,7 @@ export default class GameServices {
             teamTwo = await getTeam(this.ultmtUrl, this.apiKey, safeData.teamTwo._id?.toString())
         }
 
-        const game = await this.gameModel.create({
+        const game: IGame = await this.gameModel.create({
             ...safeData,
             creator: user,
             teamOnePlayers: teamOne.players,
@@ -73,6 +75,7 @@ export default class GameServices {
         })
 
         const token = game.getToken('one')
+        await createStatsGame(game)
 
         return { game, token }
     }
@@ -197,6 +200,7 @@ export default class GameServices {
         }
 
         await game.save()
+        await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
 
         return game
     }
@@ -437,19 +441,63 @@ export default class GameServices {
         }
 
         const game = await this.gameModel.create(safeData)
+        await createStatsGame(game)
 
         const points = gameData.points
         for (const p of points) {
             const point = await this.pointModel.create({ ...p, teamOneActive: false, teamTwoActive: false })
+            const actions = []
             for (const [i, a] of p.actions.entries()) {
                 const action = await this.actionModel.create({ ...a, actionNumber: i + 1, team: gameData.teamOne })
+                actions.push(action)
                 point.teamOneActions.push(action._id)
             }
             game.points.push(point._id)
             await point.save()
+            await createStatsPoint(point, game._id.toHexString(), actions)
         }
 
         await game.save()
+        await sendCloudTask(`/api/v1/stats/game/finish/${game._id}`, {}, 'PUT')
         return game
     }
+}
+
+const createStatsGame = async (game: IGame) => {
+    await sendCloudTask(
+        '/api/v1/stats/game',
+        {
+            game: {
+                _id: game._id,
+                startTime: game.startTime,
+                teamOne: game.teamOne,
+                teamTwo: game.teamTwo,
+                teamOnePlayers: game.teamOnePlayers,
+                teamTwoPlayers: game.teamTwoPlayers,
+            },
+        },
+        'POST',
+    )
+}
+
+const createStatsPoint = async (point: IPoint, gameId: string, actions: IAction[]) => {
+    await sendCloudTask(
+        '/api/v1/stats/point',
+        {
+            point: {
+                pointId: point._id,
+                gameId,
+                pullingTeam: point.pullingTeam,
+                receivingTeam: point.receivingTeam,
+                scoringTeam: point.scoringTeam,
+                teamOnePlayers: point.teamOnePlayers,
+                teamTwoPlayers: point.teamTwoPlayers,
+                teamOneScore: point.teamOneScore,
+                teamTwoScore: point.teamTwoScore,
+                teamOneActions: actions,
+                teamTwoActions: [],
+            },
+        },
+        'POST',
+    )
 }

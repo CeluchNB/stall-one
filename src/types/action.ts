@@ -14,6 +14,7 @@ export enum ActionType {
     TIMEOUT = 'Timeout',
     SUBSTITUTION = 'Substitution',
     CALL_ON_FIELD = 'CallOnField',
+    STALL = 'Stall',
 }
 
 // Each action type has an array of valid previous actions
@@ -35,6 +36,7 @@ export const VALID_ACTIONS = {
         ActionType.TIMEOUT,
         ActionType.SUBSTITUTION,
         ActionType.CALL_ON_FIELD,
+        ActionType.STALL,
     ],
     Pickup: [
         ActionType.PULL,
@@ -44,6 +46,7 @@ export const VALID_ACTIONS = {
         ActionType.TIMEOUT,
         ActionType.SUBSTITUTION,
         ActionType.CALL_ON_FIELD,
+        ActionType.STALL,
     ],
     TeamOneScore: [
         ActionType.PULL,
@@ -55,6 +58,7 @@ export const VALID_ACTIONS = {
         ActionType.TIMEOUT,
         ActionType.SUBSTITUTION,
         ActionType.CALL_ON_FIELD,
+        ActionType.STALL,
     ],
     TeamTwoScore: [
         ActionType.PULL,
@@ -66,6 +70,7 @@ export const VALID_ACTIONS = {
         ActionType.TIMEOUT,
         ActionType.SUBSTITUTION,
         ActionType.CALL_ON_FIELD,
+        ActionType.STALL,
     ],
     Timeout: [
         ActionType.PULL,
@@ -74,6 +79,7 @@ export const VALID_ACTIONS = {
         ActionType.TIMEOUT,
         ActionType.SUBSTITUTION,
         ActionType.CALL_ON_FIELD,
+        ActionType.STALL,
     ],
     Substitution: [
         ActionType.PULL,
@@ -85,6 +91,7 @@ export const VALID_ACTIONS = {
         ActionType.TIMEOUT,
         ActionType.CALL_ON_FIELD,
         ActionType.SUBSTITUTION,
+        ActionType.STALL,
     ],
     CallOnField: [
         ActionType.PULL,
@@ -96,7 +103,9 @@ export const VALID_ACTIONS = {
         ActionType.TIMEOUT,
         ActionType.SUBSTITUTION,
         ActionType.CALL_ON_FIELD,
+        ActionType.STALL,
     ],
+    Stall: [ActionType.CATCH, ActionType.PICKUP, ActionType.TIMEOUT, ActionType.SUBSTITUTION, ActionType.CALL_ON_FIELD],
 }
 
 export interface InputComment {
