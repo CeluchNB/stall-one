@@ -275,22 +275,26 @@ export default class PointServices {
         await point.save()
         await game.save()
 
-        if (!point.teamOneActive && !point.teamTwoActive) {
-            const teamOneActions = await this.actionModel.find().where('_id').in(point.teamOneActions)
-            const teamTwoActions = await this.actionModel.find().where('_id').in(point.teamTwoActions)
+        // use updated point to prevent race condition where points are updated at the same time
+        // and one team still shows as active when it's not
+        // TODO: rework this whole function
+        const updatedPoint = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
+        if (!updatedPoint.teamOneActive && !updatedPoint.teamTwoActive) {
+            const teamOneActions = await this.actionModel.find().where('_id').in(updatedPoint.teamOneActions)
+            const teamTwoActions = await this.actionModel.find().where('_id').in(updatedPoint.teamTwoActions)
             await sendCloudTask(
                 '/api/v1/stats/point',
                 {
                     point: {
-                        pointId: point._id,
+                        pointId: updatedPoint._id,
                         gameId,
-                        pullingTeam: point.pullingTeam,
-                        receivingTeam: point.receivingTeam,
-                        scoringTeam: point.scoringTeam,
-                        teamOnePlayers: point.teamOnePlayers,
-                        teamTwoPlayers: point.teamTwoPlayers,
-                        teamOneScore: point.teamOneScore,
-                        teamTwoScore: point.teamTwoScore,
+                        pullingTeam: updatedPoint.pullingTeam,
+                        receivingTeam: updatedPoint.receivingTeam,
+                        scoringTeam: updatedPoint.scoringTeam,
+                        teamOnePlayers: updatedPoint.teamOnePlayers,
+                        teamTwoPlayers: updatedPoint.teamTwoPlayers,
+                        teamOneScore: updatedPoint.teamOneScore,
+                        teamTwoScore: updatedPoint.teamTwoScore,
                         teamOneActions,
                         teamTwoActions,
                     },
@@ -299,7 +303,7 @@ export default class PointServices {
             )
         }
 
-        return point
+        return updatedPoint
     }
 
     /**
