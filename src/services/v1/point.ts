@@ -244,27 +244,29 @@ export default class PointServices {
         }
 
         // move actions to mongo
+        const redisActions = []
         for (let i = 1; i <= Number(totalActions); i++) {
+            // TODO: move this to a single call?
             const redisAction = await getRedisAction(this.redisClient, pointId, i, team)
-            if (team === TeamNumber.ONE) {
-                const action = await this.actionModel.create({ ...redisAction, team: game.teamOne })
-                point.teamOneActions.push(action._id)
-            } else if (team === TeamNumber.TWO) {
-                const action = await this.actionModel.create({ ...redisAction, team: game.teamTwo })
-                point.teamTwoActions.push(action._id)
-            }
+            redisActions.push(redisAction)
+
+            // TODO: move this to a single call?
             await deleteRedisAction(this.redisClient, pointId, i, team)
+        }
+
+        if (team === TeamNumber.ONE) {
+            const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamOne })))
+            point.teamOneActions = actions.map((a) => a._id)
+            point.teamOneActive = false
+        } else {
+            const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamTwo })))
+            point.teamTwoActions = actions.map((a) => a._id)
+            point.teamTwoActive = false
         }
 
         await this.redisClient.del(`${gameId}:${pointId}:${team}:actions`)
         if (!game.teamTwoActive) {
             await this.redisClient.del(`${gameId}:${pointId}:two:actions`)
-        }
-
-        if (team === TeamNumber.ONE) {
-            point.teamOneActive = false
-        } else {
-            point.teamTwoActive = false
         }
 
         if (!point.teamOneActive && !point.teamTwoActive) {

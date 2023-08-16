@@ -106,3 +106,4 @@ dist
 config/
 
 *.rdb
+.DS_Store

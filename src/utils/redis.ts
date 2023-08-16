@@ -48,19 +48,31 @@ export const getRedisAction = async (
     teamNumber: TeamNumberString,
 ): Promise<RedisAction> => {
     const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
-    const actionType = await redisClient.get(`${baseKey}:type`)
-    const playerOne = await redisClient.hGetAll(`${baseKey}:playerone`)
-    const playerTwo = await redisClient.hGetAll(`${baseKey}:playertwo`)
-    const tags = await redisClient.lRange(`${baseKey}:tags`, 0, -1)
+    const transaction = redisClient
+        .multi()
+        .get(`${baseKey}:type`)
+        .hGetAll(`${baseKey}:playerone`)
+        .hGetAll(`${baseKey}:playertwo`)
+        .lRange(`${baseKey}:tags`, 0, -1)
     const totalComments = await redisClient.get(`${baseKey}:comments`)
-    const comments: Comment[] = []
 
     for (let i = 1; i <= Number(totalComments); i++) {
-        const comment = await redisClient.get(`${baseKey}:comments:${i}:text`)
-        const commentor = await redisClient.hGetAll(`${baseKey}:comments:${i}:user`)
-        const user = parseRedisUser(commentor) as Player
+        transaction.get(`${baseKey}:comments:${i}:text`).hGetAll(`${baseKey}:comments:${i}:user`)
+    }
+    const result = await transaction.exec()
+    const actionType = result[0]
+    const playerOne = result[1]
+    const playerTwo = result[2]
+    const tags = result[3]
+
+    const comments: Comment[] = []
+    type StringObject = { [x: string]: string }
+    for (let i = 4; i < 4 + Number(totalComments) * 2; i += 2) {
+        const comment = result[i]
+        const commentor = result[i + 1]
+        const user = parseRedisUser(commentor as unknown as StringObject) as Player
         if (comment) {
-            comments.push({ comment, user, commentNumber: i })
+            comments.push({ comment: comment as unknown as string, user, commentNumber: i / 2 - 1 })
         }
     }
 
@@ -68,12 +80,12 @@ export const getRedisAction = async (
         teamNumber,
         actionNumber,
         actionType: actionType as ActionType,
-        tags,
+        tags: tags as unknown as string[],
         comments,
     }
 
-    action.playerOne = parseRedisUser(playerOne)
-    action.playerTwo = parseRedisUser(playerTwo)
+    action.playerOne = parseRedisUser(playerOne as unknown as StringObject)
+    action.playerTwo = parseRedisUser(playerTwo as unknown as StringObject)
 
     return action
 }
