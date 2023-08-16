@@ -15,30 +15,31 @@ export const saveRedisAction = async (redisClient: RedisClientType, data: RedisA
     const { actionNumber: number, teamNumber, playerOne, playerTwo, tags, actionType } = data
     const baseKey = getActionBaseKey(pointId, number, teamNumber)
 
-    await redisClient.set(`${baseKey}:type`, actionType)
+    const transaction = redisClient.multi().set(`${baseKey}:type`, actionType)
     if (playerOne) {
         if (playerOne._id) {
-            await redisClient.hSet(`${baseKey}:playerone`, 'id', playerOne._id.toString())
+            transaction.hSet(`${baseKey}:playerone`, 'id', playerOne._id.toString())
         }
-        await redisClient.hSet(`${baseKey}:playerone`, 'firstName', playerOne.firstName)
-        await redisClient.hSet(`${baseKey}:playerone`, 'lastName', playerOne.lastName)
+        transaction.hSet(`${baseKey}:playerone`, 'firstName', playerOne.firstName)
+        transaction.hSet(`${baseKey}:playerone`, 'lastName', playerOne.lastName)
         if (playerOne.username) {
-            await redisClient.hSet(`${baseKey}:playerone`, 'username', playerOne.username)
+            transaction.hSet(`${baseKey}:playerone`, 'username', playerOne.username)
         }
     }
     if (playerTwo) {
         if (playerTwo._id) {
-            await redisClient.hSet(`${baseKey}:playertwo`, 'id', playerTwo._id.toString())
+            transaction.hSet(`${baseKey}:playertwo`, 'id', playerTwo._id.toString())
         }
-        await redisClient.hSet(`${baseKey}:playertwo`, 'firstName', playerTwo.firstName)
-        await redisClient.hSet(`${baseKey}:playertwo`, 'lastName', playerTwo.lastName)
+        transaction.hSet(`${baseKey}:playertwo`, 'firstName', playerTwo.firstName)
+        transaction.hSet(`${baseKey}:playertwo`, 'lastName', playerTwo.lastName)
         if (playerTwo.username) {
-            await redisClient.hSet(`${baseKey}:playertwo`, 'username', playerTwo.username)
+            transaction.hSet(`${baseKey}:playertwo`, 'username', playerTwo.username)
         }
     }
     for (const tag of tags) {
-        await redisClient.rPush(`${baseKey}:tags`, tag)
+        transaction.rPush(`${baseKey}:tags`, tag)
     }
+    await transaction.exec()
 }
 
 export const getRedisAction = async (
@@ -60,6 +61,7 @@ export const getRedisAction = async (
         transaction.get(`${baseKey}:comments:${i}:text`).hGetAll(`${baseKey}:comments:${i}:user`)
     }
     const result = await transaction.exec()
+
     const actionType = result[0]
     const playerOne = result[1]
     const playerTwo = result[2]
@@ -97,11 +99,14 @@ export const deleteRedisAction = async (
     teamNumber: TeamNumberString,
 ) => {
     const baseKey = getActionBaseKey(pointId, number, teamNumber)
-    await redisClient.del(`${baseKey}:type`)
-    await redisClient.del(`${baseKey}:playerone`)
-    await redisClient.del(`${baseKey}:playertwo`)
-    await redisClient.del(`${baseKey}:tags`)
-    await redisClient.del(`${baseKey}:comments`)
+    await redisClient
+        .multi()
+        .del(`${baseKey}:type`)
+        .del(`${baseKey}:playerone`)
+        .del(`${baseKey}:playertwo`)
+        .del(`${baseKey}:tags`)
+        .del(`${baseKey}:comments`)
+        .exec()
 }
 
 export const saveRedisComment = async (
@@ -113,11 +118,14 @@ export const saveRedisComment = async (
 ) => {
     const baseKey = getActionBaseKey(pointId, actionNumber, teamNumber)
     const totalComments = await redisClient.incr(`${baseKey}:comments`)
-    await redisClient.set(`${baseKey}:comments:${totalComments}:text`, data.comment)
-    await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'id', data.user._id.toString())
-    await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'username', data.user.username)
-    await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', data.user.firstName)
-    await redisClient.hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', data.user.lastName)
+    await redisClient
+        .multi()
+        .set(`${baseKey}:comments:${totalComments}:text`, data.comment)
+        .hSet(`${baseKey}:comments:${totalComments}:user`, 'id', data.user._id.toString())
+        .hSet(`${baseKey}:comments:${totalComments}:user`, 'username', data.user.username)
+        .hSet(`${baseKey}:comments:${totalComments}:user`, 'firstName', data.user.firstName)
+        .hSet(`${baseKey}:comments:${totalComments}:user`, 'lastName', data.user.lastName)
+        .exec()
 }
 
 export const getRedisComment = async (
