@@ -219,7 +219,7 @@ export default class GameServices {
     ): Promise<{ game: IGame; token: string }> => {
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
-        let team: TeamNumberString = 'one'
+        let team: TeamNumberString
         if (game.teamOne._id?.equals(teamId) && !game.teamTwo._id?.equals(teamId)) {
             team = 'one'
         } else if (game.teamTwo._id?.equals(teamId)) {
