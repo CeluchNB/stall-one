@@ -208,6 +208,22 @@ describe('test validate action data', () => {
             validateActionData(action, true, prevAction)
         }).toThrowError(new ApiError(Constants.INVALID_DATA, 400))
     })
+
+    it('with timeout', () => {
+        action.actionType = ActionType.TIMEOUT
+        action.playerOne = undefined
+        action.playerTwo = undefined
+        const result = validateActionData(action, true, prevAction)
+        expect(result).toBe(true)
+    })
+
+    it('with call on field', () => {
+        action.actionType = ActionType.CALL_ON_FIELD
+        action.playerOne = undefined
+        action.playerTwo = undefined
+        const result = validateActionData(action, true, prevAction)
+        expect(result).toBe(true)
+    })
 })
 
 describe('test handle substitute', () => {

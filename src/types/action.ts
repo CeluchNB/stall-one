@@ -80,6 +80,7 @@ export const VALID_ACTIONS = {
         ActionType.SUBSTITUTION,
         ActionType.CALL_ON_FIELD,
         ActionType.STALL,
+        ActionType.BLOCK,
     ],
     Substitution: [
         ActionType.PULL,
