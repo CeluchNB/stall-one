@@ -21,10 +21,8 @@ export const validateActionData = (
         ) {
             throw new ApiError(Constants.INVALID_ACTION_TYPE, 400)
         }
-    } else {
-        if (!VALID_ACTIONS[action.actionType].includes(prevAction.actionType)) {
-            throw new ApiError(Constants.INVALID_ACTION_TYPE, 400)
-        }
+    } else if (!VALID_ACTIONS[action.actionType].includes(prevAction.actionType)) {
+        throw new ApiError(Constants.INVALID_ACTION_TYPE, 400)
     }
 
     const { playerOne, playerTwo, actionType } = action
@@ -34,8 +32,6 @@ export const validateActionData = (
         case ActionType.THROWAWAY:
         case ActionType.BLOCK:
         case ActionType.PICKUP:
-        case ActionType.TIMEOUT:
-        case ActionType.CALL_ON_FIELD:
             if (!playerOne || playerTwo) {
                 throw new ApiError(Constants.INVALID_DATA, 400)
             }
