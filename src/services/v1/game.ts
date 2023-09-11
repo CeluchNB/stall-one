@@ -390,11 +390,9 @@ export default class GameServices {
             filter['startTime'] = { ...filter['startTime'], $lt: before }
         }
 
-        const games = await this.gameModel.find(filter).skip(offset).limit(pageSize)
+        const games = await this.gameModel.find(filter).sort({ startTime: -1 }).skip(offset).limit(pageSize)
 
-        return games.sort((g1, g2) => {
-            return g2.startTime.getTime() - g1.startTime.getTime()
-        })
+        return games
     }
 
     /**

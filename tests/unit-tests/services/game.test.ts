@@ -1110,13 +1110,13 @@ describe('test search', () => {
     it('with limit', async () => {
         const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'), undefined, 1, 0)
         expect(games.length).toBe(1)
-        expect(games[0].teamOne.teamname).toBe('pghtemper')
+        expect(games[0].teamOne.teamname).toBe('vault')
     })
 
     it('with offset', async () => {
         const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'), undefined, 1, 1)
         expect(games.length).toBe(1)
-        expect(games[0].teamOne.teamname).toBe('vault')
+        expect(games[0].teamOne.teamname).toBe('pghtemper')
     })
 
     it('with short value', async () => {
