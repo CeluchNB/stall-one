@@ -269,7 +269,6 @@ export default class GameServices {
             }
             await point.save()
         }
-        console.log('finished updating points')
 
         // if team one calling delete
         if (game.teamOne._id?.equals(teamId)) {
@@ -292,11 +291,9 @@ export default class GameServices {
                 game.teamOne.teamname = undefined
                 await game.save()
             } else {
-                console.log('starting full delete')
                 // fully delete game if team two is not defined
                 await this.pointModel.deleteMany().where('_id').in(game.points)
                 await game.delete()
-                console.log('after full delete')
             }
         } else if (game.teamTwo._id?.equals(teamId)) {
             // just 'dereference' team since the other team definitely exists
@@ -315,8 +312,7 @@ export default class GameServices {
 
             await game.save()
         }
-        console.log('sending cloud task')
-        await sendCloudTask(`/api/v1/stats/game/${gameId}?team=${teamId}`, {}, 'DELETE')
+        await sendCloudTask(`/api/v1/stats/game/${gameId}?team=${teamId}`, {}, 'PUT')
     }
 
     /**
