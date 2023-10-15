@@ -7,10 +7,15 @@ export const sendCloudTask = async (endpoint: string, data: unknown, httpMethod:
     const queue = process.env.MESSAGE_QUEUE_NAME || ''
     const location = process.env.MESSAGE_QUEUE_REGION || ''
 
+    console.log('data', project, queue, location)
     const parent = client.queuePath(project, location, queue)
+    console.log('parent', parent)
     const task = getTask(`${process.env.ULTMT_API_URL}${endpoint}`, data, httpMethod)
+    console.log('task', task)
     const request = getRequest(parent, task)
+    console.log('request', request)
     const response = await client.createTask(request as any)
+    console.log('response', response)
     return response
 }
 
