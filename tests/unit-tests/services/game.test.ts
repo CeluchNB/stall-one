@@ -690,6 +690,7 @@ describe('test delete game', () => {
             actionNumber: 2,
             actionType: 'TeamOneScore',
         })
+
         await Point.create({
             pointNumber: 1,
             teamOneScore: 1,
@@ -713,6 +714,7 @@ describe('test delete game', () => {
             teamOneActions: [action2._id, action3._id],
         })
     })
+
     it('with team one and team two not joined', async () => {
         const [point1, point2] = await Point.find({})
         const game = await Game.create({
@@ -758,12 +760,15 @@ describe('test delete game', () => {
             actionNumber: 1,
             actionType: 'TeamOneScore',
         })
+
         const [point1, point2] = await Point.find({})
         point1.pullingTeam = team2
         await point1.save()
+
         point2.teamTwoActions = [action4._id, action5._id]
         point2.receivingTeam = team2
         await point2.save()
+
         const game = await Game.create({
             teamOne: team,
             teamTwo: team2,

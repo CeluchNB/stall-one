@@ -312,6 +312,7 @@ export default class GameServices {
 
             await game.save()
         }
+        await sendCloudTask(`/api/v1/stats/game/${gameId}?team=${teamId}`, {}, 'DELETE')
     }
 
     /**
