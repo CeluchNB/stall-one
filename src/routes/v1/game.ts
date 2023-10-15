@@ -160,6 +160,7 @@ gameRouter.delete(
             await services.deleteGame(req.params.id, jwt, req.query.team as string)
             return res.json()
         } catch (error) {
+            console.log('got error', error)
             next(error)
         }
     },
