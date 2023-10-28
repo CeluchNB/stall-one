@@ -1460,3 +1460,35 @@ describe('test create full game', () => {
         expect(actions.length).toBe(7)
     })
 })
+
+describe('test open', () => {
+    it('with found game', async () => {
+        const game = await Game.create(gameData)
+
+        const result = await services.open(game._id.toHexString())
+
+        expect(result.totalViews).toBe(1)
+
+        const gameRecord = await Game.findOne({})
+        expect(gameRecord?.totalViews).toBe(1)
+    })
+
+    it('with multiple calls', async () => {
+        const game = await Game.create(gameData)
+
+        const promises: Promise<unknown>[] = []
+        for (let i = 0; i < 100; i++) {
+            promises.push(services.open(game._id.toHexString()))
+        }
+        await Promise.all(promises)
+
+        const gameRecord = await Game.findOne({})
+        expect(gameRecord?.totalViews).toBe(100)
+    })
+
+    it('with unfound game', async () => {
+        await expect(services.open(new Types.ObjectId().toString())).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
+        )
+    })
+})
