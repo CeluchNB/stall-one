@@ -804,3 +804,22 @@ describe('test /POST full game', () => {
         expect(response.body.message).toBe(Constants.GENERIC_ERROR)
     })
 })
+
+describe('test /PUT open', () => {
+    it('with successful response', async () => {
+        const game = await Game.create(gameData)
+        const response = await request(app).put(`/api/v1/game/${game._id.toHexString()}/open`).send().expect(200)
+
+        const { game: gameResponse } = response.body
+
+        expect(gameResponse.totalViews).toBe(1)
+    })
+
+    it('with unsuccessful response', async () => {
+        const response = await request(app)
+            .put(`/api/v1/game/${new Types.ObjectId().toHexString()}/open`)
+            .send()
+            .expect(404)
+        expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_GAME)
+    })
+})

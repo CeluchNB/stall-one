@@ -2,7 +2,7 @@ import { CloudTasksClient } from '@google-cloud/tasks/build/src/v2'
 
 const client = new CloudTasksClient()
 
-export const sendCloudTask = async (endpoint: string, data: unknown, httpMethod: 'POST' | 'PUT' | 'DELETE') => {
+export const sendCloudTask = async (endpoint: string, data: unknown, httpMethod: 'POST' | 'PUT') => {
     const project = process.env.GCP_PROJECT_ID || ''
     const queue = process.env.MESSAGE_QUEUE_NAME || ''
     const location = process.env.MESSAGE_QUEUE_REGION || ''
@@ -11,6 +11,7 @@ export const sendCloudTask = async (endpoint: string, data: unknown, httpMethod:
     const task = getTask(`${process.env.ULTMT_API_URL}${endpoint}`, data, httpMethod)
     const request = getRequest(parent, task)
     const response = await client.createTask(request as any)
+
     return response
 }
 

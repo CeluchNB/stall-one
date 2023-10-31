@@ -61,6 +61,7 @@ const schema = new Schema<IGame>({
             username: String,
         },
     ],
+    totalViews: Number,
     resolveCode: String,
     timeoutPerHalf: Number,
     floaterTimeout: Boolean,

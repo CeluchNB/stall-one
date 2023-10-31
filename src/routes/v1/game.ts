@@ -259,4 +259,20 @@ gameRouter.get('/game/team/:id', async (req: Request, res: Response, next) => {
     }
 })
 
+gameRouter.put('/game/:id/open', async (req: Request, res: Response, next) => {
+    try {
+        const services = new GameServices(
+            Game,
+            Point,
+            Action,
+            process.env.ULTMT_API_URL || '',
+            process.env.API_KEY || '',
+        )
+        const game = await services.open(req.params.id)
+        return res.json({ game })
+    } catch (error) {
+        next(error)
+    }
+})
+
 gameRouter.use(errorMiddleware)

@@ -690,6 +690,7 @@ describe('test delete game', () => {
             actionNumber: 2,
             actionType: 'TeamOneScore',
         })
+
         await Point.create({
             pointNumber: 1,
             teamOneScore: 1,
@@ -713,6 +714,7 @@ describe('test delete game', () => {
             teamOneActions: [action2._id, action3._id],
         })
     })
+
     it('with team one and team two not joined', async () => {
         const [point1, point2] = await Point.find({})
         const game = await Game.create({
@@ -758,12 +760,15 @@ describe('test delete game', () => {
             actionNumber: 1,
             actionType: 'TeamOneScore',
         })
+
         const [point1, point2] = await Point.find({})
         point1.pullingTeam = team2
         await point1.save()
+
         point2.teamTwoActions = [action4._id, action5._id]
         point2.receivingTeam = team2
         await point2.save()
+
         const game = await Game.create({
             teamOne: team,
             teamTwo: team2,
@@ -1453,5 +1458,37 @@ describe('test create full game', () => {
         expect(point3.teamTwoScore).toBe(1)
         const actions = await Action.find({})
         expect(actions.length).toBe(7)
+    })
+})
+
+describe('test open', () => {
+    it('with found game', async () => {
+        const game = await Game.create(gameData)
+
+        const result = await services.open(game._id.toHexString())
+
+        expect(result.totalViews).toBe(1)
+
+        const gameRecord = await Game.findOne({})
+        expect(gameRecord?.totalViews).toBe(1)
+    })
+
+    it('with multiple calls', async () => {
+        const game = await Game.create(gameData)
+
+        const promises: Promise<unknown>[] = []
+        for (let i = 0; i < 100; i++) {
+            promises.push(services.open(game._id.toHexString()))
+        }
+        await Promise.all(promises)
+
+        const gameRecord = await Game.findOne({})
+        expect(gameRecord?.totalViews).toBe(100)
+    })
+
+    it('with unfound game', async () => {
+        await expect(services.open(new Types.ObjectId().toString())).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
+        )
     })
 })
