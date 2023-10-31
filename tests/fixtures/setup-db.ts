@@ -71,6 +71,7 @@ export const gameData: IGame = {
     teamOneActive: true,
     teamTwoActive: false,
     teamTwoJoined: false,
+    totalViews: 0,
     points: [],
     getToken: () => '',
 }

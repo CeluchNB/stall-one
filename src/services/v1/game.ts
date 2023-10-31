@@ -1,5 +1,5 @@
 import * as Constants from '../../utils/constants'
-import { IGameModel } from '../../models/game'
+import Game, { IGameModel } from '../../models/game'
 import IGame, { CreateFullGame, CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import randomstring from 'randomstring'
@@ -312,6 +312,7 @@ export default class GameServices {
 
             await game.save()
         }
+        await sendCloudTask(`/api/v1/stats/game/delete/${gameId}?team=${teamId}`, {}, 'PUT')
     }
 
     /**
@@ -457,6 +458,18 @@ export default class GameServices {
 
         await game.save()
         await sendCloudTask(`/api/v1/stats/game/finish/${game._id}`, {}, 'PUT')
+        return game
+    }
+
+    /**
+     * Method to increment game views. Logic on when to send will be determined on the frontend
+     * @param gameId id of game to increment total views
+     */
+    open = async (gameId: string): Promise<IGame> => {
+        const game = await Game.findOneAndUpdate({ _id: gameId }, { $inc: { totalViews: 1 } }, { new: true })
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
         return game
     }
 }
