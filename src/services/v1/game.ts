@@ -379,7 +379,7 @@ export default class GameServices {
         }
         if (live !== undefined && live !== null) {
             if (live) {
-                filter.$or = [...(filter.$or || []), { teamOneActive: true }, { teamTwoActive: true }]
+                filter['$and'] = [{ $or: [{ teamOneActive: true }, { teamTwoActive: true }] }]
             } else {
                 filter['$and'] = [{ teamOneActive: false }, { teamTwoActive: false }]
             }

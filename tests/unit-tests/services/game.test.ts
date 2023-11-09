@@ -1086,11 +1086,18 @@ describe('test search', () => {
         expect(games[0].teamTwo.teamname).toBe('tsgh')
     })
 
-    it('with simple search for live game', async () => {
+    it('with live filter', async () => {
         const games = await services.searchGames(undefined, true)
         expect(games.length).toBe(2)
         expect(games[0].teamOne.teamname).toBe('vault')
         expect(games[1].teamOne.teamname).toBe('pghtemper')
+    })
+
+    it('with search and live filter', async () => {
+        const games = await services.searchGames('vau', true)
+        expect(games.length).toBe(1)
+        expect(games[0].teamOne.teamname).toBe('vault')
+        // expect(games[1].teamOne.teamname).toBe('pghtemper')
     })
 
     it('with after value', async () => {
