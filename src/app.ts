@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import passport from 'passport'
 import { router as v1Router } from '../src/routes/v1'
+import { router as v2Router } from '../src/routes/v2'
 import axios from 'axios'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
@@ -20,6 +21,8 @@ app.use(passport.initialize())
 require('./loaders/passport')
 
 app.use('/api/v1', v1Router)
+app.use('/api/v2', v2Router)
+
 app.get('/stall-one', async (req, res) => {
     const response = await axios.get(`${process.env.ULTMT_API_URL}/ultmt`, {
         headers: { 'x-api-key': process.env.API_KEY || '' },

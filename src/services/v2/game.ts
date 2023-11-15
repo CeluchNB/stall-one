@@ -57,11 +57,14 @@ export default class GameServices {
             }
             await game.save()
 
-            res.write({ game, token })
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked' })
+            res.write('{ "result": [')
+            res.write(JSON.stringify({ game, token }) + ',')
 
             const points = await this.pointModel.find({ _id: { $in: game.points } })
+            let counter = 0
             for (const point of points) {
-                res.write({ point })
+                res.write(JSON.stringify({ point }) + ',')
                 const active = team === 'one' ? point.teamOneActive : point.teamTwoActive
 
                 const actions = []
@@ -70,11 +73,19 @@ export default class GameServices {
                 } else {
                     actions.push(...(await this.getSavedActionsForPoint(team, point)))
                 }
-                res.write({ actions })
+                console.log('writing actions')
+                res.write(JSON.stringify({ actions }))
+                if (counter < points.length - 1) {
+                    res.write(',')
+                }
+                counter++
             }
+            res.write('] }')
         } catch (_e) {
-            res.write({ error: Constants.GENERIC_ERROR })
+            console.log('writing error')
+            res.write(JSON.stringify({ error: Constants.GENERIC_ERROR }))
         } finally {
+            console.log('ending')
             res.end()
         }
     }

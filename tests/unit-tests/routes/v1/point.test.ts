@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import * as Constants from '../../../src/utils/constants'
-import app, { close } from '../../../src/app'
+import * as Constants from '../../../../src/utils/constants'
+import app, { close } from '../../../../src/app'
 import request from 'supertest'
-import Game from '../../../src/models/game'
+import Game from '../../../../src/models/game'
 import {
     gameData,
     resetDatabase,
@@ -11,13 +11,13 @@ import {
     createPointData,
     setUpDatabase,
     tearDownDatabase,
-} from '../../fixtures/setup-db'
-import Point from '../../../src/models/point'
+} from '../../../fixtures/setup-db'
+import Point from '../../../../src/models/point'
 import { Types } from 'mongoose'
-import { Player } from '../../../src/types/ultmt'
-import { ActionType, RedisAction } from '../../../src/types/action'
-import { getRedisAction, saveRedisAction } from '../../../src/utils/redis'
-import Action from '../../../src/models/action'
+import { Player } from '../../../../src/types/ultmt'
+import { ActionType, RedisAction } from '../../../../src/types/action'
+import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
+import Action from '../../../../src/models/action'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
