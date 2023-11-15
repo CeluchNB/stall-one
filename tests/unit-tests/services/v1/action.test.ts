@@ -1,10 +1,10 @@
-import * as Constants from '../../../src/utils/constants'
+import * as Constants from '../../../../src/utils/constants'
 import { Types } from 'mongoose'
-import Game from '../../../src/models/game'
-import Point from '../../../src/models/point'
-import ActionServices from '../../../src/services/v1/action'
-import { ActionType, ClientAction, Comment, RedisAction } from '../../../src/types/action'
-import { getActionBaseKey } from '../../../src/utils/utils'
+import Game from '../../../../src/models/game'
+import Point from '../../../../src/models/point'
+import ActionServices from '../../../../src/services/v1/action'
+import { ActionType, ClientAction, Comment, RedisAction } from '../../../../src/types/action'
+import { getActionBaseKey } from '../../../../src/utils/utils'
 import {
     setUpDatabase,
     tearDownDatabase,
@@ -12,13 +12,13 @@ import {
     resetDatabase,
     gameData,
     createPointData,
-} from '../../fixtures/setup-db'
-import { saveRedisAction } from '../../../src/utils/redis'
-import { parseActionData } from '../../../src/utils/action'
+} from '../../../fixtures/setup-db'
+import { saveRedisAction } from '../../../../src/utils/redis'
+import { parseActionData } from '../../../../src/utils/action'
 import axios from 'axios'
-import { ApiError } from '../../../src/types/errors'
-import Action from '../../../src/models/action'
-import { Player } from '../../../src/types/ultmt'
+import { ApiError } from '../../../../src/types/errors'
+import Action from '../../../../src/models/action'
+import { Player } from '../../../../src/types/ultmt'
 
 beforeAll(async () => {
     await setUpDatabase()
