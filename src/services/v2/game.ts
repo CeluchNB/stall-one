@@ -58,13 +58,16 @@ export default class GameServices {
             await game.save()
 
             res.writeHead(200, { 'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked' })
-            res.write('{ "result": [')
-            res.write(JSON.stringify({ game, token }) + ',')
+            res.write('{ "result": {')
+            res.write('"game": ')
+            res.write(JSON.stringify(game))
+            res.write(',')
+            res.write('"token": "' + token + '",')
 
             const points = await this.pointModel.find({ _id: { $in: game.points } })
             let counter = 0
+            res.write('"points": [')
             for (const point of points) {
-                res.write(JSON.stringify({ point }) + ',')
                 const active = team === 'one' ? point.teamOneActive : point.teamTwoActive
 
                 const actions = []
@@ -73,19 +76,21 @@ export default class GameServices {
                 } else {
                     actions.push(...(await this.getSavedActionsForPoint(team, point)))
                 }
-                console.log('writing actions')
-                res.write(JSON.stringify({ actions }))
+
+                res.write('{ "point": ')
+                res.write(JSON.stringify(point))
+                res.write(', "actions": ')
+                res.write(JSON.stringify(actions))
+                res.write('}')
                 if (counter < points.length - 1) {
                     res.write(',')
                 }
                 counter++
             }
-            res.write('] }')
+            res.write('] } }')
         } catch (_e) {
-            console.log('writing error')
             res.write(JSON.stringify({ error: Constants.GENERIC_ERROR }))
         } finally {
-            console.log('ending')
             res.end()
         }
     }

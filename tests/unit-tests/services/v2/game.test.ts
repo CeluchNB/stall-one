@@ -9,7 +9,6 @@ import { setUpDatabase, tearDownDatabase, client, getMock, resetDatabase } from 
 import { Types } from 'mongoose'
 import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import { ActionType } from '../../../../src/types/action'
-import jwt, { JwtPayload } from 'jsonwebtoken'
 
 const services = new GameServices(Game, Point, Action, client, '', '')
 
@@ -146,6 +145,7 @@ describe('Game Services v2', () => {
 
         it('reactivates for team one', async () => {
             const res = {
+                writeHead: jest.fn(),
                 write: jest.fn(),
                 end: jest.fn(),
             }
@@ -157,32 +157,33 @@ describe('Game Services v2', () => {
             expect(game?.teamOneActive).toBe(true)
             expect(game?.teamTwoActive).toBe(false)
 
-            expect(res.write).toHaveBeenCalledTimes(5)
+            expect(res.writeHead).toHaveBeenCalledTimes(1)
+            expect(res.write).toHaveBeenCalledTimes(18)
 
-            const { game: gameResponse, token } = res.write.mock.calls[0][0]
-            expect(gameResponse._id.toHexString()).toBe(game!._id.toHexString())
+            const gameResponse = JSON.parse(res.write.mock.calls[2][0])
+            expect(gameResponse._id).toBe(game!._id.toHexString())
 
-            const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
-            expect(payload.sub).toBe(game!._id.toString())
-            expect(payload.team).toBe('one')
+            const tokenWrite = res.write.mock.calls[4][0]
+            expect(tokenWrite).toMatch(/"token":/)
 
             const pointOne = await Point.findOne({ pointNumber: 1 })
-            expect(res.write.mock.calls[1][0]).toMatchObject({ point: pointOne })
+            expect(JSON.parse(res.write.mock.calls[7][0])).toMatchObject(pointOne!.toJSON())
 
-            const actionsOne = await Action.find({ 'team._id': teamOne._id })
-            expect(res.write.mock.calls[2][0]).toMatchObject({ actions: actionsOne })
+            const actionsOne = (await Action.find({ 'team._id': teamOne._id })).map((action) => action.toJSON())
+            expect(JSON.parse(res.write.mock.calls[9][0])).toMatchObject(actionsOne)
 
             const pointTwo = await Point.findOne({ pointNumber: 2 })
-            expect(res.write.mock.calls[3][0]).toMatchObject({ point: pointTwo })
+            expect(JSON.parse(res.write.mock.calls[13][0])).toMatchObject(pointTwo!.toJSON())
 
             const actionsTwo = await Promise.all([getRedisAction(client, pointTwo!._id.toHexString(), 1, 'one')])
-            expect(res.write.mock.calls[4][0]).toMatchObject({ actions: actionsTwo })
+            expect(actionsTwo).toMatchObject(JSON.parse(res.write.mock.calls[15][0]))
 
             expect(res.end).toHaveBeenCalledTimes(1)
         })
 
         it('reactivates for team two', async () => {
             const res = {
+                writeHead: jest.fn(),
                 write: jest.fn(),
                 end: jest.fn(),
             }
@@ -194,29 +195,28 @@ describe('Game Services v2', () => {
             expect(game?.teamOneActive).toBe(false)
             expect(game?.teamTwoActive).toBe(true)
 
-            expect(res.write).toHaveBeenCalledTimes(5)
+            expect(res.write).toHaveBeenCalledTimes(18)
 
-            const { game: gameResponse, token } = res.write.mock.calls[0][0]
-            expect(gameResponse._id.toHexString()).toBe(game!._id.toHexString())
+            const gameResponse = JSON.parse(res.write.mock.calls[2][0])
+            expect(gameResponse._id).toBe(game!._id.toHexString())
 
-            const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
-            expect(payload.sub).toBe(game!._id.toString())
-            expect(payload.team).toBe('two')
+            const tokenWrite = res.write.mock.calls[4][0]
+            expect(tokenWrite).toMatch(/"token":/)
 
             const pointOne = await Point.findOne({ pointNumber: 1 })
-            expect(res.write.mock.calls[1][0]).toMatchObject({ point: pointOne })
+            expect(JSON.parse(res.write.mock.calls[7][0])).toMatchObject(pointOne!.toJSON())
 
-            const actionsOne = await Action.find({ 'team._id': teamTwo._id })
-            expect(res.write.mock.calls[2][0]).toMatchObject({ actions: actionsOne })
+            const actionsOne = (await Action.find({ 'team._id': teamTwo._id })).map((action) => action.toJSON())
+            expect(JSON.parse(res.write.mock.calls[9][0])).toMatchObject(actionsOne)
 
             const pointTwo = await Point.findOne({ pointNumber: 2 })
-            expect(res.write.mock.calls[3][0]).toMatchObject({ point: pointTwo })
+            expect(JSON.parse(res.write.mock.calls[13][0])).toMatchObject(pointTwo!.toJSON())
 
             const actionsTwo = await Promise.all([
                 getRedisAction(client, pointTwo!._id.toHexString(), 1, 'two'),
                 getRedisAction(client, pointTwo!._id.toHexString(), 2, 'two'),
             ])
-            expect(res.write.mock.calls[4][0]).toMatchObject({ actions: actionsTwo })
+            expect(actionsTwo).toMatchObject(JSON.parse(res.write.mock.calls[15][0]))
 
             expect(res.end).toHaveBeenCalledTimes(1)
         })
@@ -232,7 +232,7 @@ describe('Game Services v2', () => {
             await services.reactivateGame(gameId.toHexString(), 'jwt', badId.toHexString(), res as any)
 
             expect(res.write).toHaveBeenCalledTimes(1)
-            expect(res.write.mock.calls[0][0].error).toMatch(Constants.GENERIC_ERROR)
+            expect(JSON.parse(res.write.mock.calls[0][0]).error).toMatch(Constants.GENERIC_ERROR)
             expect(res.end).toHaveBeenCalledTimes(1)
         })
     })

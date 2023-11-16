@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { Types } from 'mongoose'
 import app, { close } from '../../../../src/app'
 import request from 'supertest'
@@ -116,15 +117,15 @@ describe('Game Routes v2', () => {
                 .send()
                 .expect(200)
 
-            console.log('response', response.body)
-
             expect(response.body).toBeDefined()
             const { result } = response.body
-            console.log('result', result[0].game.points)
 
-            const game = await Game.findOne({})
-            expect(result[0].game._id).toBe(game!._id.toHexString())
-            expect(result[0].game.points).toMatchObject(game!.points)
+            const gameRecord = await Game.findOne({})
+            expect(result.game._id).toBe(gameRecord!._id.toHexString())
+            expect(result.game.points).toMatchObject(gameRecord!.points)
+            expect(result.points.length).toBe(2)
+            expect(result.points[0].actions.length).toBe(3)
+            expect(result.points[1].actions.length).toBe(1)
         })
 
         // it('with unsuccessful response', async () => {})

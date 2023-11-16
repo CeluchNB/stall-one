@@ -341,7 +341,7 @@ describe('test undo action', () => {
         expect(Number(totalActions)).toBe(1)
     })
 
-    it('with subtitutions', async () => {
+    it('with substitutions', async () => {
         const playerOne = {
             _id: new Types.ObjectId(),
             firstName: 'Noah',
