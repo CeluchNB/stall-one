@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import * as Constants from '../../../../src/utils/constants'
 import Action from '../../../../src/models/action'
 import Game from '../../../../src/models/game'
 import Point from '../../../../src/models/point'
@@ -144,96 +143,132 @@ describe('Game Services v2', () => {
         })
 
         it('reactivates for team one', async () => {
-            const res = {
-                writeHead: jest.fn(),
-                write: jest.fn(),
-                end: jest.fn(),
-            }
+            const result = await services.reactivateGame(gameId.toHexString(), 'jwt', teamOne._id.toHexString())
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await services.reactivateGame(gameId.toHexString(), 'jwt', teamOne._id.toHexString(), res as any)
+            expect(result.team).toBe('one')
 
             const game = await Game.findOne({})
+            expect(result.game).toMatchObject(game!.toJSON())
             expect(game?.teamOneActive).toBe(true)
-            expect(game?.teamTwoActive).toBe(false)
 
-            expect(res.writeHead).toHaveBeenCalledTimes(1)
-            expect(res.write).toHaveBeenCalledTimes(18)
+            const point = await Point.findOne({ pointNumber: 2 })
+            expect(result.activePoint).toMatchObject(point!.toJSON())
+            expect(point?.teamOneActive).toBe(true)
 
-            const gameResponse = JSON.parse(res.write.mock.calls[2][0])
-            expect(gameResponse._id).toBe(game!._id.toHexString())
-
-            const tokenWrite = res.write.mock.calls[4][0]
-            expect(tokenWrite).toMatch(/"token":/)
-
-            const pointOne = await Point.findOne({ pointNumber: 1 })
-            expect(JSON.parse(res.write.mock.calls[7][0])).toMatchObject(pointOne!.toJSON())
-
-            const actionsOne = (await Action.find({ 'team._id': teamOne._id })).map((action) => action.toJSON())
-            expect(JSON.parse(res.write.mock.calls[9][0])).toMatchObject(actionsOne)
-
-            const pointTwo = await Point.findOne({ pointNumber: 2 })
-            expect(JSON.parse(res.write.mock.calls[13][0])).toMatchObject(pointTwo!.toJSON())
-
-            const actionsTwo = await Promise.all([getRedisAction(client, pointTwo!._id.toHexString(), 1, 'one')])
-            expect(actionsTwo).toMatchObject(JSON.parse(res.write.mock.calls[15][0]))
-
-            expect(res.end).toHaveBeenCalledTimes(1)
+            const actions = await Promise.all([getRedisAction(client, point!._id.toHexString(), 1, 'one')])
+            expect(result.actions).toMatchObject(actions)
         })
 
         it('reactivates for team two', async () => {
-            const res = {
-                writeHead: jest.fn(),
-                write: jest.fn(),
-                end: jest.fn(),
-            }
+            const result = await services.reactivateGame(gameId.toHexString(), 'jwt', teamTwo._id.toHexString())
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await services.reactivateGame(gameId.toHexString(), 'jwt', teamTwo._id.toHexString(), res as any)
+            expect(result.team).toBe('two')
 
             const game = await Game.findOne({})
-            expect(game?.teamOneActive).toBe(false)
+            expect(result.game).toMatchObject(game!.toJSON())
             expect(game?.teamTwoActive).toBe(true)
 
-            expect(res.write).toHaveBeenCalledTimes(18)
+            const point = await Point.findOne({ pointNumber: 2 })
+            expect(result.activePoint).toMatchObject(point!.toJSON())
+            expect(point?.teamTwoActive).toBe(true)
 
-            const gameResponse = JSON.parse(res.write.mock.calls[2][0])
-            expect(gameResponse._id).toBe(game!._id.toHexString())
-
-            const tokenWrite = res.write.mock.calls[4][0]
-            expect(tokenWrite).toMatch(/"token":/)
-
-            const pointOne = await Point.findOne({ pointNumber: 1 })
-            expect(JSON.parse(res.write.mock.calls[7][0])).toMatchObject(pointOne!.toJSON())
-
-            const actionsOne = (await Action.find({ 'team._id': teamTwo._id })).map((action) => action.toJSON())
-            expect(JSON.parse(res.write.mock.calls[9][0])).toMatchObject(actionsOne)
-
-            const pointTwo = await Point.findOne({ pointNumber: 2 })
-            expect(JSON.parse(res.write.mock.calls[13][0])).toMatchObject(pointTwo!.toJSON())
-
-            const actionsTwo = await Promise.all([
-                getRedisAction(client, pointTwo!._id.toHexString(), 1, 'two'),
-                getRedisAction(client, pointTwo!._id.toHexString(), 2, 'two'),
+            const actions = await Promise.all([
+                getRedisAction(client, point!._id.toHexString(), 1, 'two'),
+                getRedisAction(client, point!._id.toHexString(), 2, 'two'),
             ])
-            expect(actionsTwo).toMatchObject(JSON.parse(res.write.mock.calls[15][0]))
-
-            expect(res.end).toHaveBeenCalledTimes(1)
+            expect(result.actions).toMatchObject(actions)
         })
 
-        it('handles error', async () => {
-            const res = {
-                write: jest.fn(),
-                end: jest.fn(),
-            }
+        it('reactivates game with last point inactive for team one', async () => {
+            const point1 = await Point.findOne({ pointNumber: 1 })
+            const game = await Game.create({
+                teamOne,
+                teamTwo,
+                teamTwoDefined: true,
+                teamTwoActive: false,
+                teamOneActive: false,
+                scoreLimit: 15,
+                halfScore: 8,
+                startTime: new Date(),
+                softcapMins: 75,
+                hardcapMins: 90,
+                playersPerPoint: 7,
+                timeoutPerHalf: 1,
+                floaterTimeout: true,
+                points: [point1!._id],
+            })
 
-            const badId = new Types.ObjectId()
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await services.reactivateGame(gameId.toHexString(), 'jwt', badId.toHexString(), res as any)
+            const result = await services.reactivateGame(game._id.toHexString(), 'jwt', teamOne._id.toHexString())
 
-            expect(res.write).toHaveBeenCalledTimes(1)
-            expect(JSON.parse(res.write.mock.calls[0][0]).error).toMatch(Constants.GENERIC_ERROR)
-            expect(res.end).toHaveBeenCalledTimes(1)
+            expect(result.team).toBe('one')
+
+            expect(result.game).toMatchObject({ ...game!.toJSON(), teamOneActive: true })
+
+            const point = await Point.findOne({ pointNumber: 1 })
+            expect(result.activePoint).toMatchObject(point!.toJSON())
+            expect(point?.teamOneActive).toBe(true)
+
+            const actions = await Action.find({ 'team._id': teamOne._id })
+            expect(result.actions).toMatchObject(actions)
+        })
+
+        it('reactivates game with last point inactive for team two', async () => {
+            const point1 = await Point.findOne({ pointNumber: 1 })
+            const game = await Game.create({
+                teamOne,
+                teamTwo,
+                teamTwoDefined: true,
+                teamTwoActive: false,
+                teamOneActive: false,
+                scoreLimit: 15,
+                halfScore: 8,
+                startTime: new Date(),
+                softcapMins: 75,
+                hardcapMins: 90,
+                playersPerPoint: 7,
+                timeoutPerHalf: 1,
+                floaterTimeout: true,
+                points: [point1!._id],
+            })
+
+            const result = await services.reactivateGame(game._id.toHexString(), 'jwt', teamTwo._id.toHexString())
+
+            expect(result.team).toBe('two')
+
+            expect(result.game).toMatchObject({ ...game!.toJSON(), teamTwoActive: true })
+
+            const point = await Point.findOne({ pointNumber: 1 })
+            expect(result.activePoint).toMatchObject(point!.toJSON())
+            expect(point?.teamTwoActive).toBe(true)
+
+            const actions = await Action.find({ 'team._id': teamTwo._id })
+            expect(result.actions).toMatchObject(actions)
+        })
+
+        it('reactivates without any points', async () => {
+            const game = await Game.create({
+                teamOne,
+                teamTwo,
+                teamTwoDefined: true,
+                teamTwoActive: false,
+                teamOneActive: false,
+                scoreLimit: 15,
+                halfScore: 8,
+                startTime: new Date(),
+                softcapMins: 75,
+                hardcapMins: 90,
+                playersPerPoint: 7,
+                timeoutPerHalf: 1,
+                floaterTimeout: true,
+                points: [],
+            })
+
+            const result = await services.reactivateGame(game._id.toHexString(), 'jwt', teamOne._id.toHexString())
+
+            expect(result.game).toMatchObject({ ...game.toJSON(), teamOneActive: true })
+            expect(result.team).toBe('one')
+            expect(result.activePoint).toBeUndefined()
+            expect(result.actions).toMatchObject([])
         })
     })
 })

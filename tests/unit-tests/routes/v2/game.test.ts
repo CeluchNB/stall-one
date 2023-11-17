@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import * as Constants from '../../../../src/utils/constants'
 import { Types } from 'mongoose'
 import app, { close } from '../../../../src/app'
 import request from 'supertest'
@@ -118,16 +119,26 @@ describe('Game Routes v2', () => {
                 .expect(200)
 
             expect(response.body).toBeDefined()
-            const { result } = response.body
+            const { game, team, activePoint, actions } = response.body
 
             const gameRecord = await Game.findOne({})
-            expect(result.game._id).toBe(gameRecord!._id.toHexString())
-            expect(result.game.points).toMatchObject(gameRecord!.points)
-            expect(result.points.length).toBe(2)
-            expect(result.points[0].actions.length).toBe(3)
-            expect(result.points[1].actions.length).toBe(1)
+            expect(game._id).toEqual(gameRecord!._id.toHexString())
+            expect(team).toBe('one')
+
+            const point = await Point.findOne({ pointNumber: 2 })
+            expect(activePoint).toMatchObject(point!.toJSON())
+
+            expect(actions.length).toBe(1)
         })
 
-        // it('with unsuccessful response', async () => {})
+        it('with unsuccessful response', async () => {
+            const response = await request(app)
+                .put(`/api/v2/game/${gameId}/reactivate?team=${new Types.ObjectId().toHexString()}`)
+                .set('Authorization', 'Bearer token')
+                .send()
+                .expect(404)
+
+            expect(response.body.message).toBe(Constants.UNABLE_TO_FETCH_TEAM)
+        })
     })
 })

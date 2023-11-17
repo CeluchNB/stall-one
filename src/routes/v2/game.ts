@@ -14,18 +14,22 @@ gameRouter.put(
     param('id').escape().isString(),
     query('team').escape().isString(),
     async (req: Request, res: Response, next) => {
-        const redisClient = await getClient()
-        const jwt = req.headers?.authorization?.replace('Bearer ', '') as string
-        const services = new GameServices(
-            Game,
-            Point,
-            Action,
-            redisClient,
-            process.env.ULTMT_API_URL || '',
-            process.env.API_KEY || '',
-        )
-        await services.reactivateGame(req.params.id, jwt, req.query.team as string, res)
-        next()
+        try {
+            const redisClient = await getClient()
+            const jwt = req.headers?.authorization?.replace('Bearer ', '') as string
+            const services = new GameServices(
+                Game,
+                Point,
+                Action,
+                redisClient,
+                process.env.ULTMT_API_URL || '',
+                process.env.API_KEY || '',
+            )
+            const result = await services.reactivateGame(req.params.id, jwt, req.query.team as string)
+            return res.json(result)
+        } catch (e) {
+            next(e)
+        }
     },
 )
 

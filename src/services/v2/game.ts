@@ -1,16 +1,15 @@
 import * as Constants from '../../utils/constants'
-import { ApiError } from '../../types/errors'
 import { IActionModel } from '../../models/action'
 import IGame from '../../types/game'
 import { IGameModel } from '../../models/game'
 import IPoint from '../../types/point'
 import { IPointModel } from '../../models/point'
-import { Response } from 'express'
 import { TeamNumberString } from '../../types/ultmt'
 import { authenticateManager } from '../../utils/ultmt'
 import { findByIdOrThrow } from '../../utils/mongoose'
 import { getRedisAction } from '../../utils/redis'
-import IAction, { RedisAction, RedisClientType } from '../../types/action'
+import { RedisAction, RedisClientType } from '../../types/action'
+import { getTeamNumber } from '../../utils/game'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -41,68 +40,42 @@ export default class GameServices {
      * @param userJwt user to validate as team manager
      * @param teamId team that is in game
      */
-    reactivateGame = async (gameId: string, userJwt: string, teamId: string, res: Response) => {
-        try {
-            const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+    reactivateGame = async (gameId: string, userJwt: string, teamId: string) => {
+        await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, teamId)
 
-            const team: TeamNumberString = this.getTeamNumber(game, teamId)
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+        const team: TeamNumberString = getTeamNumber(game, teamId)
 
-            await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, teamId)
-
-            const token = game.getToken(team)
-            if (team === 'one') {
-                game.teamOneActive = true
-            } else {
-                game.teamTwoActive = true
-            }
-            await game.save()
-
-            res.writeHead(200, { 'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked' })
-            res.write('{ "result": {')
-            res.write('"game": ')
-            res.write(JSON.stringify(game))
-            res.write(',')
-            res.write('"token": "' + token + '",')
-
-            const points = await this.pointModel.find({ _id: { $in: game.points } })
-            let counter = 0
-            res.write('"points": [')
-            for (const point of points) {
-                const active = team === 'one' ? point.teamOneActive : point.teamTwoActive
-
-                const actions = []
-                if (active) {
-                    actions.push(...(await this.getLiveActionsForPoint(gameId, point._id.toHexString(), team)))
-                } else {
-                    actions.push(...(await this.getSavedActionsForPoint(team, point)))
-                }
-
-                res.write('{ "point": ')
-                res.write(JSON.stringify(point))
-                res.write(', "actions": ')
-                res.write(JSON.stringify(actions))
-                res.write('}')
-                if (counter < points.length - 1) {
-                    res.write(',')
-                }
-                counter++
-            }
-            res.write('] } }')
-        } catch (_e) {
-            res.write(JSON.stringify({ error: Constants.GENERIC_ERROR }))
-        } finally {
-            res.end()
+        if (team === 'one') {
+            game.teamOneActive = true
+        } else if (team === 'two') {
+            game.teamTwoActive = true
         }
-    }
+        await game.save()
 
-    private getTeamNumber = (game: IGame, teamId: string): TeamNumberString => {
-        if (game.teamOne._id?.equals(teamId)) {
-            return 'one'
-        } else if (game.teamTwo._id?.equals(teamId)) {
-            return 'two'
+        const activePoint = await this.pointModel.findOne({ _id: { $in: game.points } }).sort('-pointNumber')
+
+        if (!activePoint) {
+            return { game, team, activePoint: undefined, actions: [] }
+        }
+
+        const actions = []
+        if ((team === 'one' && activePoint.teamOneActive) || (team === 'two' && activePoint.teamTwoActive)) {
+            actions.push(
+                ...(await this.getLiveActionsForPoint(game._id.toHexString(), activePoint._id.toHexString(), team)),
+            )
         } else {
-            throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 40)
+            actions.push(...(await this.getSavedActionsForPoint(team, activePoint)))
         }
+
+        if (team === 'one') {
+            activePoint.teamOneActive = true
+        } else if (team === 'two') {
+            activePoint.teamTwoActive = true
+        }
+        await activePoint.save()
+
+        return { game, team, activePoint, actions }
     }
 
     private getLiveActionsForPoint = async (
@@ -118,8 +91,11 @@ export default class GameServices {
         return await Promise.all(actionPromises)
     }
 
-    private getSavedActionsForPoint = async (team: TeamNumberString, point: IPoint): Promise<IAction[]> => {
+    private getSavedActionsForPoint = async (team: TeamNumberString, point: IPoint): Promise<RedisAction[]> => {
         const actionIds = team === 'one' ? point.teamOneActions : point.teamTwoActions
-        return await this.actionModel.find({ _id: { $in: actionIds } })
+        return (await this.actionModel.find({ _id: { $in: actionIds } })).map((action) => ({
+            ...action,
+            teamNumber: team,
+        }))
     }
 }
