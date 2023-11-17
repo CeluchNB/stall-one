@@ -9,6 +9,7 @@ import Point from '../../../../src/models/point'
 import { ActionType } from '../../../../src/types/action'
 import { saveRedisAction } from '../../../../src/utils/redis'
 import { client, getMock, resetDatabase, setUpDatabase, tearDownDatabase } from '../../../fixtures/setup-db'
+import jwt, { JwtPayload } from 'jsonwebtoken'
 import axios from 'axios'
 
 beforeAll(async () => {
@@ -119,11 +120,15 @@ describe('Game Routes v2', () => {
                 .expect(200)
 
             expect(response.body).toBeDefined()
-            const { game, team, activePoint, actions } = response.body
+            const { game, team, token, activePoint, actions } = response.body
 
             const gameRecord = await Game.findOne({})
             expect(game._id).toEqual(gameRecord!._id.toHexString())
             expect(team).toBe('one')
+
+            const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
+            expect(payload.sub).toBe(game._id.toString())
+            expect(payload.team).toBe('one')
 
             const point = await Point.findOne({ pointNumber: 2 })
             expect(activePoint).toMatchObject(point!.toJSON())

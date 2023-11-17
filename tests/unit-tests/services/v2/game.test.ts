@@ -7,6 +7,7 @@ import axios from 'axios'
 import { setUpDatabase, tearDownDatabase, client, getMock, resetDatabase } from '../../../fixtures/setup-db'
 import { Types } from 'mongoose'
 import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
+import jwt, { JwtPayload } from 'jsonwebtoken'
 import { ActionType } from '../../../../src/types/action'
 
 const services = new GameServices(Game, Point, Action, client, '', '')
@@ -151,6 +152,10 @@ describe('Game Services v2', () => {
             expect(result.game).toMatchObject(game!.toJSON())
             expect(game?.teamOneActive).toBe(true)
 
+            const payload = jwt.verify(result.token, process.env.JWT_SECRET as string) as JwtPayload
+            expect(payload.sub).toBe(game!._id.toString())
+            expect(payload.team).toBe('one')
+
             const point = await Point.findOne({ pointNumber: 2 })
             expect(result.activePoint).toMatchObject(point!.toJSON())
             expect(point?.teamOneActive).toBe(true)
@@ -167,6 +172,10 @@ describe('Game Services v2', () => {
             const game = await Game.findOne({})
             expect(result.game).toMatchObject(game!.toJSON())
             expect(game?.teamTwoActive).toBe(true)
+
+            const payload = jwt.verify(result.token, process.env.JWT_SECRET as string) as JwtPayload
+            expect(payload.sub).toBe(game!._id.toString())
+            expect(payload.team).toBe('two')
 
             const point = await Point.findOne({ pointNumber: 2 })
             expect(result.activePoint).toMatchObject(point!.toJSON())
@@ -202,7 +211,11 @@ describe('Game Services v2', () => {
 
             expect(result.team).toBe('one')
 
-            expect(result.game).toMatchObject({ ...game!.toJSON(), teamOneActive: true })
+            expect(result.game).toMatchObject({ ...game.toJSON(), teamOneActive: true })
+
+            const payload = jwt.verify(result.token, process.env.JWT_SECRET as string) as JwtPayload
+            expect(payload.sub).toBe(game._id.toString())
+            expect(payload.team).toBe('one')
 
             const point = await Point.findOne({ pointNumber: 1 })
             expect(result.activePoint).toMatchObject(point!.toJSON())
@@ -235,7 +248,11 @@ describe('Game Services v2', () => {
 
             expect(result.team).toBe('two')
 
-            expect(result.game).toMatchObject({ ...game!.toJSON(), teamTwoActive: true })
+            expect(result.game).toMatchObject({ ...game.toJSON(), teamTwoActive: true })
+
+            const payload = jwt.verify(result.token, process.env.JWT_SECRET as string) as JwtPayload
+            expect(payload.sub).toBe(game!._id.toString())
+            expect(payload.team).toBe('two')
 
             const point = await Point.findOne({ pointNumber: 1 })
             expect(result.activePoint).toMatchObject(point!.toJSON())
@@ -269,6 +286,10 @@ describe('Game Services v2', () => {
             expect(result.team).toBe('one')
             expect(result.activePoint).toBeUndefined()
             expect(result.actions).toMatchObject([])
+
+            const payload = jwt.verify(result.token, process.env.JWT_SECRET as string) as JwtPayload
+            expect(payload.sub).toBe(game._id.toString())
+            expect(payload.team).toBe('one')
         })
     })
 })

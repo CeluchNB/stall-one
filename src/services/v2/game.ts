@@ -45,6 +45,7 @@ export default class GameServices {
 
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
         const team: TeamNumberString = getTeamNumber(game, teamId)
+        const token = game.getToken(team)
 
         if (team === 'one') {
             game.teamOneActive = true
@@ -56,7 +57,7 @@ export default class GameServices {
         const activePoint = await this.pointModel.findOne({ _id: { $in: game.points } }).sort('-pointNumber')
 
         if (!activePoint) {
-            return { game, team, activePoint: undefined, actions: [] }
+            return { game, team, token, activePoint: undefined, actions: [] }
         }
 
         const actions = []
@@ -75,7 +76,7 @@ export default class GameServices {
         }
         await activePoint.save()
 
-        return { game, team, activePoint, actions }
+        return { game, team, token, activePoint, actions }
     }
 
     private getLiveActionsForPoint = async (
