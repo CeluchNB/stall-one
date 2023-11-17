@@ -10,6 +10,8 @@ import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import { ActionType } from '../../../../src/types/action'
 
+jest.mock('@google-cloud/tasks/build/src/v2')
+
 const services = new GameServices(Game, Point, Action, client, '', '')
 
 beforeEach(() => {
@@ -221,7 +223,11 @@ describe('Game Services v2', () => {
             expect(result.activePoint).toMatchObject(point!.toJSON())
             expect(point?.teamOneActive).toBe(true)
 
-            const actions = await Action.find({ 'team._id': teamOne._id })
+            const actions = await Promise.all([
+                getRedisAction(client, point!._id.toHexString(), 1, 'one'),
+                getRedisAction(client, point!._id.toHexString(), 2, 'one'),
+                getRedisAction(client, point!._id.toHexString(), 3, 'one'),
+            ])
             expect(result.actions).toMatchObject(actions)
         })
 
@@ -258,7 +264,10 @@ describe('Game Services v2', () => {
             expect(result.activePoint).toMatchObject(point!.toJSON())
             expect(point?.teamTwoActive).toBe(true)
 
-            const actions = await Action.find({ 'team._id': teamTwo._id })
+            const actions = await Promise.all([
+                getRedisAction(client, point!._id.toHexString(), 1, 'two'),
+                getRedisAction(client, point!._id.toHexString(), 2, 'two'),
+            ])
             expect(result.actions).toMatchObject(actions)
         })
 

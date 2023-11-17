@@ -376,6 +376,8 @@ export default class PointServices {
             const actions = await this.actionModel.where({ _id: { $in: point.teamOneActions } })
             await this.saveActions(actions, gameId, pointId, team)
 
+            await this.actionModel.deleteMany({ _id: { $in: point.teamOneActions } })
+
             // delete actions from model
             point.teamOneActions = []
         } else {
@@ -385,6 +387,7 @@ export default class PointServices {
             const actions = await this.actionModel.where({ _id: { $in: point.teamTwoActions } })
             await this.saveActions(actions, gameId, pointId, team)
 
+            await this.actionModel.deleteMany({ _id: { $in: point.teamTwoActions } })
             // delete actions from model
             point.teamTwoActions = []
         }

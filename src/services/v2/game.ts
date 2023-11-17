@@ -10,6 +10,7 @@ import { findByIdOrThrow } from '../../utils/mongoose'
 import { getRedisAction } from '../../utils/redis'
 import { RedisAction, RedisClientType } from '../../types/action'
 import { getTeamNumber } from '../../utils/game'
+import PointServices from '../v1/point'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -44,7 +45,7 @@ export default class GameServices {
         await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, teamId)
 
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
-        const team: TeamNumberString = getTeamNumber(game, teamId)
+        const team = getTeamNumber(game, teamId)
         const token = game.getToken(team)
 
         if (team === 'one') {
@@ -54,27 +55,30 @@ export default class GameServices {
         }
         await game.save()
 
-        const activePoint = await this.pointModel.findOne({ _id: { $in: game.points } }).sort('-pointNumber')
+        // get most recent point in game
+        let activePoint: IPoint | null = await this.pointModel
+            .findOne({ _id: { $in: game.points } })
+            .sort('-pointNumber')
 
         if (!activePoint) {
             return { game, team, token, activePoint: undefined, actions: [] }
         }
 
         const actions = []
-        if ((team === 'one' && activePoint.teamOneActive) || (team === 'two' && activePoint.teamTwoActive)) {
-            actions.push(
-                ...(await this.getLiveActionsForPoint(game._id.toHexString(), activePoint._id.toHexString(), team)),
+        if ((team === 'one' && !activePoint.teamOneActive) || (team === 'two' && !activePoint.teamTwoActive)) {
+            // reactivate point if it was previously inactive
+            const pointService = new PointServices(this.pointModel, this.gameModel, this.actionModel, this.redisClient)
+            activePoint = await pointService.reactivatePoint(
+                game._id.toHexString(),
+                activePoint._id.toHexString(),
+                team,
             )
-        } else {
-            actions.push(...(await this.getSavedActionsForPoint(team, activePoint)))
         }
 
-        if (team === 'one') {
-            activePoint.teamOneActive = true
-        } else if (team === 'two') {
-            activePoint.teamTwoActive = true
-        }
-        await activePoint.save()
+        // game actions will always be in redis after reactivate
+        actions.push(
+            ...(await this.getLiveActionsForPoint(game._id.toHexString(), activePoint._id.toHexString(), team)),
+        )
 
         return { game, team, token, activePoint, actions }
     }
@@ -90,13 +94,5 @@ export default class GameServices {
             actionPromises.push(getRedisAction(this.redisClient, pointId, i, team))
         }
         return await Promise.all(actionPromises)
-    }
-
-    private getSavedActionsForPoint = async (team: TeamNumberString, point: IPoint): Promise<RedisAction[]> => {
-        const actionIds = team === 'one' ? point.teamOneActions : point.teamTwoActions
-        return (await this.actionModel.find({ _id: { $in: actionIds } })).map((action) => ({
-            ...action,
-            teamNumber: team,
-        }))
     }
 }
