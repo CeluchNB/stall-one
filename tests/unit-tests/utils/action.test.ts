@@ -1,11 +1,5 @@
 import * as Constants from '../../../src/utils/constants'
-import {
-    addUniquePlayerToArray,
-    handleSubstitute,
-    parseActionData,
-    undoSubstitute,
-    validateActionData,
-} from '../../../src/utils/action'
+import { handleSubstitute, parseActionData, undoSubstitute, validateActionData } from '../../../src/utils/action'
 import { Types } from 'mongoose'
 import { ActionType, ClientAction } from '../../../src/types/action'
 import { ApiError } from '../../../src/types/errors'
@@ -446,35 +440,5 @@ describe('test undo substitute', () => {
         expect(updatedPoint?.teamOneActivePlayers.length).toBe(1)
         expect(updatedPoint?.teamTwoPlayers.length).toBe(0)
         expect(updatedPoint?.teamTwoActivePlayers.length).toBe(0)
-    })
-})
-
-describe('test add unique player to array', () => {
-    it('with player not in array', () => {
-        const playerOne: Player = {
-            _id: new Types.ObjectId(),
-            firstName: 'First 1',
-            lastName: 'Last 1',
-            username: 'firstlast1',
-        }
-
-        const array: Player[] = []
-        addUniquePlayerToArray(array, playerOne)
-        expect(array.length).toBe(1)
-        expect((array[0] as Player).username).toBe(playerOne.username)
-    })
-
-    it('with player in array', () => {
-        const playerOne: Player = {
-            _id: new Types.ObjectId(),
-            firstName: 'First 1',
-            lastName: 'Last 1',
-            username: 'firstlast1',
-        }
-
-        const array: Player[] = [playerOne]
-        addUniquePlayerToArray(array, playerOne)
-        expect(array.length).toBe(1)
-        expect((array[0] as Player).username).toBe(playerOne.username)
     })
 })

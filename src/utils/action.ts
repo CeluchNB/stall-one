@@ -84,12 +84,12 @@ export const handleSubstitute = async (
     }
 
     if (team === 'one') {
-        addUniquePlayerToArray(point.teamOnePlayers, subToAdd)
+        point.teamOnePlayers.push(subToAdd)
         // active player logic is duplicated on the front end
         // if we change here, make sure to change on the frontend
         replacePlayerInArray(point.teamOneActivePlayers, subToRemove, subToAdd)
     } else {
-        addUniquePlayerToArray(point.teamTwoPlayers, subToAdd)
+        point.teamTwoPlayers.push(subToAdd)
         replacePlayerInArray(point.teamTwoActivePlayers, subToRemove, subToAdd)
     }
     await point.save()
@@ -119,13 +119,6 @@ export const undoSubstitute = async (
         replacePlayerInArray(point.teamTwoActivePlayers, subToRemove, subToAdd)
     }
     await point.save()
-}
-
-export const addUniquePlayerToArray = (players: Player[], playerToAdd: Player) => {
-    const currentIndex = players.findIndex((p) => p._id.equals(playerToAdd._id))
-    if (currentIndex === -1) {
-        players.push(playerToAdd)
-    }
 }
 
 const removeSinglePlayerFromArray = (players: Player[], playerToRemove: Player) => {
