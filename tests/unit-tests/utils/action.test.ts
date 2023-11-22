@@ -1,5 +1,11 @@
 import * as Constants from '../../../src/utils/constants'
-import { handleSubstitute, parseActionData, validateActionData } from '../../../src/utils/action'
+import {
+    addUniquePlayerToArray,
+    handleSubstitute,
+    parseActionData,
+    undoSubstitute,
+    validateActionData,
+} from '../../../src/utils/action'
 import { Types } from 'mongoose'
 import { ActionType, ClientAction } from '../../../src/types/action'
 import { ApiError } from '../../../src/types/errors'
@@ -229,32 +235,31 @@ describe('test validate action data', () => {
 describe('test handle substitute', () => {
     it('with valid data for team one', async () => {
         const game = await Game.create(gameData)
-        const point = await Point.create(createPointData)
+        const point = await Point.create({
+            ...createPointData,
+            teamOnePlayers: [playerOne],
+            teamOneActivePlayers: [playerOne],
+        })
         game.teamOne = createPointData.pullingTeam
         await game.save()
 
         const actionData: ClientAction = {
             actionType: ActionType.SUBSTITUTION,
-            playerOne: {
-                _id: new Types.ObjectId(),
-                firstName: 'Noah',
-                lastName: 'Celuch',
-                username: 'noah',
-            },
-            playerTwo: {
-                _id: new Types.ObjectId(),
-                firstName: 'Amy',
-                lastName: 'Celuch',
-                username: 'amy',
-            },
+            playerOne,
+            playerTwo,
             tags: ['good'],
         }
         await handleSubstitute(actionData, point._id.toString(), 'one', Point)
 
         const updatedPoint = await Point.findById(point._id)
-        expect(updatedPoint?.teamOnePlayers.length).toBe(1)
-        expect(updatedPoint?.teamOnePlayers[0].username).toBe(actionData.playerTwo?.username)
+        expect(updatedPoint?.teamOnePlayers.length).toBe(2)
+        expect(updatedPoint?.teamOnePlayers[0].username).toBe(actionData.playerOne?.username)
+        expect(updatedPoint?.teamOnePlayers[1].username).toBe(actionData.playerTwo?.username)
+        expect(updatedPoint?.teamOneActivePlayers.length).toBe(1)
+        expect(updatedPoint?.teamOneActivePlayers[0].username).toBe(actionData.playerTwo?.username)
+
         expect(updatedPoint?.teamTwoPlayers.length).toBe(0)
+        expect(updatedPoint?.teamTwoActivePlayers.length).toBe(0)
     })
 
     it('with valid data for team two', async () => {
@@ -284,7 +289,10 @@ describe('test handle substitute', () => {
         const updatedPoint = await Point.findById(point._id)
         expect(updatedPoint?.teamTwoPlayers.length).toBe(1)
         expect(updatedPoint?.teamTwoPlayers[0].username).toBe(actionData.playerTwo?.username)
+        expect(updatedPoint?.teamTwoActivePlayers.length).toBe(1)
+        expect(updatedPoint?.teamTwoActivePlayers[0].username).toBe(actionData.playerTwo?.username)
         expect(updatedPoint?.teamOnePlayers.length).toBe(0)
+        expect(updatedPoint?.teamOneActivePlayers.length).toBe(0)
     })
 
     it('with unfound point error', async () => {
@@ -311,5 +319,162 @@ describe('test handle substitute', () => {
         await expect(handleSubstitute(actionData, new Types.ObjectId().toString(), 'one', Point)).rejects.toThrowError(
             new ApiError(Constants.UNABLE_TO_FIND_POINT, 404),
         )
+    })
+
+    it('with missing player data', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create(createPointData)
+        game.teamOne = createPointData.pullingTeam
+        await game.save()
+
+        const actionData: ClientAction = {
+            actionType: ActionType.SUBSTITUTION,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            tags: ['good'],
+        }
+        await handleSubstitute(actionData, point._id.toString(), 'one', Point)
+
+        const updatedPoint = await Point.findById(point._id)
+        expect(updatedPoint?.teamOnePlayers.length).toBe(0)
+        expect(updatedPoint?.teamOneActivePlayers.length).toBe(0)
+        expect(updatedPoint?.teamTwoPlayers.length).toBe(0)
+        expect(updatedPoint?.teamTwoActivePlayers.length).toBe(0)
+    })
+})
+
+describe('test undo substitute', () => {
+    it('with valid data for team one', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create({
+            ...createPointData,
+            teamOnePlayers: [playerOne, playerTwo],
+            teamOneActivePlayers: [playerTwo],
+        })
+        game.teamOne = createPointData.pullingTeam
+        await game.save()
+
+        const actionData: ClientAction = {
+            actionType: ActionType.SUBSTITUTION,
+            playerOne,
+            playerTwo,
+            tags: ['good'],
+        }
+        await undoSubstitute(actionData, point._id.toString(), 'one', Point)
+
+        const updatedPoint = await Point.findById(point._id)
+        expect(updatedPoint?.teamOnePlayers.length).toBe(1)
+        expect(updatedPoint?.teamOnePlayers[0].username).toBe(playerOne.username)
+        expect(updatedPoint?.teamOneActivePlayers.length).toBe(1)
+        expect(updatedPoint?.teamOneActivePlayers[0].username).toBe(playerOne.username)
+    })
+
+    it('with valid data for team two', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create({
+            ...createPointData,
+            teamTwoPlayers: [playerOne, playerTwo],
+            teamTwoActivePlayers: [playerTwo],
+        })
+        game.teamOne = createPointData.pullingTeam
+        await game.save()
+
+        const actionData: ClientAction = {
+            actionType: ActionType.SUBSTITUTION,
+            playerOne,
+            playerTwo,
+            tags: ['good'],
+        }
+        await undoSubstitute(actionData, point._id.toString(), 'two', Point)
+
+        const updatedPoint = await Point.findById(point._id)
+        expect(updatedPoint?.teamTwoPlayers.length).toBe(1)
+        expect(updatedPoint?.teamTwoPlayers[0].username).toBe(playerOne.username)
+        expect(updatedPoint?.teamTwoActivePlayers.length).toBe(1)
+        expect(updatedPoint?.teamTwoActivePlayers[0].username).toBe(playerOne.username)
+    })
+
+    it('with missing point', async () => {
+        const game = await Game.create(gameData)
+        await Point.create({
+            ...createPointData,
+            teamTwoPlayers: [playerOne, playerTwo],
+            teamTwoActivePlayers: [playerTwo],
+        })
+        game.teamOne = createPointData.pullingTeam
+        await game.save()
+
+        const actionData: ClientAction = {
+            actionType: ActionType.SUBSTITUTION,
+            playerOne,
+            playerTwo,
+            tags: ['good'],
+        }
+        await expect(undoSubstitute(actionData, new Types.ObjectId().toString(), 'one', Point)).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_POINT, 404),
+        )
+    })
+
+    it('with missing player data', async () => {
+        const game = await Game.create(gameData)
+        const point = await Point.create({
+            ...createPointData,
+            teamOnePlayers: [playerOne],
+            teamOneActivePlayers: [playerOne],
+        })
+        game.teamOne = createPointData.pullingTeam
+        await game.save()
+
+        const actionData: ClientAction = {
+            actionType: ActionType.SUBSTITUTION,
+            playerOne: {
+                _id: new Types.ObjectId(),
+                firstName: 'Noah',
+                lastName: 'Celuch',
+                username: 'noah',
+            },
+            tags: ['good'],
+        }
+        await undoSubstitute(actionData, point._id.toString(), 'one', Point)
+
+        const updatedPoint = await Point.findById(point._id)
+        expect(updatedPoint?.teamOnePlayers.length).toBe(1)
+        expect(updatedPoint?.teamOneActivePlayers.length).toBe(1)
+        expect(updatedPoint?.teamTwoPlayers.length).toBe(0)
+        expect(updatedPoint?.teamTwoActivePlayers.length).toBe(0)
+    })
+})
+
+describe('test add unique player to array', () => {
+    it('with player not in array', () => {
+        const playerOne: Player = {
+            _id: new Types.ObjectId(),
+            firstName: 'First 1',
+            lastName: 'Last 1',
+            username: 'firstlast1',
+        }
+
+        const array: Player[] = []
+        addUniquePlayerToArray(array, playerOne)
+        expect(array.length).toBe(1)
+        expect((array[0] as Player).username).toBe(playerOne.username)
+    })
+
+    it('with player in array', () => {
+        const playerOne: Player = {
+            _id: new Types.ObjectId(),
+            firstName: 'First 1',
+            lastName: 'Last 1',
+            username: 'firstlast1',
+        }
+
+        const array: Player[] = [playerOne]
+        addUniquePlayerToArray(array, playerOne)
+        expect(array.length).toBe(1)
+        expect((array[0] as Player).username).toBe(playerOne.username)
     })
 })

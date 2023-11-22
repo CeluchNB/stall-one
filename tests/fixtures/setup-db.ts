@@ -81,6 +81,8 @@ export const createPointData: IPoint = {
     _id: pointId,
     pointNumber: 1,
     teamOnePlayers: [],
+    teamOneActivePlayers: [],
+    teamTwoActivePlayers: [],
     teamTwoPlayers: [],
     teamOneScore: 0,
     teamTwoScore: 0,

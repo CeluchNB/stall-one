@@ -19,6 +19,22 @@ const schema = new Schema<IPoint>({
             username: String,
         },
     ],
+    teamOneActivePlayers: [
+        {
+            _id: SchemaTypes.ObjectId,
+            firstName: String,
+            lastName: String,
+            username: String,
+        },
+    ],
+    teamTwoActivePlayers: [
+        {
+            _id: SchemaTypes.ObjectId,
+            firstName: String,
+            lastName: String,
+            username: String,
+        },
+    ],
     teamOneScore: { type: Number, required: true },
     teamTwoScore: { type: Number, required: true },
     pullingTeam: {

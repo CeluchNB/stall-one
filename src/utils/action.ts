@@ -77,10 +77,20 @@ export const handleSubstitute = async (
         throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
     }
 
+    const subToRemove = data.playerOne
+    const subToAdd = data.playerTwo
+    if (!subToRemove || !subToAdd) {
+        return
+    }
+
     if (team === 'one') {
-        point.teamOnePlayers.push(data.playerTwo as Player)
+        addUniquePlayerToArray(point.teamOnePlayers, subToAdd)
+        // active player logic is duplicated on the front end
+        // if we change here, make sure to change on the frontend
+        replacePlayerInArray(point.teamOneActivePlayers, subToRemove, subToAdd)
     } else {
-        point.teamTwoPlayers.push(data.playerTwo as Player)
+        addUniquePlayerToArray(point.teamTwoPlayers, subToAdd)
+        replacePlayerInArray(point.teamTwoActivePlayers, subToRemove, subToAdd)
     }
     await point.save()
 }
@@ -94,14 +104,36 @@ export const undoSubstitute = async (
     const point = await findByIdOrThrow<IPoint>(pointId, pointModel, Constants.UNABLE_TO_FIND_POINT)
 
     const subToRemove = data.playerTwo
-    if (!subToRemove) {
+    const subToAdd = data.playerOne
+    if (!subToRemove || !subToAdd) {
         return
     }
 
     if (team === 'one') {
-        point.teamOnePlayers = point.teamOnePlayers.filter((player) => !player._id?.equals(subToRemove._id))
+        removeSinglePlayerFromArray(point.teamOnePlayers, subToRemove)
+        // active player logic is duplicated on the front end
+        // if we change here, make sure to change on the frontend
+        replacePlayerInArray(point.teamOneActivePlayers, subToRemove, subToAdd)
     } else {
-        point.teamTwoPlayers = point.teamTwoPlayers.filter((player) => !player._id?.equals(subToRemove._id))
+        removeSinglePlayerFromArray(point.teamTwoPlayers, subToRemove)
+        replacePlayerInArray(point.teamTwoActivePlayers, subToRemove, subToAdd)
     }
     await point.save()
+}
+
+export const addUniquePlayerToArray = (players: Player[], playerToAdd: Player) => {
+    const currentIndex = players.findIndex((p) => p._id.equals(playerToAdd._id))
+    if (currentIndex === -1) {
+        players.push(playerToAdd)
+    }
+}
+
+const removeSinglePlayerFromArray = (players: Player[], playerToRemove: Player) => {
+    const index = players.findIndex((player) => player._id?.equals(playerToRemove._id))
+    players.splice(index, 1)
+}
+
+const replacePlayerInArray = (players: Player[], playerToRemove: Player, playerToAdd: Player) => {
+    const index = players.findIndex((p) => p._id.equals(playerToRemove._id))
+    players.splice(index, 1, playerToAdd)
 }

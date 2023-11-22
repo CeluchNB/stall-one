@@ -76,6 +76,8 @@ export default class PointServices {
             pointNumber: pointNumber,
             teamOnePlayers: [],
             teamTwoPlayers: [],
+            teamOneActivePlayers: [],
+            teamTwoActivePlayers: [],
             teamOneScore: game.teamOneScore,
             teamTwoScore: game.teamTwoScore,
             teamTwoActive: game.teamTwoActive,
@@ -178,8 +180,10 @@ export default class PointServices {
 
         if (team === TeamNumber.ONE) {
             point.teamOnePlayers = players
+            point.teamOneActivePlayers = players
         } else {
             point.teamTwoPlayers = players
+            point.teamTwoActivePlayers = players
         }
         await point.save()
 
@@ -246,11 +250,9 @@ export default class PointServices {
         // move actions to mongo
         const redisActions = []
         for (let i = 1; i <= Number(totalActions); i++) {
-            // TODO: move this to a single call?
             const redisAction = await getRedisAction(this.redisClient, pointId, i, team)
             redisActions.push(redisAction)
 
-            // TODO: move this to a single call?
             await deleteRedisAction(this.redisClient, pointId, i, team)
         }
 
