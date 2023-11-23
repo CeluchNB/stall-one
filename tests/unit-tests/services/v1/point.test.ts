@@ -431,12 +431,16 @@ describe('test add players to point', () => {
         expect(point._id.toString()).toBe(initialPoint._id.toString())
         expect(point.pointNumber).toBe(1)
         expect(point.teamOnePlayers.length).toBe(7)
+        expect(point.teamOneActivePlayers.length).toBe(7)
+        expect(point.teamTwoActivePlayers.length).toBe(0)
         expect(point.teamTwoPlayers.length).toBe(0)
 
         const updatedPoint = await Point.findById(initialPoint._id)
         expect(updatedPoint?.pointNumber).toBe(1)
         expect(updatedPoint?.teamOnePlayers.length).toBe(7)
+        expect(updatedPoint?.teamOneActivePlayers.length).toBe(7)
         expect(updatedPoint?.teamTwoPlayers.length).toBe(0)
+        expect(updatedPoint?.teamTwoActivePlayers.length).toBe(0)
     })
 
     it('with valid data for team two', async () => {
@@ -472,12 +476,16 @@ describe('test add players to point', () => {
         expect(point._id.toString()).toBe(initialPoint._id.toString())
         expect(point.pointNumber).toBe(1)
         expect(point.teamOnePlayers.length).toBe(0)
+        expect(point.teamOneActivePlayers.length).toBe(0)
         expect(point.teamTwoPlayers.length).toBe(7)
+        expect(point.teamTwoActivePlayers.length).toBe(7)
 
         const updatedPoint = await Point.findById(initialPoint._id)
         expect(updatedPoint?.pointNumber).toBe(1)
         expect(updatedPoint?.teamOnePlayers.length).toBe(0)
+        expect(updatedPoint?.teamOneActivePlayers.length).toBe(0)
         expect(updatedPoint?.teamTwoPlayers.length).toBe(7)
+        expect(updatedPoint?.teamTwoActivePlayers.length).toBe(7)
     })
 
     it('with unfound point', async () => {
