@@ -10,6 +10,7 @@ import { deleteRedisAction, getRedisAction, saveRedisAction } from '../../utils/
 import { findByIdOrThrow, idsAreEqual } from '../../utils/mongoose'
 import IGame from '../../types/game'
 import { sendCloudTask } from '../../utils/cloud-tasks'
+import { publish } from '../../loaders/redis'
 
 export default class PointServices {
     pointModel: IPointModel
@@ -247,65 +248,72 @@ export default class PointServices {
             }
         }
 
-        // move actions to mongo
-        const redisActions = []
-        for (let i = 1; i <= Number(totalActions); i++) {
-            const redisAction = await getRedisAction(this.redisClient, pointId, i, team)
-            redisActions.push(redisAction)
+        publish('point-finish', `game:${gameId}:point:${pointId}:team:${team}`)
 
-            await deleteRedisAction(this.redisClient, pointId, i, team)
-        }
+        // move actions to mongo
+        // const redisActionPromises = []
+        // for (let i = 1; i <= Number(totalActions); i++) {
+        //     redisActionPromises.push(getRedisAction(this.redisClient, pointId, i, team))
+        // }
+
+        // const redisActions = await Promise.all(redisActionPromises)
 
         if (team === TeamNumber.ONE) {
-            const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamOne })))
-            point.teamOneActions = actions.map((a) => a._id)
+            // const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamOne })))
+            // point.teamOneActions = actions.map((a) => a._id)
             point.teamOneActive = false
         } else {
-            const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamTwo })))
-            point.teamTwoActions = actions.map((a) => a._id)
+            // const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamTwo })))
+            // point.teamTwoActions = actions.map((a) => a._id)
             point.teamTwoActive = false
-        }
-
-        await this.redisClient.del(`${gameId}:${pointId}:${team}:actions`)
-        if (!game.teamTwoActive) {
-            await this.redisClient.del(`${gameId}:${pointId}:two:actions`)
-        }
-
-        if (!point.teamOneActive && !point.teamTwoActive) {
-            await this.redisClient.del(`${gameId}:${pointId}:pulling`)
-            await this.redisClient.del(`${gameId}:${pointId}:receiving`)
         }
 
         await point.save()
         await game.save()
 
-        // use updated point to prevent race condition where points are updated at the same time
-        // and one team still shows as active when it's not
-        // TODO: rework this whole function
+        // await this.redisClient.del(`${gameId}:${pointId}:${team}:actions`)
+        // if (!game.teamTwoActive) {
+        //     await this.redisClient.del(`${gameId}:${pointId}:two:actions`)
+        // }
+
+        // if (!point.teamOneActive && !point.teamTwoActive) {
+        //     await this.redisClient.del(`${gameId}:${pointId}:pulling`)
+        //     await this.redisClient.del(`${gameId}:${pointId}:receiving`)
+        // }
+
+        // const deleteActionPromises = []
+        // for (let i = 1; i <= Number(totalActions); i++) {
+        //     deleteActionPromises.push(deleteRedisAction(this.redisClient, pointId, i, team))
+        // }
+        // await Promise.all(deleteActionPromises)
+
+        // // use updated point to prevent race condition where points are updated at the same time
+        // // and one team still shows as active when it's not
+        // // TODO: rework this whole function
         const updatedPoint = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
-        if (!updatedPoint.teamOneActive && !updatedPoint.teamTwoActive) {
-            const teamOneActions = await this.actionModel.find().where('_id').in(updatedPoint.teamOneActions)
-            const teamTwoActions = await this.actionModel.find().where('_id').in(updatedPoint.teamTwoActions)
-            await sendCloudTask(
-                '/api/v1/stats/point',
-                {
-                    point: {
-                        pointId: updatedPoint._id,
-                        gameId,
-                        pullingTeam: updatedPoint.pullingTeam,
-                        receivingTeam: updatedPoint.receivingTeam,
-                        scoringTeam: updatedPoint.scoringTeam,
-                        teamOnePlayers: updatedPoint.teamOnePlayers,
-                        teamTwoPlayers: updatedPoint.teamTwoPlayers,
-                        teamOneScore: updatedPoint.teamOneScore,
-                        teamTwoScore: updatedPoint.teamTwoScore,
-                        teamOneActions,
-                        teamTwoActions,
-                    },
-                },
-                'POST',
-            )
-        }
+        // if (!updatedPoint.teamOneActive && !updatedPoint.teamTwoActive) {
+        //     const teamOneActions = await this.actionModel.find().where('_id').in(updatedPoint.teamOneActions)
+        //     const teamTwoActions = await this.actionModel.find().where('_id').in(updatedPoint.teamTwoActions)
+        //     await sendCloudTask(
+        //         '/api/v1/stats/point',
+        //         {
+        //             point: {
+        //                 pointId: updatedPoint._id,
+        //                 gameId,
+        //                 pullingTeam: updatedPoint.pullingTeam,
+        //                 receivingTeam: updatedPoint.receivingTeam,
+        //                 scoringTeam: updatedPoint.scoringTeam,
+        //                 teamOnePlayers: updatedPoint.teamOnePlayers,
+        //                 teamTwoPlayers: updatedPoint.teamTwoPlayers,
+        //                 teamOneScore: updatedPoint.teamOneScore,
+        //                 teamTwoScore: updatedPoint.teamTwoScore,
+        //                 teamOneActions,
+        //                 teamTwoActions,
+        //             },
+        //         },
+        //         'POST',
+        //     )
+        // }
 
         return updatedPoint
     }

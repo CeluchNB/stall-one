@@ -20,8 +20,10 @@ app.use(express.json())
 app.use(passport.initialize())
 require('./loaders/passport')
 
-app.use('/api/v1', v1Router)
-app.use('/api/v2', v2Router)
+getClient().then(() => {
+    app.use('/api/v1', v1Router)
+    app.use('/api/v2', v2Router)
+})
 
 app.get('/stall-one', async (req, res) => {
     const response = await axios.get(`${process.env.ULTMT_API_URL}/ultmt`, {
@@ -35,11 +37,15 @@ const httpServer = createServer(app)
 httpServer.setTimeout(0)
 const io = new Server<ClientToServerEvents>(httpServer, {})
 
-Promise.resolve(createRedisAdapter()).then(async (adapter) => {
+async function startUp() {
+    const adapter = await createRedisAdapter()
     const client = await getClient()
+
     io.adapter(adapter)
     io.of('/live').on('connection', socketHandler(client, io))
-})
+}
+
+startUp()
 
 // Close all connections, for testing purposes
 export const close = async () => {

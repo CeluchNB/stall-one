@@ -21,15 +21,18 @@ import { ActionType, RedisAction } from '../../../../src/types/action'
 import { getActionBaseKey } from '../../../../src/utils/utils'
 import IGame from '../../../../src/types/game'
 import IPoint from '../../../../src/types/point'
+import { closeRedisConnection, createRedisAdapter } from '../../../../src/loaders/redis'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
 beforeAll(async () => {
     await setUpDatabase()
+    await createRedisAdapter()
 })
 
 afterAll(async () => {
     await tearDownDatabase()
+    await closeRedisConnection()
 })
 
 afterEach(async () => {
