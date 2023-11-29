@@ -11,6 +11,8 @@ import { connectDatabase, closeDatabase } from './loaders/mongoose'
 import { createRedisAdapter, closeRedisConnection } from './loaders/redis'
 import { ClientToServerEvents } from './types/socket'
 import { getClient } from './utils/redis'
+import { connection } from './loaders/bullmq'
+import { worker } from './background/v1'
 
 Promise.resolve(connectDatabase())
 
@@ -20,10 +22,8 @@ app.use(express.json())
 app.use(passport.initialize())
 require('./loaders/passport')
 
-getClient().then(() => {
-    app.use('/api/v1', v1Router)
-    app.use('/api/v2', v2Router)
-})
+app.use('/api/v1', v1Router)
+app.use('/api/v2', v2Router)
 
 app.get('/stall-one', async (req, res) => {
     const response = await axios.get(`${process.env.ULTMT_API_URL}/ultmt`, {
@@ -53,6 +53,8 @@ export const close = async () => {
     if (client && client.isOpen) {
         await client.quit()
     }
+    await worker.close()
+    await connection.quit()
     await closeDatabase()
     await closeRedisConnection()
 }

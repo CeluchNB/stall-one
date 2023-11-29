@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as Constants from '../../../../src/utils/constants'
+import * as BackgroundPointHelpers from '../../../../src/background/v1/point'
 import {
     setUpDatabase,
     tearDownDatabase,
@@ -21,18 +22,19 @@ import { ActionType, RedisAction } from '../../../../src/types/action'
 import { getActionBaseKey } from '../../../../src/utils/utils'
 import IGame from '../../../../src/types/game'
 import IPoint from '../../../../src/types/point'
-import { closeRedisConnection, createRedisAdapter } from '../../../../src/loaders/redis'
+import { connection } from '../../../../src/loaders/bullmq'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
+jest.spyOn(BackgroundPointHelpers, 'addFinishPointJob').mockImplementation()
 
 beforeAll(async () => {
     await setUpDatabase()
-    await createRedisAdapter()
 })
 
 afterAll(async () => {
     await tearDownDatabase()
-    await closeRedisConnection()
+    await BackgroundPointHelpers.worker.close()
+    await connection.quit()
 })
 
 afterEach(async () => {

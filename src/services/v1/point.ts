@@ -10,7 +10,7 @@ import { deleteRedisAction, getRedisAction, saveRedisAction } from '../../utils/
 import { findByIdOrThrow, idsAreEqual } from '../../utils/mongoose'
 import IGame from '../../types/game'
 import { sendCloudTask } from '../../utils/cloud-tasks'
-import { publish } from '../../loaders/redis'
+import { addFinishPointJob } from '../../background/v1/point'
 
 export default class PointServices {
     pointModel: IPointModel
@@ -248,7 +248,8 @@ export default class PointServices {
             }
         }
 
-        publish('point-finish', `game:${gameId}:point:${pointId}:team:${team}`)
+        // publish('point-finish', `game:${gameId}:point:${pointId}:team:${team}`)
+        await addFinishPointJob({ gameId, pointId, team })
 
         // move actions to mongo
         // const redisActionPromises = []

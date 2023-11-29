@@ -1,15 +1,14 @@
 import * as Constants from '../../utils/constants'
-import { subscribe } from '../../loaders/redis'
 import { IActionModel } from '../../models/action'
 import { IGameModel } from '../../models/game'
 import { IPointModel } from '../../models/point'
-import { RedisClientType } from '../../types/action'
 import IPoint from '../../types/point'
 import { sendCloudTask } from '../../utils/cloud-tasks'
 import { findByIdOrThrow } from '../../utils/mongoose'
 import { deleteRedisAction, getClient, getRedisAction } from '../../utils/redis'
 import { TeamNumber, TeamNumberString } from '../../types/ultmt'
 import IGame from '../../types/game'
+import { Job } from 'bullmq'
 
 export default class PointBackgroundServices {
     pointModel: IPointModel
@@ -20,16 +19,11 @@ export default class PointBackgroundServices {
         this.pointModel = pointModel
         this.gameModel = gameModel
         this.actionModel = actionModel
-
-        subscribe('point-finish', this.finishPoint)
     }
 
-    finishPoint = async (message: string) => {
-        console.log('got finish point', message)
-        const elements = message.split(':')
-        const gameId = elements[1]
-        const pointId = elements[3]
-        const team = elements[5]
+    finishPoint = async (job: Job) => {
+        console.log('in finish point job', job.data)
+        const { gameId, pointId, team } = job.data
 
         const redisClient = await getClient()
 

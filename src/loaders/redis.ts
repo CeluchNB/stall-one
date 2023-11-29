@@ -19,11 +19,3 @@ export async function closeRedisConnection() {
         await subClient.quit()
     }
 }
-
-export function subscribe(channel: string, method: (message: string) => Promise<void>) {
-    subClient.subscribe(channel, method)
-}
-
-export function publish(channel: string, data: string) {
-    pubClient.publish(channel, data)
-}
