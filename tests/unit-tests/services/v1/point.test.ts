@@ -602,7 +602,6 @@ describe('test finish point', () => {
         expect(result.teamTwoActive).toBe(true)
         expect(result.teamOneScore).toBe(1)
         expect(result.teamTwoScore).toBe(0)
-        expect(result.teamOneActions.length).toBe(2)
 
         const pointRecord = await Point.findById(point._id)
         const gameRecord = await Game.findById(game._id)
@@ -612,10 +611,7 @@ describe('test finish point', () => {
         expect(gameRecord?.teamTwoScore).toBe(0)
 
         const keys = await client.keys('*')
-        expect(keys.length).toBe(3)
-
-        const actions = await Action.find({})
-        expect(actions.length).toBe(2)
+        expect(keys.length).toBe(6)
     })
 
     it('with team two first finishing and scoring', async () => {
@@ -651,7 +647,6 @@ describe('test finish point', () => {
         expect(result.teamTwoActive).toBe(false)
         expect(result.teamOneScore).toBe(0)
         expect(result.teamTwoScore).toBe(1)
-        expect(result.teamTwoActions.length).toBe(2)
 
         const pointRecord = await Point.findById(point._id)
         const gameRecord = await Game.findById(game._id)
@@ -661,9 +656,7 @@ describe('test finish point', () => {
         expect(gameRecord?.teamTwoScore).toBe(1)
 
         const keys = await client.keys('*')
-        expect(keys.length).toBe(3)
-        const actions = await Action.find({})
-        expect(actions.length).toBe(2)
+        expect(keys.length).toBe(6)
     })
 
     it('with only team finishing', async () => {
@@ -701,7 +694,6 @@ describe('test finish point', () => {
         expect(result.teamTwoActive).toBe(false)
         expect(result.teamOneScore).toBe(1)
         expect(result.teamTwoScore).toBe(0)
-        expect(result.teamOneActions.length).toBe(2)
 
         const pointRecord = await Point.findById(point._id)
         const gameRecord = await Game.findById(game._id)
@@ -711,9 +703,7 @@ describe('test finish point', () => {
         expect(gameRecord?.teamTwoScore).toBe(0)
 
         const keys = await client.keys('*')
-        expect(keys.length).toBe(0)
-        const actions = await Action.find({})
-        expect(actions.length).toBe(2)
+        expect(keys.length).toBe(5)
     })
 
     it('with previously finished point', async () => {

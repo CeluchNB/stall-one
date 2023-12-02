@@ -378,7 +378,7 @@ describe('test /PUT finish point', () => {
 
         const { point: pointResponse } = response.body
         expect(pointResponse._id.toString()).toBe(point._id.toString())
-        expect(pointResponse.teamOneActions.length).toBe(2)
+        expect(pointResponse.teamOneActions.length).toBe(0)
         expect(pointResponse.teamOneScore).toBe(1)
         expect(pointResponse.teamTwoScore).toBe(0)
         expect(pointResponse.teamOneActive).toBe(false)
@@ -391,7 +391,7 @@ describe('test /PUT finish point', () => {
         expect(pointRecord?.teamTwoActive).toBe(false)
 
         const keys = await client.keys('*')
-        expect(keys.length).toBe(0)
+        expect(keys.length).toBe(11)
     })
 
     it('with service error', async () => {

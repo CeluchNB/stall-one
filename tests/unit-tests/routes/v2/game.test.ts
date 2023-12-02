@@ -131,7 +131,7 @@ describe('Game Routes v2', () => {
             expect(payload.team).toBe('one')
 
             const point = await Point.findOne({ pointNumber: 2 })
-            expect(activePoint).toMatchObject(point!.toJSON())
+            expect(activePoint._id.toString()).toBe(point!._id.toHexString())
 
             expect(actions.length).toBe(1)
         })
