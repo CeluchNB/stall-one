@@ -11,8 +11,7 @@ import { connectDatabase, closeDatabase } from './loaders/mongoose'
 import { createRedisAdapter, closeRedisConnection } from './loaders/redis'
 import { ClientToServerEvents } from './types/socket'
 import { getClient } from './utils/redis'
-import { connection } from './loaders/bullmq'
-import { worker } from './background/v1'
+import { finishPointQueue } from './background/v1'
 
 Promise.resolve(connectDatabase())
 
@@ -21,6 +20,8 @@ app.use(cors())
 app.use(express.json())
 app.use(passport.initialize())
 require('./loaders/passport')
+
+finishPointQueue.initialize()
 
 app.use('/api/v1', v1Router)
 app.use('/api/v2', v2Router)
@@ -53,8 +54,7 @@ export const close = async () => {
     if (client && client.isOpen) {
         await client.quit()
     }
-    await worker.close()
-    await connection.quit()
+    await finishPointQueue.close()
     await closeDatabase()
     await closeRedisConnection()
 }

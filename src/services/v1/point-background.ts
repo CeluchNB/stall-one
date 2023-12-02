@@ -22,7 +22,6 @@ export default class PointBackgroundServices {
     }
 
     finishPoint = async (job: Job) => {
-        console.log('in finish point job', job.data)
         const { gameId, pointId, team } = job.data
 
         const redisClient = await getClient()

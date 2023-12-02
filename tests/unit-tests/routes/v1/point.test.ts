@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as Constants from '../../../../src/utils/constants'
-import * as BackgroundPointHelpers from '../../../../src/background/v1/point'
 import app, { close } from '../../../../src/app'
 import request from 'supertest'
 import Game from '../../../../src/models/game'
@@ -21,14 +20,21 @@ import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import Action from '../../../../src/models/action'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
-jest.spyOn(BackgroundPointHelpers, 'addFinishPointJob').mockImplementation()
+jest.mock('../../../../src/background/v1/point', () => {
+    return {
+        finishPointQueue: {
+            initialize: jest.fn(),
+            close: jest.fn(),
+            addFinishPointJob: jest.fn(),
+        },
+    }
+})
 
 beforeAll(async () => {
     await setUpDatabase()
 })
 
 afterAll(async () => {
-    await BackgroundPointHelpers.worker.close()
     await close()
     await tearDownDatabase()
 })

@@ -24,7 +24,7 @@ export const resetDatabase = async () => {
     }
 }
 
-export const tearDownDatabase = () => {
+export const tearDownDatabase = async () => {
     connection.close()
     client.quit()
 }

@@ -6,11 +6,11 @@ import { ApiError } from '../../types/errors'
 import IPoint from '../../types/point'
 import IAction, { ActionType, RedisAction, RedisClientType } from '../../types/action'
 import { IActionModel } from '../../models/action'
-import { deleteRedisAction, getRedisAction, saveRedisAction } from '../../utils/redis'
+import { getRedisAction, saveRedisAction } from '../../utils/redis'
 import { findByIdOrThrow, idsAreEqual } from '../../utils/mongoose'
 import IGame from '../../types/game'
 import { sendCloudTask } from '../../utils/cloud-tasks'
-import { addFinishPointJob } from '../../background/v1/point'
+import { finishPointQueue } from '../../background/v1'
 
 export default class PointServices {
     pointModel: IPointModel
@@ -249,7 +249,7 @@ export default class PointServices {
         }
 
         // publish('point-finish', `game:${gameId}:point:${pointId}:team:${team}`)
-        await addFinishPointJob({ gameId, pointId, team })
+        await finishPointQueue.addFinishPointJob({ gameId, pointId, team })
 
         // move actions to mongo
         // const redisActionPromises = []

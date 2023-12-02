@@ -9,8 +9,6 @@ import { Types } from 'mongoose'
 import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import { ActionType } from '../../../../src/types/action'
-import { connection } from '../../../../src/loaders/bullmq'
-import { worker } from '../../../../src/background/v1'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
@@ -30,8 +28,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await tearDownDatabase()
-    await worker.close()
-    await connection.quit()
 })
 
 afterEach(async () => {
