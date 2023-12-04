@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as Constants from '../../../../src/utils/constants'
-// import * as BackgroundPointHelpers from '../../../../src/background/v1/point'
 import {
     setUpDatabase,
     tearDownDatabase,

@@ -4,11 +4,11 @@ import Game from '../../models/game'
 import Point from '../../models/point'
 import PointBackgroundServices from '../../services/v1/point-background'
 import { Queue, Worker } from 'bullmq'
-import { TeamNumber } from '../../types/ultmt'
+import { TeamNumberString } from '../../types/ultmt'
 
 const FINISH_POINT_QUEUE = 'FinishPoint'
 
-const FinishPointQueue = () => {
+export const FinishPointQueue = (redisUrl = 'redis://localhost:6379') => {
     const services = new PointBackgroundServices(Point, Game, Action)
 
     let connection: IORedis
@@ -16,7 +16,7 @@ const FinishPointQueue = () => {
     let worker: Worker
 
     const initializeConnection = () => {
-        connection = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', { maxRetriesPerRequest: null })
+        connection = new IORedis(redisUrl, { maxRetriesPerRequest: null })
     }
 
     const initializeQueue = () => {
@@ -51,7 +51,7 @@ const FinishPointQueue = () => {
         await closeConnection()
     }
 
-    const addFinishPointJob = async (data: { gameId: string; pointId: string; team: TeamNumber }) => {
+    const addFinishPointJob = async (data: { gameId: string; pointId: string; team: TeamNumberString }) => {
         const { gameId, pointId, team } = data
         await queue.add(pointId, { gameId, pointId, team })
     }
@@ -69,4 +69,4 @@ const FinishPointQueue = () => {
     }
 }
 
-export const finishPointQueue = FinishPointQueue()
+export const finishPointQueue = FinishPointQueue(process.env.REDIS_URL)
