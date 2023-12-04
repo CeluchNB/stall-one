@@ -1,27 +1,20 @@
-import * as Constants from '../../../../src/utils/constants'
 import {
     setUpDatabase,
     tearDownDatabase,
-    gameData,
     resetDatabase,
     client,
     createData,
     createPointData,
 } from '../../../fixtures/setup-db'
-import PointServices from '../../../../src/services/v1/point'
 import Point from '../../../../src/models/point'
 import Game from '../../../../src/models/game'
-import { Player, TeamNumber } from '../../../../src/types/ultmt'
-import { ApiError } from '../../../../src/types/errors'
-import { Types } from 'mongoose'
+import { TeamNumber } from '../../../../src/types/ultmt'
 import Action from '../../../../src/models/action'
-import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
+import { saveRedisAction } from '../../../../src/utils/redis'
 import { ActionType, RedisAction } from '../../../../src/types/action'
-import { getActionBaseKey } from '../../../../src/utils/utils'
-import IGame from '../../../../src/types/game'
-import IPoint from '../../../../src/types/point'
 import PointBackgroundServices from '../../../../src/services/v1/point-background'
 import { Job } from 'bullmq'
+import { getClient } from '../../../../src/utils/redis'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
@@ -31,6 +24,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await tearDownDatabase()
+    const client = await getClient()
+    await client.quit()
 })
 
 afterEach(async () => {
@@ -39,7 +34,6 @@ afterEach(async () => {
 
 describe('handles finish point background service', () => {
     const services = new PointBackgroundServices(Point, Game, Action)
-
     it('handles team one score', async () => {
         const game = await Game.create(createData)
         const point = await Point.create({ ...createPointData, teamTwoActive: false, teamOneActive: false })

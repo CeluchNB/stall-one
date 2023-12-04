@@ -24,13 +24,11 @@ export default class PointBackgroundServices {
 
     finishPoint = async (job: Job) => {
         const { gameId, pointId, team } = job.data
-
         const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
-
         const redisClient = await getClient()
-        const totalActions = await redisClient.get(`${gameId}:${pointId}:${team}:actions`)
 
+        const totalActions = await redisClient.get(`${gameId}:${pointId}:${team}:actions`)
         const redisActions = await this.getTeamActions(Number(totalActions), pointId, team)
 
         await this.moveActionsToDataStore(redisActions, team, game, point)
