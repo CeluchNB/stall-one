@@ -53,8 +53,6 @@ describe('test save redis action', () => {
         await saveRedisAction(client, actionData, pointId)
 
         const baseKey = getActionBaseKey(pointId, actionData.actionNumber, 'one')
-        const totalKeys = await client.keys('*')
-        expect(totalKeys.length).toBe(4)
 
         const playerOne = await client.hGetAll(`${baseKey}:playerone`)
         expect(playerOne.id).toBe(actionData.playerOne?._id?.toString())

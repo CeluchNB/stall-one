@@ -11,6 +11,7 @@ import { connectDatabase, closeDatabase } from './loaders/mongoose'
 import { createRedisAdapter, closeRedisConnection } from './loaders/redis'
 import { ClientToServerEvents } from './types/socket'
 import { getClient } from './utils/redis'
+import { finishPointQueue } from './background/v1'
 
 Promise.resolve(connectDatabase())
 
@@ -19,6 +20,8 @@ app.use(cors())
 app.use(express.json())
 app.use(passport.initialize())
 require('./loaders/passport')
+
+finishPointQueue.initialize()
 
 app.use('/api/v1', v1Router)
 app.use('/api/v2', v2Router)
@@ -35,11 +38,15 @@ const httpServer = createServer(app)
 httpServer.setTimeout(0)
 const io = new Server<ClientToServerEvents>(httpServer, {})
 
-Promise.resolve(createRedisAdapter()).then(async (adapter) => {
+async function startUp() {
+    const adapter = await createRedisAdapter()
     const client = await getClient()
+
     io.adapter(adapter)
     io.of('/live').on('connection', socketHandler(client, io))
-})
+}
+
+startUp()
 
 // Close all connections, for testing purposes
 export const close = async () => {
@@ -47,6 +54,7 @@ export const close = async () => {
     if (client && client.isOpen) {
         await client.quit()
     }
+    await finishPointQueue.close()
     await closeDatabase()
     await closeRedisConnection()
 }
