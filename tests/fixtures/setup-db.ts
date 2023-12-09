@@ -24,7 +24,7 @@ export const resetDatabase = async () => {
     }
 }
 
-export const tearDownDatabase = () => {
+export const tearDownDatabase = async () => {
     connection.close()
     client.quit()
 }
@@ -81,6 +81,8 @@ export const createPointData: IPoint = {
     _id: pointId,
     pointNumber: 1,
     teamOnePlayers: [],
+    teamOneActivePlayers: [],
+    teamTwoActivePlayers: [],
     teamTwoPlayers: [],
     teamOneScore: 0,
     teamTwoScore: 0,

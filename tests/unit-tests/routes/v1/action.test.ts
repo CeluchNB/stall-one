@@ -1,9 +1,9 @@
-import * as Constants from '../../../src/utils/constants'
-import app, { close } from '../../../src/app'
+import * as Constants from '../../../../src/utils/constants'
+import app, { close } from '../../../../src/app'
 import request from 'supertest'
 import axios from 'axios'
-import Action from '../../../src/models/action'
-import { resetDatabase } from '../../fixtures/setup-db'
+import Action from '../../../../src/models/action'
+import { resetDatabase } from '../../../fixtures/setup-db'
 import { Types } from 'mongoose'
 
 afterAll(async () => {

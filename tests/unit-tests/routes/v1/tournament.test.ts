@@ -1,11 +1,11 @@
-import * as Constants from '../../../src/utils/constants'
-import app, { close } from '../../../src/app'
+import * as Constants from '../../../../src/utils/constants'
+import app, { close } from '../../../../src/app'
 import request from 'supertest'
-import { resetDatabase } from '../../fixtures/setup-db'
-import { CreateTournament } from '../../../src/types/tournament'
-import Tournament from '../../../src/models/tournament'
+import { resetDatabase } from '../../../fixtures/setup-db'
+import { CreateTournament } from '../../../../src/types/tournament'
+import Tournament from '../../../../src/models/tournament'
 import { Types } from 'mongoose'
-import { ApiError } from '../../../src/types/errors'
+import { ApiError } from '../../../../src/types/errors'
 
 afterAll(async () => {
     await close()
