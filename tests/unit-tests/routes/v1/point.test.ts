@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import * as Constants from '../../../src/utils/constants'
-import app, { close } from '../../../src/app'
+import * as Constants from '../../../../src/utils/constants'
+import app, { close } from '../../../../src/app'
 import request from 'supertest'
-import Game from '../../../src/models/game'
+import Game from '../../../../src/models/game'
 import {
     gameData,
     resetDatabase,
@@ -11,15 +11,24 @@ import {
     createPointData,
     setUpDatabase,
     tearDownDatabase,
-} from '../../fixtures/setup-db'
-import Point from '../../../src/models/point'
+} from '../../../fixtures/setup-db'
+import Point from '../../../../src/models/point'
 import { Types } from 'mongoose'
-import { Player } from '../../../src/types/ultmt'
-import { ActionType, RedisAction } from '../../../src/types/action'
-import { getRedisAction, saveRedisAction } from '../../../src/utils/redis'
-import Action from '../../../src/models/action'
+import { Player } from '../../../../src/types/ultmt'
+import { ActionType, RedisAction } from '../../../../src/types/action'
+import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
+import Action from '../../../../src/models/action'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
+jest.mock('../../../../src/background/v1/point', () => {
+    return {
+        finishPointQueue: {
+            initialize: jest.fn(),
+            close: jest.fn(),
+            addFinishPointJob: jest.fn(),
+        },
+    }
+})
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -369,7 +378,7 @@ describe('test /PUT finish point', () => {
 
         const { point: pointResponse } = response.body
         expect(pointResponse._id.toString()).toBe(point._id.toString())
-        expect(pointResponse.teamOneActions.length).toBe(2)
+        expect(pointResponse.teamOneActions.length).toBe(0)
         expect(pointResponse.teamOneScore).toBe(1)
         expect(pointResponse.teamTwoScore).toBe(0)
         expect(pointResponse.teamOneActive).toBe(false)
@@ -382,7 +391,7 @@ describe('test /PUT finish point', () => {
         expect(pointRecord?.teamTwoActive).toBe(false)
 
         const keys = await client.keys('*')
-        expect(keys.length).toBe(0)
+        expect(keys.length).toBe(11)
     })
 
     it('with service error', async () => {

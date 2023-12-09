@@ -6,10 +6,11 @@ import { ApiError } from '../../types/errors'
 import IPoint from '../../types/point'
 import IAction, { ActionType, RedisAction, RedisClientType } from '../../types/action'
 import { IActionModel } from '../../models/action'
-import { deleteRedisAction, getRedisAction, saveRedisAction } from '../../utils/redis'
+import { getRedisAction, saveRedisAction } from '../../utils/redis'
 import { findByIdOrThrow, idsAreEqual } from '../../utils/mongoose'
 import IGame from '../../types/game'
 import { sendCloudTask } from '../../utils/cloud-tasks'
+import { finishPointQueue } from '../../background/v1'
 
 export default class PointServices {
     pointModel: IPointModel
@@ -76,6 +77,8 @@ export default class PointServices {
             pointNumber: pointNumber,
             teamOnePlayers: [],
             teamTwoPlayers: [],
+            teamOneActivePlayers: [],
+            teamTwoActivePlayers: [],
             teamOneScore: game.teamOneScore,
             teamTwoScore: game.teamTwoScore,
             teamTwoActive: game.teamTwoActive,
@@ -178,8 +181,10 @@ export default class PointServices {
 
         if (team === TeamNumber.ONE) {
             point.teamOnePlayers = players
+            point.teamOneActivePlayers = players
         } else {
             point.teamTwoPlayers = players
+            point.teamTwoActivePlayers = players
         }
         await point.save()
 
@@ -243,67 +248,16 @@ export default class PointServices {
             }
         }
 
-        // move actions to mongo
-        const redisActions = []
-        for (let i = 1; i <= Number(totalActions); i++) {
-            // TODO: move this to a single call?
-            const redisAction = await getRedisAction(this.redisClient, pointId, i, team)
-            redisActions.push(redisAction)
-
-            // TODO: move this to a single call?
-            await deleteRedisAction(this.redisClient, pointId, i, team)
-        }
-
         if (team === TeamNumber.ONE) {
-            const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamOne })))
-            point.teamOneActions = actions.map((a) => a._id)
             point.teamOneActive = false
         } else {
-            const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamTwo })))
-            point.teamTwoActions = actions.map((a) => a._id)
             point.teamTwoActive = false
         }
 
-        await this.redisClient.del(`${gameId}:${pointId}:${team}:actions`)
-        if (!game.teamTwoActive) {
-            await this.redisClient.del(`${gameId}:${pointId}:two:actions`)
-        }
-
-        if (!point.teamOneActive && !point.teamTwoActive) {
-            await this.redisClient.del(`${gameId}:${pointId}:pulling`)
-            await this.redisClient.del(`${gameId}:${pointId}:receiving`)
-        }
-
-        await point.save()
+        const updatedPoint = await point.save()
         await game.save()
 
-        // use updated point to prevent race condition where points are updated at the same time
-        // and one team still shows as active when it's not
-        // TODO: rework this whole function
-        const updatedPoint = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
-        if (!updatedPoint.teamOneActive && !updatedPoint.teamTwoActive) {
-            const teamOneActions = await this.actionModel.find().where('_id').in(updatedPoint.teamOneActions)
-            const teamTwoActions = await this.actionModel.find().where('_id').in(updatedPoint.teamTwoActions)
-            await sendCloudTask(
-                '/api/v1/stats/point',
-                {
-                    point: {
-                        pointId: updatedPoint._id,
-                        gameId,
-                        pullingTeam: updatedPoint.pullingTeam,
-                        receivingTeam: updatedPoint.receivingTeam,
-                        scoringTeam: updatedPoint.scoringTeam,
-                        teamOnePlayers: updatedPoint.teamOnePlayers,
-                        teamTwoPlayers: updatedPoint.teamTwoPlayers,
-                        teamOneScore: updatedPoint.teamOneScore,
-                        teamTwoScore: updatedPoint.teamTwoScore,
-                        teamOneActions,
-                        teamTwoActions,
-                    },
-                },
-                'POST',
-            )
-        }
+        await finishPointQueue.addFinishPointJob({ gameId, pointId, team })
 
         return updatedPoint
     }
@@ -376,6 +330,8 @@ export default class PointServices {
             const actions = await this.actionModel.where({ _id: { $in: point.teamOneActions } })
             await this.saveActions(actions, gameId, pointId, team)
 
+            await this.actionModel.deleteMany({ _id: { $in: point.teamOneActions } })
+
             // delete actions from model
             point.teamOneActions = []
         } else {
@@ -385,6 +341,7 @@ export default class PointServices {
             const actions = await this.actionModel.where({ _id: { $in: point.teamTwoActions } })
             await this.saveActions(actions, gameId, pointId, team)
 
+            await this.actionModel.deleteMany({ _id: { $in: point.teamTwoActions } })
             // delete actions from model
             point.teamTwoActions = []
         }

@@ -18,6 +18,8 @@ interface IPoint {
     pointNumber: number
     teamOnePlayers: Player[]
     teamTwoPlayers: Player[]
+    teamOneActivePlayers: Player[]
+    teamTwoActivePlayers: Player[]
     teamOneScore: number
     teamTwoScore: number
     pullingTeam: Team

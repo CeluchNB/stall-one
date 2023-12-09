@@ -1,9 +1,9 @@
-import * as Constants from '../../../src/utils/constants'
-import { setUpDatabase, tearDownDatabase, resetDatabase } from '../../fixtures/setup-db'
-import { CreateTournament } from '../../../src/types/tournament'
-import Tournament from '../../../src/models/tournament'
-import TournamentServices from '../../../src/services/v1/tournament'
-import { ApiError } from '../../../src/types/errors'
+import * as Constants from '../../../../src/utils/constants'
+import { setUpDatabase, tearDownDatabase, resetDatabase } from '../../../fixtures/setup-db'
+import { CreateTournament } from '../../../../src/types/tournament'
+import Tournament from '../../../../src/models/tournament'
+import TournamentServices from '../../../../src/services/v1/tournament'
+import { ApiError } from '../../../../src/types/errors'
 import { Types } from 'mongoose'
 
 beforeAll(async () => {

@@ -9,8 +9,11 @@ import { GameAuth } from '../../types/game'
 import { getMyTeamNumber } from '../../utils/utils'
 import { getClient } from '../../utils/redis'
 import Action from '../../models/action'
+import PointBackgroundServices from '../../services/v1/point-background'
 
 export const pointRouter = Router()
+
+new PointBackgroundServices(Point, Game, Action)
 
 pointRouter.post(
     '/point',

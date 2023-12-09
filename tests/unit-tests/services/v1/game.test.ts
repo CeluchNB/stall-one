@@ -1,19 +1,26 @@
-import * as Constants from '../../../src/utils/constants'
-import { setUpDatabase, tearDownDatabase, createData, gameData, getMock, resetDatabase } from '../../fixtures/setup-db'
-import GameServices from '../../../src/services/v1/game'
-import Game from '../../../src/models/game'
-import { ApiError } from '../../../src/types/errors'
-import { CreateFullGame, CreateGame } from '../../../src/types/game'
-import { Team, TeamNumber } from '../../../src/types/ultmt'
+import * as Constants from '../../../../src/utils/constants'
+import {
+    setUpDatabase,
+    tearDownDatabase,
+    createData,
+    gameData,
+    getMock,
+    resetDatabase,
+} from '../../../fixtures/setup-db'
+import GameServices from '../../../../src/services/v1/game'
+import Game from '../../../../src/models/game'
+import { ApiError } from '../../../../src/types/errors'
+import { CreateFullGame, CreateGame } from '../../../../src/types/game'
+import { Team, TeamNumber } from '../../../../src/types/ultmt'
 import { Types } from 'mongoose'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import axios from 'axios'
 import randomstring from 'randomstring'
-import Tournament from '../../../src/models/tournament'
-import { CreateTournament } from '../../../src/types/tournament'
-import Point from '../../../src/models/point'
-import Action from '../../../src/models/action'
-import { ActionType } from '../../../src/types/action'
+import Tournament from '../../../../src/models/tournament'
+import { CreateTournament } from '../../../../src/types/tournament'
+import Point from '../../../../src/models/point'
+import Action from '../../../../src/models/action'
+import { ActionType } from '../../../../src/types/action'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 

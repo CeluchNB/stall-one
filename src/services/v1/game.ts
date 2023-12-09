@@ -89,7 +89,7 @@ export default class GameServices {
     updateGame = async (gameId: string, gameData: UpdateGame): Promise<IGame> => {
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
-        // This does not actually work b/c of 0's
+        // TODO: This does not actually work b/c of 0's
         const safeData: UpdateGame = {
             teamTwo: gameData.teamTwo,
             teamTwoDefined: gameData.teamTwoDefined,

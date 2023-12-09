@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import * as Constants from '../../../src/utils/constants'
+import * as Constants from '../../../../src/utils/constants'
 import {
     setUpDatabase,
     tearDownDatabase,
@@ -8,21 +8,30 @@ import {
     client,
     createData,
     createPointData,
-} from '../../fixtures/setup-db'
-import PointServices from '../../../src/services/v1/point'
-import Point from '../../../src/models/point'
-import Game from '../../../src/models/game'
-import { Player, TeamNumber } from '../../../src/types/ultmt'
-import { ApiError } from '../../../src/types/errors'
+} from '../../../fixtures/setup-db'
+import PointServices from '../../../../src/services/v1/point'
+import Point from '../../../../src/models/point'
+import Game from '../../../../src/models/game'
+import { Player, TeamNumber } from '../../../../src/types/ultmt'
+import { ApiError } from '../../../../src/types/errors'
 import { Types } from 'mongoose'
-import Action from '../../../src/models/action'
-import { getRedisAction, saveRedisAction } from '../../../src/utils/redis'
-import { ActionType, RedisAction } from '../../../src/types/action'
-import { getActionBaseKey } from '../../../src/utils/utils'
-import IGame from '../../../src/types/game'
-import IPoint from '../../../src/types/point'
+import Action from '../../../../src/models/action'
+import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
+import { ActionType, RedisAction } from '../../../../src/types/action'
+import { getActionBaseKey } from '../../../../src/utils/utils'
+import IGame from '../../../../src/types/game'
+import IPoint from '../../../../src/types/point'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
+jest.mock('../../../../src/background/v1/point', () => {
+    return {
+        finishPointQueue: {
+            initialize: jest.fn(),
+            close: jest.fn(),
+            addFinishPointJob: jest.fn(),
+        },
+    }
+})
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -431,12 +440,16 @@ describe('test add players to point', () => {
         expect(point._id.toString()).toBe(initialPoint._id.toString())
         expect(point.pointNumber).toBe(1)
         expect(point.teamOnePlayers.length).toBe(7)
+        expect(point.teamOneActivePlayers.length).toBe(7)
+        expect(point.teamTwoActivePlayers.length).toBe(0)
         expect(point.teamTwoPlayers.length).toBe(0)
 
         const updatedPoint = await Point.findById(initialPoint._id)
         expect(updatedPoint?.pointNumber).toBe(1)
         expect(updatedPoint?.teamOnePlayers.length).toBe(7)
+        expect(updatedPoint?.teamOneActivePlayers.length).toBe(7)
         expect(updatedPoint?.teamTwoPlayers.length).toBe(0)
+        expect(updatedPoint?.teamTwoActivePlayers.length).toBe(0)
     })
 
     it('with valid data for team two', async () => {
@@ -472,12 +485,16 @@ describe('test add players to point', () => {
         expect(point._id.toString()).toBe(initialPoint._id.toString())
         expect(point.pointNumber).toBe(1)
         expect(point.teamOnePlayers.length).toBe(0)
+        expect(point.teamOneActivePlayers.length).toBe(0)
         expect(point.teamTwoPlayers.length).toBe(7)
+        expect(point.teamTwoActivePlayers.length).toBe(7)
 
         const updatedPoint = await Point.findById(initialPoint._id)
         expect(updatedPoint?.pointNumber).toBe(1)
         expect(updatedPoint?.teamOnePlayers.length).toBe(0)
+        expect(updatedPoint?.teamOneActivePlayers.length).toBe(0)
         expect(updatedPoint?.teamTwoPlayers.length).toBe(7)
+        expect(updatedPoint?.teamTwoActivePlayers.length).toBe(7)
     })
 
     it('with unfound point', async () => {
@@ -584,7 +601,6 @@ describe('test finish point', () => {
         expect(result.teamTwoActive).toBe(true)
         expect(result.teamOneScore).toBe(1)
         expect(result.teamTwoScore).toBe(0)
-        expect(result.teamOneActions.length).toBe(2)
 
         const pointRecord = await Point.findById(point._id)
         const gameRecord = await Game.findById(game._id)
@@ -594,10 +610,7 @@ describe('test finish point', () => {
         expect(gameRecord?.teamTwoScore).toBe(0)
 
         const keys = await client.keys('*')
-        expect(keys.length).toBe(3)
-
-        const actions = await Action.find({})
-        expect(actions.length).toBe(2)
+        expect(keys.length).toBe(6)
     })
 
     it('with team two first finishing and scoring', async () => {
@@ -633,7 +646,6 @@ describe('test finish point', () => {
         expect(result.teamTwoActive).toBe(false)
         expect(result.teamOneScore).toBe(0)
         expect(result.teamTwoScore).toBe(1)
-        expect(result.teamTwoActions.length).toBe(2)
 
         const pointRecord = await Point.findById(point._id)
         const gameRecord = await Game.findById(game._id)
@@ -643,9 +655,7 @@ describe('test finish point', () => {
         expect(gameRecord?.teamTwoScore).toBe(1)
 
         const keys = await client.keys('*')
-        expect(keys.length).toBe(3)
-        const actions = await Action.find({})
-        expect(actions.length).toBe(2)
+        expect(keys.length).toBe(6)
     })
 
     it('with only team finishing', async () => {
@@ -683,7 +693,6 @@ describe('test finish point', () => {
         expect(result.teamTwoActive).toBe(false)
         expect(result.teamOneScore).toBe(1)
         expect(result.teamTwoScore).toBe(0)
-        expect(result.teamOneActions.length).toBe(2)
 
         const pointRecord = await Point.findById(point._id)
         const gameRecord = await Game.findById(game._id)
@@ -693,9 +702,7 @@ describe('test finish point', () => {
         expect(gameRecord?.teamTwoScore).toBe(0)
 
         const keys = await client.keys('*')
-        expect(keys.length).toBe(0)
-        const actions = await Action.find({})
-        expect(actions.length).toBe(2)
+        expect(keys.length).toBe(5)
     })
 
     it('with previously finished point', async () => {
