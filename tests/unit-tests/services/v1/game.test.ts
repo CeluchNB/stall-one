@@ -100,6 +100,7 @@ describe('test create game', () => {
                     endDate: new Date('09-23-2022'),
                     name: 'Mid-Atlantic Regionals 2022',
                     eventId: 'mareg22',
+                    creator: createData.creator,
                 },
             },
             'jwt',

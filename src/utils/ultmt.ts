@@ -1,6 +1,6 @@
 import * as Constants from './constants'
 import axios from 'axios'
-import { TeamResponse, UserResponse } from '../types/ultmt'
+import { Player, TeamResponse, UserResponse } from '../types/ultmt'
 import { ApiError } from '../types/errors'
 
 export const getUser = async (ultmtUrl: string, apiKey: string, jwt: string): Promise<UserResponse> => {
@@ -57,5 +57,14 @@ export const getTeam = async (ultmtUrl: string, apiKey: string, teamId?: string)
         return team
     } catch (error) {
         throw new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404)
+    }
+}
+
+export const parseUser = (player: Player): Player => {
+    return {
+        _id: player._id,
+        firstName: player.firstName,
+        lastName: player.lastName,
+        username: player.username,
     }
 }

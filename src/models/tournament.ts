@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose'
+import { Schema, SchemaTypes, model } from 'mongoose'
 import ITournament from '../types/tournament'
 
 const schema = new Schema<ITournament>({
@@ -9,6 +9,12 @@ const schema = new Schema<ITournament>({
     startDate: Date,
     endDate: Date,
     eventId: { type: String, required: true, unique: true },
+    creator: {
+        _id: SchemaTypes.ObjectId,
+        firstName: String,
+        lastName: String,
+        username: String,
+    },
 })
 
 schema.index({ name: 'text', eventId: 'text' })

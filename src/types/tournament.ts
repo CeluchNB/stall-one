@@ -1,4 +1,5 @@
 import { Types } from 'mongoose'
+import { Player } from './ultmt'
 
 export interface CreateTournament {
     startDate?: Date
@@ -9,6 +10,7 @@ export interface CreateTournament {
 
 interface ITournament extends CreateTournament {
     _id: Types.ObjectId
+    creator: Player
 }
 
 export default ITournament

@@ -1,11 +1,12 @@
 import * as Constants from '../../../../src/utils/constants'
 import app, { close } from '../../../../src/app'
 import request from 'supertest'
-import { resetDatabase } from '../../../fixtures/setup-db'
+import { resetDatabase, getMock } from '../../../fixtures/setup-db'
 import { CreateTournament } from '../../../../src/types/tournament'
 import Tournament from '../../../../src/models/tournament'
 import { Types } from 'mongoose'
 import { ApiError } from '../../../../src/types/errors'
+import axios from 'axios'
 
 afterAll(async () => {
     await close()
@@ -13,6 +14,14 @@ afterAll(async () => {
 
 afterEach(async () => {
     await resetDatabase()
+})
+
+beforeEach(() => {
+    jest.spyOn(axios, 'get').mockImplementation(getMock)
+})
+
+afterEach(() => {
+    jest.spyOn(axios, 'get').mockReset()
 })
 
 describe('test /POST tournament', () => {
