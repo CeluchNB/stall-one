@@ -1,10 +1,11 @@
 import * as Constants from '../../../../src/utils/constants'
-import { setUpDatabase, tearDownDatabase, resetDatabase } from '../../../fixtures/setup-db'
+import { setUpDatabase, tearDownDatabase, resetDatabase, getMock } from '../../../fixtures/setup-db'
 import { CreateTournament } from '../../../../src/types/tournament'
 import Tournament from '../../../../src/models/tournament'
 import TournamentServices from '../../../../src/services/v1/tournament'
 import { ApiError } from '../../../../src/types/errors'
 import { Types } from 'mongoose'
+import axios from 'axios'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -18,7 +19,15 @@ afterEach(async () => {
     await resetDatabase()
 })
 
-const services = new TournamentServices(Tournament)
+beforeEach(() => {
+    jest.spyOn(axios, 'get').mockImplementation(getMock)
+})
+
+afterEach(() => {
+    jest.spyOn(axios, 'get').mockReset()
+})
+
+const services = new TournamentServices(Tournament, '', '')
 describe('test create tournament', () => {
     it('with valid data', async () => {
         const createData: CreateTournament = {
@@ -28,7 +37,7 @@ describe('test create tournament', () => {
             eventId: 'mareg22',
         }
 
-        const tournament = await services.createTournament(createData)
+        const tournament = await services.createTournament(createData, 'jwt')
         expect(tournament.startDate).toBe(createData.startDate)
         expect(tournament.endDate).toBe(createData.endDate)
         expect(tournament.name).toBe(createData.name)
@@ -46,7 +55,7 @@ describe('test create tournament', () => {
             eventId: 'mareg22',
             some: 'baddata',
         }
-        const tournament = await services.createTournament(createData as unknown as CreateTournament)
+        const tournament = await services.createTournament(createData as unknown as CreateTournament, 'kwt')
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect((tournament as any).some).toBeUndefined()
 
