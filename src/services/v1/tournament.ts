@@ -2,12 +2,17 @@ import * as Constants from '../../utils/constants'
 import { ITournamentModel } from '../../models/tournament'
 import ITournament, { CreateTournament } from '../../types/tournament'
 import { findByIdOrThrow } from '../../utils/mongoose'
+import { getUser, parseUser } from '../../utils/ultmt'
 
 export default class TournamentServices {
     tournamentModel: ITournamentModel
+    ultmtUrl: string
+    apiKey: string
 
-    constructor(tournamentModel: ITournamentModel) {
+    constructor(tournamentModel: ITournamentModel, ultmtUrl: string, apiKey: string) {
         this.tournamentModel = tournamentModel
+        this.ultmtUrl = ultmtUrl
+        this.apiKey = apiKey
     }
 
     /**
@@ -15,8 +20,9 @@ export default class TournamentServices {
      * @param data create tournament data
      * @returns tournament document
      */
-    createTournament = async (data: CreateTournament): Promise<ITournament> => {
-        const tournament = await this.tournamentModel.create(data)
+    createTournament = async (data: CreateTournament, jwt: string): Promise<ITournament> => {
+        const user = await getUser(this.ultmtUrl, this.apiKey, jwt)
+        const tournament = await this.tournamentModel.create({ ...data, creator: parseUser(user) })
         return tournament
     }
 

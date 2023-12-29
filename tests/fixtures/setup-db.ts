@@ -104,7 +104,7 @@ export const createPointData: IPoint = {
 }
 
 export const getMock = jest.fn((url) => {
-    if (url.includes('auth/manager')) {
+    if (url.includes('auth/manager') || url.includes('user')) {
         return Promise.resolve({
             data: {
                 user: {
