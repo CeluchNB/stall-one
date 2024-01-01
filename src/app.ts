@@ -1,8 +1,8 @@
 import express from 'express'
 import cors from 'cors'
 import passport from 'passport'
-import { router as v1Router } from '../src/routes/v1'
-import { router as v2Router } from '../src/routes/v2'
+// import { router as v1Router } from '../src/routes/v1'
+// import { router as v2Router } from '../src/routes/v2'
 import axios from 'axios'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
@@ -12,6 +12,7 @@ import { createRedisAdapter, closeRedisConnection } from './loaders/redis'
 import { ClientToServerEvents } from './types/socket'
 import { getClient } from './utils/redis'
 import { finishPointQueue } from './background/v1'
+import { createLazyRouter } from 'express-lazy-router'
 
 Promise.resolve(connectDatabase())
 
@@ -23,8 +24,15 @@ require('./loaders/passport')
 
 finishPointQueue.initialize()
 
-app.use('/api/v1', v1Router)
-app.use('/api/v2', v2Router)
+const lazyRouter = createLazyRouter()
+app.use(
+    '/api/v1',
+    lazyRouter(() => import('./routes/v1')),
+)
+app.use(
+    '/api/v2',
+    lazyRouter(() => import('./routes/v2')),
+)
 
 app.get('/stall-one', async (req, res) => {
     const response = await axios.get(`${process.env.ULTMT_API_URL}/ultmt`, {
