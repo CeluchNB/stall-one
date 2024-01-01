@@ -1,25 +1,30 @@
 import * as Constants from '../../../src/utils/constants'
 import * as RedisUtils from '../../../src/utils/redis'
-import app, { close } from '../../../src/app'
+import { close, setupApp } from '../../../src/app'
 import { resetDatabase, createData, client, setUpDatabase, tearDownDatabase } from '../../fixtures/setup-db'
 import ioClient from 'socket.io-client'
 import { ActionType, ClientAction } from '../../../src/types/action'
 import { Types } from 'mongoose'
 import Game from '../../../src/models/game'
 import axios from 'axios'
+import { Server } from 'http'
 
 let clientSocket: ReturnType<typeof ioClient>
 let gameId: string
+let httpServer: Server
 const pointId = 'pointid'
 
 beforeAll((done) => {
-    app.listen(process.env.PORT, () => {
-        Game.create(createData, (err, game) => {
-            gameId = game._id.toString()
-            clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`)
-            clientSocket.on('connect', () => {
-                clientSocket.emit('join:point', gameId, pointId)
-                done()
+    setupApp().then((app) => {
+        httpServer = app
+        app.listen(process.env.PORT, () => {
+            Game.create(createData, (err, game) => {
+                gameId = game._id.toString()
+                clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`)
+                clientSocket.on('connect', () => {
+                    clientSocket.emit('join:point', gameId, pointId)
+                    done()
+                })
             })
         })
     })
@@ -37,7 +42,7 @@ afterAll(async () => {
     await close()
     await tearDownDatabase()
     clientSocket.close()
-    app.close()
+    httpServer.close()
 })
 
 describe('test client action error case', () => {

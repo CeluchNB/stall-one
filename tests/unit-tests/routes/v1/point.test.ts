@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as Constants from '../../../../src/utils/constants'
-import app, { close } from '../../../../src/app'
+import { close, setupApp } from '../../../../src/app'
 import request from 'supertest'
 import Game from '../../../../src/models/game'
 import {
@@ -18,6 +18,7 @@ import { Player } from '../../../../src/types/ultmt'
 import { ActionType, RedisAction } from '../../../../src/types/action'
 import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import Action from '../../../../src/models/action'
+import { Server } from 'http'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 jest.mock('../../../../src/background/v1/point', () => {
@@ -30,7 +31,9 @@ jest.mock('../../../../src/background/v1/point', () => {
     }
 })
 
+let app: Server
 beforeAll(async () => {
+    app = await setupApp()
     await setUpDatabase()
 })
 

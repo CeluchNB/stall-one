@@ -42,7 +42,9 @@ export const FinishPointQueue = (redisUrl = 'redis://localhost:6379') => {
     }
 
     const closeConnection = async () => {
-        await connection.quit()
+        if (connection.status === 'ready') {
+            await connection.quit()
+        }
     }
 
     const close = async () => {

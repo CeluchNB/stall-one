@@ -1,6 +1,6 @@
 import * as Constants from '../../../src/utils/constants'
 import * as RedisUtils from '../../../src/utils/redis'
-import app, { close } from '../../../src/app'
+import { close, setupApp } from '../../../src/app'
 import {
     resetDatabase,
     createData,
@@ -17,6 +17,7 @@ import IGame from '../../../src/types/game'
 import Point from '../../../src/models/point'
 import IPoint from '../../../src/types/point'
 import { parseActionData } from '../../../src/utils/action'
+import { Server } from 'http'
 
 /*
     The current socket testing setup is less than ideal. Ideally, a new
@@ -27,25 +28,30 @@ import { parseActionData } from '../../../src/utils/action'
     such as resetting the mongo DB between each test.
 */
 
+beforeAll(async () => {
+    await setUpDatabase()
+})
+
 let clientSocket: ReturnType<typeof ioClient>
 let gameId: Types.ObjectId
 const pointId = 'pointone'
+let httpServer: Server
 beforeAll((done) => {
-    app.listen(process.env.PORT, () => {
-        Game.create(createData, (error, game) => {
-            gameId = game._id
-            const token = game.getToken('one')
-            clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`, {
-                extraHeaders: { authorization: `Bearer ${token}` },
-            })
-            clientSocket.on('connect', () => {
-                done()
+    setupApp().then((app) => {
+        httpServer = app
+        app.listen(process.env.PORT, () => {
+            Game.create(createData, (error, game) => {
+                gameId = game._id
+                const token = game.getToken('one')
+                clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`, {
+                    extraHeaders: { authorization: `Bearer ${token}` },
+                })
+                clientSocket.on('connect', () => {
+                    done()
+                })
             })
         })
     })
-})
-beforeAll(async () => {
-    await setUpDatabase()
 })
 
 beforeEach(async () => {
@@ -62,7 +68,7 @@ afterAll(async () => {
     await close()
     await tearDownDatabase()
     clientSocket.close()
-    app.close()
+    httpServer.close()
 })
 
 describe('test client action sent', () => {
