@@ -13,7 +13,6 @@ import Action from '../../../../src/models/action'
 import { saveRedisAction } from '../../../../src/utils/redis'
 import { ActionType, RedisAction } from '../../../../src/types/action'
 import PointBackgroundServices from '../../../../src/services/v1/point-background'
-import { Job } from 'bullmq'
 import { getClient } from '../../../../src/utils/redis'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
@@ -64,9 +63,7 @@ describe('handles finish point background service', () => {
         await client.set(`${game._id.toString()}:${point._id.toString()}:two:actions`, 0)
         await saveRedisAction(client, firstAction, point._id.toString())
         await saveRedisAction(client, secondAction, point._id.toString())
-        await services.finishPoint({
-            data: { gameId: game._id.toHexString(), pointId: point._id.toHexString(), team: 'one' },
-        } as Job)
+        await services.finishPoint(point._id.toHexString(), game._id.toHexString(), 'one')
 
         const pointRecord = await Point.findById(point._id)
 
@@ -116,9 +113,7 @@ describe('handles finish point background service', () => {
         await client.set(`${game._id.toString()}:${point._id.toString()}:two:actions`, 2)
         await saveRedisAction(client, firstAction, point._id.toString())
         await saveRedisAction(client, secondAction, point._id.toString())
-        await services.finishPoint({
-            data: { gameId: game._id.toHexString(), pointId: point._id.toHexString(), team: 'two' },
-        } as Job)
+        await services.finishPoint(point._id.toHexString(), game._id.toHexString(), 'two')
 
         const pointRecord = await Point.findById(point._id)
 

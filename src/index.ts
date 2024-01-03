@@ -1,12 +1,11 @@
-import dotenv from 'dotenv'
+console.log('Very first thing', Date.now())
+import { setupApp } from './app'
 
-const pathToEnv = process.cwd() + '/src/config/.env'
-dotenv.config({ path: pathToEnv })
+setupApp().then((app) => {
+    const PORT = process.env.PORT || 3000
 
-import app from './app'
-
-const PORT = process.env.PORT || 3000
-
-app.listen(PORT, () => {
-    return console.log('Stall one listening on', PORT)
+    app.listen(PORT, () => {
+        console.log('Listening', Date.now())
+        return console.log('Stall one listening on', PORT)
+    })
 })

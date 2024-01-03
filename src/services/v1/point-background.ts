@@ -8,7 +8,6 @@ import { findByIdOrThrow } from '../../utils/mongoose'
 import { deleteRedisAction, getClient, getRedisAction } from '../../utils/redis'
 import { TeamNumber, TeamNumberString } from '../../types/ultmt'
 import IGame from '../../types/game'
-import { Job } from 'bullmq'
 import { RedisAction } from '../../types/action'
 
 export default class PointBackgroundServices {
@@ -22,8 +21,7 @@ export default class PointBackgroundServices {
         this.actionModel = actionModel
     }
 
-    finishPoint = async (job: Job) => {
-        const { gameId, pointId, team } = job.data
+    finishPoint = async (pointId: string, gameId: string, team: TeamNumberString) => {
         const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
         const redisClient = await getClient()

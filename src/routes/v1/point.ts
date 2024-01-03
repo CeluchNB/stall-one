@@ -13,8 +13,6 @@ import PointBackgroundServices from '../../services/v1/point-background'
 
 export const pointRouter = Router()
 
-new PointBackgroundServices(Point, Game, Action)
-
 pointRouter.post(
     '/point',
     query('pulling').isBoolean(),
@@ -156,5 +154,18 @@ pointRouter.get(
         return res.json({ actions })
     },
 )
+
+pointRouter.put('/point/:id/background-finish', param('id').escape(), async (req: Request, res: Response, next) => {
+    try {
+        const services = new PointBackgroundServices(Point, Game, Action)
+        const {
+            finishPointData: { gameId, team },
+        } = req.body
+        await services.finishPoint(req.params.id, gameId, team)
+        return res.send()
+    } catch (error) {
+        next(error)
+    }
+})
 
 pointRouter.use(errorMiddleware)

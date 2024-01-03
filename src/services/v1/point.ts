@@ -10,7 +10,7 @@ import { getRedisAction, saveRedisAction } from '../../utils/redis'
 import { findByIdOrThrow, idsAreEqual } from '../../utils/mongoose'
 import IGame from '../../types/game'
 import { sendCloudTask } from '../../utils/cloud-tasks'
-import { finishPointQueue } from '../../background/v1'
+// import { finishPointQueue } from '../../background/v1'
 
 export default class PointServices {
     pointModel: IPointModel
@@ -257,7 +257,16 @@ export default class PointServices {
         const updatedPoint = await point.save()
         await game.save()
 
-        await finishPointQueue.addFinishPointJob({ gameId, pointId, team })
+        await sendCloudTask(
+            `/api/v1/point/${pointId}/background-finish`,
+            {
+                finishPointData: {
+                    gameId,
+                    team,
+                },
+            },
+            'PUT',
+        )
 
         return updatedPoint
     }

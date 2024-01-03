@@ -1,10 +1,16 @@
 import * as Constants from '../../../../src/utils/constants'
-import app, { close } from '../../../../src/app'
+import { close, setupApp } from '../../../../src/app'
 import request from 'supertest'
 import axios from 'axios'
 import Action from '../../../../src/models/action'
 import { resetDatabase } from '../../../fixtures/setup-db'
 import { Types } from 'mongoose'
+import { Server } from 'http'
+
+let app: Server
+beforeAll(async () => {
+    app = await setupApp()
+})
 
 afterAll(async () => {
     await close()
