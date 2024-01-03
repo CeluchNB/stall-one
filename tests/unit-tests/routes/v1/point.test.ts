@@ -14,7 +14,7 @@ import {
 } from '../../../fixtures/setup-db'
 import Point from '../../../../src/models/point'
 import { Types } from 'mongoose'
-import { Player } from '../../../../src/types/ultmt'
+import { Player, TeamNumber } from '../../../../src/types/ultmt'
 import { ActionType, RedisAction } from '../../../../src/types/action'
 import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import Action from '../../../../src/models/action'
@@ -46,7 +46,7 @@ afterEach(async () => {
     await resetDatabase()
 })
 
-describe('test /POST first point route', () => {
+describe('test POST first point route', () => {
     it('with valid data', async () => {
         const game = await Game.create(gameData)
         const token = game.getToken('one')
@@ -101,7 +101,7 @@ describe('test /POST first point route', () => {
     })
 })
 
-describe('test /PUT pulling team', () => {
+describe('test PUT pulling team', () => {
     it('with valid data for team one', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
@@ -208,7 +208,7 @@ describe('test /PUT pulling team', () => {
     })
 })
 
-describe('test /PUT set players', () => {
+describe('test PUT set players', () => {
     it('with valid data', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
@@ -316,7 +316,7 @@ describe('test /PUT set players', () => {
     })
 })
 
-describe('test /PUT finish point', () => {
+describe('test PUT finish point', () => {
     it('with valid team one data', async () => {
         const game = await Game.create(createData)
         const point = await Point.create(createPointData)
@@ -431,7 +431,7 @@ describe('test /PUT finish point', () => {
     })
 })
 
-describe('test /PUT reactivate point', () => {
+describe('test PUT reactivate point', () => {
     beforeEach(async () => {
         const action1 = await Action.create({
             team: {
@@ -553,7 +553,7 @@ describe('test /PUT reactivate point', () => {
     })
 })
 
-describe('test /DELETE point', () => {
+describe('test DELETE point', () => {
     it('with valid data', async () => {
         const game = await Game.create(createData)
         const point = await Point.create(createPointData)
@@ -614,7 +614,7 @@ describe('test /DELETE point', () => {
     })
 })
 
-describe('test /GET actions by point', () => {
+describe('test GET actions by point', () => {
     const team = {
         _id: new Types.ObjectId(),
         seasonStart: new Date(),
@@ -722,7 +722,7 @@ describe('test /GET actions by point', () => {
     })
 })
 
-describe('test /GET live actions of a point', () => {
+describe('test GET live actions of a point', () => {
     it('with valid response', async () => {
         const game = await Game.create(createData)
         const point = await Point.create(createPointData)
@@ -787,5 +787,78 @@ describe('test /GET live actions of a point', () => {
         expect(actions.length).toBe(2)
         expect(actions[0].actionType).toBe(ActionType.CATCH)
         expect(actions[1].actionType).toBe(ActionType.TEAM_ONE_SCORE)
+    })
+})
+
+describe('test PUT finish background point', () => {
+    it('with successful call', async () => {
+        const game = await Game.create(createData)
+        const point = await Point.create({ ...createPointData, teamTwoActive: false, teamOneActive: false })
+        game.teamTwoActive = false
+        game.teamTwoDefined = false
+        game.points.push(point._id)
+        await game.save()
+
+        const firstAction: RedisAction = {
+            actionNumber: 1,
+            teamNumber: TeamNumber.ONE,
+            actionType: ActionType.CATCH,
+            tags: [],
+            comments: [],
+        }
+
+        const secondAction: RedisAction = {
+            actionNumber: 2,
+            teamNumber: TeamNumber.ONE,
+            actionType: ActionType.TEAM_ONE_SCORE,
+            tags: [],
+            comments: [],
+        }
+        await client.set(`${game._id.toString()}:${point._id.toString()}:pulling`, 'two')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:receiving`, 'one')
+        await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 2)
+        await client.set(`${game._id.toString()}:${point._id.toString()}:two:actions`, 0)
+        await saveRedisAction(client, firstAction, point._id.toString())
+        await saveRedisAction(client, secondAction, point._id.toString())
+
+        await request(app)
+            .put(`/api/v1/point/${point._id.toHexString()}/background-finish`)
+            .send({
+                finishPointData: {
+                    gameId: game._id.toHexString(),
+                    team: 'one',
+                },
+            })
+            .expect(200)
+
+        const pointRecord = await Point.findById(point._id)
+
+        expect(pointRecord?.teamOneActions.length).toBe(2)
+        expect(pointRecord?.teamTwoActions.length).toBe(0)
+
+        const pullingKey = await client.get(`${game._id.toString()}:${point._id.toString()}:pulling`)
+        expect(pullingKey).toBeNull()
+
+        const receivingKey = await client.get(`${game._id.toString()}:${point._id.toString()}:receiving`)
+        expect(receivingKey).toBeNull()
+
+        const teamOneActionCount = await client.get(`${game._id.toString()}:${point._id.toString()}:one:actions`)
+        expect(teamOneActionCount).toBeNull()
+
+        const teamTwoActiveCount = await client.get(`${game._id.toString()}:${point._id.toString()}:two:actions`)
+        expect(teamTwoActiveCount).toBeNull()
+    })
+
+    it('with failed call', async () => {
+        const id = new Types.ObjectId()
+        await request(app)
+            .put(`/api/v1/point/${id.toHexString()}/background-finish`)
+            .send({
+                finishPointData: {
+                    gameId: id.toHexString(),
+                    team: 'one',
+                },
+            })
+            .expect(404)
     })
 })

@@ -9,7 +9,7 @@ import { connectDatabase, closeDatabase } from './loaders/mongoose'
 import { createRedisAdapter, closeRedisConnection } from './loaders/redis'
 import { ClientToServerEvents } from './types/socket'
 import { getClient } from './utils/redis'
-import { finishPointQueue } from './background/v1'
+// import { finishPointQueue } from './background/v1'
 import { createLazyRouter } from 'express-lazy-router'
 import { loadPassportMiddleware } from './loaders/passport'
 import dotenv from 'dotenv'
@@ -23,7 +23,6 @@ export const setupApp = async (): Promise<HttpServer> => {
     app.use(express.json())
     app.use(passport.initialize())
     loadPassportMiddleware()
-    finishPointQueue.initialize()
 
     const lazyRouter = createLazyRouter()
     app.use(
@@ -63,7 +62,6 @@ export const close = async () => {
     if (client && client.isOpen) {
         await client.quit()
     }
-    await finishPointQueue.close()
     await closeDatabase()
     await closeRedisConnection()
 }
