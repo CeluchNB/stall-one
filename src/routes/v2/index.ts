@@ -1,6 +1,8 @@
 import { gameRouter } from './game'
 import { Router } from 'express'
 
-export const router = Router()
+const router = Router()
 
 router.use(gameRouter)
+
+export default router

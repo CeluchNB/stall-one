@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as Constants from '../../../../src/utils/constants'
 import { Types } from 'mongoose'
-import app, { close } from '../../../../src/app'
+import { close, setupApp } from '../../../../src/app'
 import request from 'supertest'
 import Action from '../../../../src/models/action'
 import Game from '../../../../src/models/game'
@@ -11,8 +11,11 @@ import { saveRedisAction } from '../../../../src/utils/redis'
 import { client, getMock, resetDatabase, setUpDatabase, tearDownDatabase } from '../../../fixtures/setup-db'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import axios from 'axios'
+import { Server } from 'http'
 
+let app: Server
 beforeAll(async () => {
+    app = await setupApp()
     await setUpDatabase()
 })
 

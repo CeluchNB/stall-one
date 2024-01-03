@@ -1,5 +1,5 @@
 import * as Constants from '../../../../src/utils/constants'
-import app, { close } from '../../../../src/app'
+import { close, setupApp } from '../../../../src/app'
 import request from 'supertest'
 import Game from '../../../../src/models/game'
 import { createData, gameData, getMock, resetDatabase } from '../../../fixtures/setup-db'
@@ -12,8 +12,14 @@ import Action from '../../../../src/models/action'
 import Point from '../../../../src/models/point'
 import { CreateFullGame } from '../../../../src/types/game'
 import { ActionType } from '../../../../src/types/action'
+import { Server } from 'http'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
+
+let app: Server
+beforeAll(async () => {
+    app = await setupApp()
+})
 
 afterAll(async () => {
     await close()

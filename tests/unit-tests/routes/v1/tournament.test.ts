@@ -1,5 +1,5 @@
 import * as Constants from '../../../../src/utils/constants'
-import app, { close } from '../../../../src/app'
+import { close, setupApp } from '../../../../src/app'
 import request from 'supertest'
 import { resetDatabase, getMock } from '../../../fixtures/setup-db'
 import { CreateTournament } from '../../../../src/types/tournament'
@@ -7,6 +7,12 @@ import Tournament from '../../../../src/models/tournament'
 import { Types } from 'mongoose'
 import { ApiError } from '../../../../src/types/errors'
 import axios from 'axios'
+import { Server } from 'http'
+
+let app: Server
+beforeAll(async () => {
+    app = await setupApp()
+})
 
 afterAll(async () => {
     await close()
