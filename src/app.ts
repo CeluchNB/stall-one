@@ -14,7 +14,6 @@ import { loadPassportMiddleware } from './loaders/passport'
 import dotenv from 'dotenv'
 
 export const setupApp = async (): Promise<HttpServer> => {
-    console.log('setting up env', Date.now())
     const pathToEnv = process.cwd() + '/src/config/.env'
     dotenv.config({ path: pathToEnv })
 
@@ -22,10 +21,8 @@ export const setupApp = async (): Promise<HttpServer> => {
     app.use(cors())
     app.use(express.json())
     app.use(passport.initialize())
-    console.log('loading passport middleware', Date.now())
     loadPassportMiddleware()
 
-    console.log('setting up routers', Date.now())
     const lazyRouter = createLazyRouter()
     app.use(
         '/api/v1',
@@ -36,7 +33,6 @@ export const setupApp = async (): Promise<HttpServer> => {
         lazyRouter(() => import('./routes/v2')),
     )
 
-    console.log('added routers', Date.now())
     app.get('/stall-one', async (req, res) => {
         const response = await axios.get(`${process.env.ULTMT_API_URL}/ultmt`, {
             headers: { 'x-api-key': process.env.API_KEY || '' },
@@ -45,22 +41,17 @@ export const setupApp = async (): Promise<HttpServer> => {
         res.json({ message: message.message })
     })
 
-    console.log('creating server', Date.now())
     const httpServer = createServer(app)
     httpServer.setTimeout(0)
     const io = new Server<ClientToServerEvents>(httpServer, {})
 
-    console.log('connecting database', Date.now())
-    connectDatabase()
-    console.log('creating redis adapter', Date.now())
+    await connectDatabase()
     const adapter = await createRedisAdapter()
-    console.log('done creating redis adapter', Date.now())
     const client = await getClient()
 
     io.adapter(adapter)
     io.of('/live').on('connection', socketHandler(client, io))
 
-    console.log('returning server', Date.now())
     return httpServer
 }
 

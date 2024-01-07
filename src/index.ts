@@ -1,4 +1,4 @@
-console.log('Very first thing', Date.now())
+console.log('very first thing', Date.now())
 import { setupApp } from './app'
 
 setupApp().then((app) => {
