@@ -493,7 +493,7 @@ export default class GameServices {
         for (const pointId of game.points) {
             const point = await this.pointModel.findById(pointId)
 
-            if (!point) continue
+            if (!point || point.teamOneActive || point.teamTwoActive) continue
 
             const actionIds = game.teamOne._id?.equals(teamId) ? point?.teamOneActions : point?.teamTwoActions
             const actions = await this.actionModel.find({ _id: { $in: actionIds } })

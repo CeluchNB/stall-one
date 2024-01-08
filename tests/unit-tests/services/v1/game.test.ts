@@ -1544,6 +1544,8 @@ describe('test rebuild full stats for game', () => {
             teamOneScore: 0,
             teamTwoScore: 1,
             teamOneActions: [action1._id],
+            teamOneActive: false,
+            teamTwoActive: false,
         })
         await Point.create({
             pointNumber: 2,
@@ -1552,6 +1554,8 @@ describe('test rebuild full stats for game', () => {
             teamOneScore: 1,
             teamTwoScore: 1,
             teamOneActions: [action2._id],
+            teamOneActive: false,
+            teamTwoActive: false,
         })
         await Point.create({
             pointNumber: 3,
@@ -1560,6 +1564,8 @@ describe('test rebuild full stats for game', () => {
             teamOneScore: 1,
             teamTwoScore: 2,
             teamOneActions: [action3._id],
+            teamOneActive: true,
+            teamTwoActive: true,
         })
     })
 
@@ -1576,7 +1582,7 @@ describe('test rebuild full stats for game', () => {
 
         await services.rebuildStatsForGame(game._id.toHexString(), game.teamOne._id?.toHexString() as string)
 
-        expect(cloudTaskSpy).toBeCalledTimes(5)
+        expect(cloudTaskSpy).toBeCalledTimes(4)
     })
 
     it('handles unfound game', async () => {
