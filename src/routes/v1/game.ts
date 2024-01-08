@@ -275,4 +275,27 @@ gameRouter.put('/game/:id/open', async (req: Request, res: Response, next) => {
     }
 })
 
+gameRouter.put(
+    '/game/:id/rebuild',
+    param('id').escape(),
+    query('team').escape(),
+    async (req: Request, res: Response, next) => {
+        try {
+            const services = new GameServices(
+                Game,
+                Point,
+                Action,
+                process.env.ULTMT_API_URL || '',
+                process.env.API_KEY || '',
+            )
+            const gameId = req.params.id
+            const teamId = req.query.team
+            await services.rebuildStatsForGame(gameId, teamId as string)
+            return res.send()
+        } catch (e) {
+            next(e)
+        }
+    },
+)
+
 gameRouter.use(errorMiddleware)
