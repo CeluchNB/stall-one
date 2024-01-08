@@ -1563,13 +1563,15 @@ describe('test rebuild full stats for game', () => {
         })
     })
 
-    it('handles success with team two', async () => {
+    it('handles success with team one and finished game', async () => {
         const cloudTaskSpy = jest
             .spyOn(CloudTaskServices, 'sendCloudTask')
             .mockReturnValue(Promise.resolve([] as never))
         const [point1, point2, point3] = await Point.find()
         const game = await Game.create(createData)
         game.points = [point1._id, point2._id, point3._id]
+        game.teamOneActive = false
+        game.teamTwoActive = false
         await game.save()
 
         await services.rebuildStatsForGame(game._id.toHexString(), game.teamOne._id?.toHexString() as string)
@@ -1616,6 +1618,6 @@ describe('test rebuild full stats for game', () => {
 
         await services.rebuildStatsForGame(game._id.toHexString(), game.teamTwo._id?.toHexString() as string)
 
-        expect(cloudTaskSpy).toBeCalledTimes(5)
+        expect(cloudTaskSpy).toBeCalledTimes(4)
     })
 })

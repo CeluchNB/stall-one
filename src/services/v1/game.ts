@@ -503,7 +503,9 @@ export default class GameServices {
             await createStatsPoint(point, gameId, actions)
         }
 
-        await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
+        if (!game.teamOneActive && !game.teamTwoActive) {
+            await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
+        }
     }
 }
 
