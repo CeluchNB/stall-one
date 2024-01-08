@@ -1576,7 +1576,7 @@ describe('test rebuild full stats for game', () => {
 
         await services.rebuildStatsForGame(game._id.toHexString(), game.teamOne._id?.toHexString() as string)
 
-        expect(cloudTaskSpy).toBeCalledTimes(6)
+        expect(cloudTaskSpy).toBeCalledTimes(5)
     })
 
     it('handles unfound game', async () => {
@@ -1618,6 +1618,6 @@ describe('test rebuild full stats for game', () => {
 
         await services.rebuildStatsForGame(game._id.toHexString(), game.teamTwo._id?.toHexString() as string)
 
-        expect(cloudTaskSpy).toBeCalledTimes(4)
+        expect(cloudTaskSpy).toBeCalledTimes(3)
     })
 })

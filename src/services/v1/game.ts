@@ -488,8 +488,6 @@ export default class GameServices {
             throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
-        await sendCloudTask(`/api/v1/stats/game/delete/${gameId}?team=${teamId}`, {}, 'PUT')
-
         await createStatsGame(game)
 
         for (const pointId of game.points) {
