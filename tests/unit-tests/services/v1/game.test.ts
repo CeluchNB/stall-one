@@ -1,4 +1,5 @@
 import * as Constants from '../../../../src/utils/constants'
+import * as CloudTaskServices from '../../../../src/utils/cloud-tasks'
 import {
     setUpDatabase,
     tearDownDatabase,
@@ -1505,5 +1506,124 @@ describe('test open', () => {
         await expect(services.open(new Types.ObjectId().toString())).rejects.toThrowError(
             new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
         )
+    })
+})
+
+describe('test rebuild full stats for game', () => {
+    const team: Team = {
+        _id: new Types.ObjectId(),
+        seasonStart: new Date(),
+        seasonEnd: new Date(),
+        place: 'Place 1',
+        name: 'Name 1',
+        teamname: 'placename',
+    }
+    beforeEach(async () => {
+        jest.resetAllMocks()
+
+        const action1 = await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'TeamOneScore',
+        })
+        const action2 = await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'Pull',
+        })
+        const action3 = await Action.create({
+            team,
+            actionNumber: 2,
+            actionType: 'TeamOneScore',
+        })
+
+        await Point.create({
+            pointNumber: 1,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 0,
+            teamTwoScore: 1,
+            teamOneActions: [action1._id],
+            teamOneActive: false,
+            teamTwoActive: false,
+        })
+        await Point.create({
+            pointNumber: 2,
+            pullingTeam: { name: 'Team 2' },
+            receivingTeam: { name: 'Team 1' },
+            teamOneScore: 1,
+            teamTwoScore: 1,
+            teamOneActions: [action2._id],
+            teamOneActive: false,
+            teamTwoActive: false,
+        })
+        await Point.create({
+            pointNumber: 3,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 1,
+            teamTwoScore: 2,
+            teamOneActions: [action3._id],
+            teamOneActive: true,
+            teamTwoActive: true,
+        })
+    })
+
+    it('handles success with team one and finished game', async () => {
+        const cloudTaskSpy = jest
+            .spyOn(CloudTaskServices, 'sendCloudTask')
+            .mockReturnValue(Promise.resolve([] as never))
+        const [point1, point2, point3] = await Point.find()
+        const game = await Game.create(createData)
+        game.points = [point1._id, point2._id, point3._id]
+        game.teamOneActive = false
+        game.teamTwoActive = false
+        await game.save()
+
+        await services.rebuildStatsForGame(game._id.toHexString(), game.teamOne._id?.toHexString() as string)
+
+        expect(cloudTaskSpy).toBeCalledTimes(4)
+    })
+
+    it('handles unfound game', async () => {
+        const cloudTaskSpy = jest
+            .spyOn(CloudTaskServices, 'sendCloudTask')
+            .mockReturnValue(Promise.resolve([] as never))
+
+        await expect(
+            services.rebuildStatsForGame(new Types.ObjectId().toHexString(), new Types.ObjectId().toHexString()),
+        ).rejects.toThrow(Constants.UNABLE_TO_FIND_GAME)
+
+        expect(cloudTaskSpy).not.toHaveBeenCalled()
+    })
+
+    it('handles team id does not belong to game', async () => {
+        const cloudTaskSpy = jest
+            .spyOn(CloudTaskServices, 'sendCloudTask')
+            .mockReturnValue(Promise.resolve([] as never))
+        const game = await Game.create(createData)
+
+        await expect(
+            services.rebuildStatsForGame(game._id.toHexString(), new Types.ObjectId().toHexString()),
+        ).rejects.toThrow(Constants.INVALID_DATA)
+
+        expect(cloudTaskSpy).not.toHaveBeenCalled()
+    })
+
+    it('handles success unfound point and team two', async () => {
+        const cloudTaskSpy = jest
+            .spyOn(CloudTaskServices, 'sendCloudTask')
+            .mockReturnValue(Promise.resolve([] as never))
+
+        const teamTwoId = new Types.ObjectId()
+
+        const [point1, point3] = await Point.find()
+        const game = await Game.create({ ...createData, teamTwo: { _id: teamTwoId, place: 'Test', name: 'Test' } })
+        game.points = [point1._id, new Types.ObjectId(), point3._id]
+        await game.save()
+
+        await services.rebuildStatsForGame(game._id.toHexString(), game.teamTwo._id?.toHexString() as string)
+
+        expect(cloudTaskSpy).toBeCalledTimes(3)
     })
 })

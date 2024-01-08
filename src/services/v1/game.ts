@@ -472,6 +472,39 @@ export default class GameServices {
         }
         return game
     }
+
+    /**
+     * Method to completely rebuild the stats for a game
+     * @param gameId game id to rebuild
+     * @param teamId team to rebuild game for
+     */
+    rebuildStatsForGame = async (gameId: string, teamId: string) => {
+        const game = await this.gameModel.findById(gameId)
+        if (!game) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_GAME, 404)
+        }
+
+        if (!game.teamOne._id?.equals(teamId) && !game.teamTwo._id?.equals(teamId)) {
+            throw new ApiError(Constants.INVALID_DATA, 400)
+        }
+
+        await createStatsGame(game)
+
+        for (const pointId of game.points) {
+            const point = await this.pointModel.findById(pointId)
+
+            if (!point || point.teamOneActive || point.teamTwoActive) continue
+
+            const actionIds = game.teamOne._id?.equals(teamId) ? point?.teamOneActions : point?.teamTwoActions
+            const actions = await this.actionModel.find({ _id: { $in: actionIds } })
+
+            await createStatsPoint(point, gameId, actions)
+        }
+
+        if (!game.teamOneActive && !game.teamTwoActive) {
+            await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
+        }
+    }
 }
 
 const createStatsGame = async (game: IGame) => {
