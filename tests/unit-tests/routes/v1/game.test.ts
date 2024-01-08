@@ -512,7 +512,7 @@ describe('test /GET game points', () => {
     })
 })
 
-describe('test /GET search games', () => {
+describe('test GET search games', () => {
     const gameOneData = {
         creator: {
             _id: new Types.ObjectId(),
@@ -626,7 +626,7 @@ describe('test /GET search games', () => {
     })
 })
 
-describe('test /GET games by team id', () => {
+describe('test GET games by team id', () => {
     const teamOneId = new Types.ObjectId()
     const teamTwoId = new Types.ObjectId()
     const teamThreeId = new Types.ObjectId()
@@ -707,7 +707,7 @@ describe('test /GET games by team id', () => {
     })
 })
 
-describe('test /POST full game', () => {
+describe('test POST full game', () => {
     it('with valid data', async () => {
         const fullGame: CreateFullGame = {
             ...createData,
@@ -811,7 +811,7 @@ describe('test /POST full game', () => {
     })
 })
 
-describe('test /PUT open', () => {
+describe('test PUT open', () => {
     it('with successful response', async () => {
         const game = await Game.create(gameData)
         const response = await request(app).put(`/api/v1/game/${game._id.toHexString()}/open`).send().expect(200)
@@ -827,5 +827,76 @@ describe('test /PUT open', () => {
             .send()
             .expect(404)
         expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_GAME)
+    })
+})
+
+describe('test PUT rebuild game stats', () => {
+    const team: Team = {
+        _id: new Types.ObjectId(),
+        seasonStart: new Date(),
+        seasonEnd: new Date(),
+        place: 'Place 1',
+        name: 'Name 1',
+        teamname: 'placename',
+    }
+    beforeEach(async () => {
+        jest.resetAllMocks()
+
+        const action1 = await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'TeamOneScore',
+        })
+        const action2 = await Action.create({
+            team,
+            actionNumber: 1,
+            actionType: 'Pull',
+        })
+        const action3 = await Action.create({
+            team,
+            actionNumber: 2,
+            actionType: 'TeamOneScore',
+        })
+
+        await Point.create({
+            pointNumber: 1,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 0,
+            teamTwoScore: 1,
+            teamOneActions: [action1._id],
+        })
+        await Point.create({
+            pointNumber: 2,
+            pullingTeam: { name: 'Team 2' },
+            receivingTeam: { name: 'Team 1' },
+            teamOneScore: 1,
+            teamTwoScore: 1,
+            teamOneActions: [action2._id],
+        })
+        await Point.create({
+            pointNumber: 3,
+            pullingTeam: { name: 'Team 1' },
+            receivingTeam: { name: 'Team 2' },
+            teamOneScore: 1,
+            teamTwoScore: 2,
+            teamOneActions: [action3._id],
+        })
+    })
+
+    it('with success', async () => {
+        const [point1, point2, point3] = await Point.find()
+        const game = await Game.create(createData)
+        game.points = [point1._id, point2._id, point3._id]
+        await game.save()
+
+        await request(app)
+            .put(`/api/v1/game/${game._id.toHexString()}/rebuild?team=${game.teamOne._id?.toHexString()}`)
+            .send()
+            .expect(200)
+    })
+
+    it('with failure', async () => {
+        await request(app).put(`/api/v1/game/${new Types.ObjectId().toHexString()}/rebuild`).send().expect(404)
     })
 })
