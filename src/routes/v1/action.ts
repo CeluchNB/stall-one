@@ -1,7 +1,6 @@
 import { Request, Response, Router } from 'express'
 import { body, param } from 'express-validator'
 import ActionServices from '../../services/v1/action'
-import { errorMiddleware } from '../../middlware/errors'
 import Action from '../../models/action'
 import { getClient } from '../../utils/redis'
 
@@ -73,5 +72,3 @@ actionRouter.delete(
         }
     },
 )
-
-actionRouter.use(errorMiddleware)

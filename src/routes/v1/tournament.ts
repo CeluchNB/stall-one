@@ -1,7 +1,6 @@
 import { Request, Response, Router } from 'express'
 import { body, param, query } from 'express-validator'
 import Tournament from '../../models/tournament'
-import { errorMiddleware } from '../../middlware/errors'
 import TournamentServices from '../../services/v1/tournament'
 import { CreateTournament } from '../../types/tournament'
 
@@ -53,5 +52,3 @@ tournamentRouter.get('/tournament/:id', param('id').isString(), async (req: Requ
         next(error)
     }
 })
-
-tournamentRouter.use(errorMiddleware)

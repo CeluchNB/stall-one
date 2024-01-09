@@ -1,7 +1,6 @@
 import { Request, Response, Router } from 'express'
 import { body, param, query } from 'express-validator'
 import passport from 'passport'
-import { errorMiddleware } from '../../middlware/errors'
 import Game from '../../models/game'
 import Point from '../../models/point'
 import PointServices from '../../services/v1/point'
@@ -167,5 +166,3 @@ pointRouter.put('/point/:id/background-finish', param('id').escape(), async (req
         next(error)
     }
 })
-
-pointRouter.use(errorMiddleware)
