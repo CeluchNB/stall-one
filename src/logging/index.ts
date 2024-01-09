@@ -21,12 +21,9 @@ export const Logger = () => {
         req.uuid = uuid()
         logger.info(`${req.url} - ${req.uuid}`, {
             httpRequest: {
-                statusCode: res.statusCode,
+                status: res.statusCode,
                 requestUrl: req.url,
-                originalUrl: req.originalUrl,
                 requestMethod: req.method,
-                body: req.body,
-                requestId: req.uuid,
             },
         })
         next()
@@ -35,11 +32,9 @@ export const Logger = () => {
     const errorMiddleware = (err: ApiError, req: UniqueRequest, res: Response, next: NextFunction) => {
         logger.error(`${req.url} - ${req.uuid}`, {
             httpRequest: {
-                statusCode: res.statusCode,
+                status: res.statusCode,
                 requestUrl: req.url,
                 requestMethod: req.method,
-                body: req.body,
-                requestId: req.uuid,
             },
         })
         next(err)
