@@ -23,6 +23,7 @@ export const Logger = () => {
             httpRequest: {
                 statusCode: res.statusCode,
                 requestUrl: req.url,
+                originalUrl: req.originalUrl,
                 requestMethod: req.method,
                 body: req.body,
                 requestId: req.uuid,
