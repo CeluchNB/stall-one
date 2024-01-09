@@ -14,7 +14,7 @@ export const Logger = () => {
     const logger = winston.createLogger({
         level: 'http',
         format: winston.format.json(),
-        transports: [new winston.transports.Console(), loggingWinston],
+        transports: [loggingWinston],
     })
 
     const requestMiddleware = (req: UniqueRequest, res: Response, next: NextFunction) => {
