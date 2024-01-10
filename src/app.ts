@@ -19,12 +19,12 @@ export const setupApp = async (): Promise<HttpServer> => {
     const pathToEnv = process.cwd() + '/src/config/.env'
     dotenv.config({ path: pathToEnv })
 
-    const { requestMiddleware: requestLogger, errorMiddleware: errorLogger } = Logger()
+    const logger = Logger()
 
     const app = express()
     app.use(cors())
     app.use(express.json())
-    app.use(requestLogger as RequestHandler)
+    app.use(logger.requestMiddleware as RequestHandler)
     app.use(passport.initialize())
     loadPassportMiddleware()
 
@@ -46,7 +46,7 @@ export const setupApp = async (): Promise<HttpServer> => {
         res.json({ message: message.message })
     })
 
-    app.use(errorLogger as ErrorRequestHandler)
+    app.use(logger.errorMiddleware as ErrorRequestHandler)
     app.use(errorMiddleware)
 
     const httpServer = createServer(app)
@@ -58,7 +58,7 @@ export const setupApp = async (): Promise<HttpServer> => {
     const client = await getClient()
 
     io.adapter(adapter)
-    io.of('/live').on('connection', socketHandler(client, io))
+    io.of('/live').on('connection', socketHandler(client, io, logger))
 
     return httpServer
 }

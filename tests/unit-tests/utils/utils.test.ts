@@ -4,6 +4,7 @@ import { TeamNumber } from '../../../src/types/ultmt'
 import { ApiError } from '../../../src/types/errors'
 import { Types } from 'mongoose'
 import { Socket } from 'socket.io'
+import { UltmtLogger } from '../../../src/logging'
 
 describe('test get my team number', () => {
     it('case 1', () => {
@@ -39,7 +40,9 @@ describe('test handle socket error', () => {
         const socket: Socket = {
             emit,
         } as unknown as Socket
-        handleSocketError(socket, new ApiError(Constants.INVALID_DATA, 400))
+        handleSocketError(socket, new ApiError(Constants.INVALID_DATA, 400), {
+            logError: jest.fn(),
+        } as unknown as UltmtLogger)
         expect(emit).toBeCalledWith('action:error', { code: 400, message: Constants.INVALID_DATA })
     })
 
@@ -48,7 +51,9 @@ describe('test handle socket error', () => {
         const socket: Socket = {
             emit,
         } as unknown as Socket
-        handleSocketError(socket, 7)
+        handleSocketError(socket, 7, {
+            logError: jest.fn(),
+        } as unknown as UltmtLogger)
         expect(emit).toBeCalledWith('action:error', { code: 500, message: Constants.GENERIC_ERROR })
     })
 })

@@ -43,23 +43,20 @@ export const Logger = () => {
         next(err)
     }
 
-    const logRequest = (info: string) => {
-        logger.info(info)
-    }
-
-    const logError = (error: ApiError) => {
+    const logError = (error: unknown) => {
         logger.error(error)
     }
 
-    const logResult = (result: unknown) => {
+    const logInfo = (result: unknown) => {
         logger.info(result)
     }
 
     return {
         requestMiddleware,
         errorMiddleware,
-        logRequest,
         logError,
-        logResult,
+        logInfo,
     }
 }
+
+export type UltmtLogger = ReturnType<typeof Logger>
