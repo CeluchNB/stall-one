@@ -57,11 +57,11 @@ describe('test client action error case', () => {
             },
             tags: ['IB'],
         }
-        clientSocket.on('action:error', (error) => {
-            expect(error.message).toBe(Constants.UNAUTHENTICATED_USER)
+
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }), (response: unknown) => {
+            expect(response).toMatchObject({ status: 'error', message: Constants.UNAUTHENTICATED_USER })
             done()
         })
-        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }))
     })
 })
 
@@ -122,11 +122,8 @@ describe('test server action', () => {
                 pointId,
             ),
         ).then(() => {
-            clientSocket.on('action:error', (error) => {
-                expect(error.message).toBe(Constants.INVALID_DATA)
-                done()
-            })
             clientSocket.emit('action:server', JSON.stringify({ actionNumber: 1 }))
+            done()
         })
     })
 
@@ -156,11 +153,8 @@ describe('test server action', () => {
                 pointId,
             ),
         ).then(() => {
-            clientSocket.on('action:error', (error) => {
-                expect(error.message).toBe(Constants.GENERIC_ERROR)
-                done()
-            })
             clientSocket.emit('action:server', JSON.stringify({ pointId, actionNumber: 1, teamNumber: 'one' }))
+            done()
         })
     })
 })
@@ -222,6 +216,9 @@ describe('test action comment', () => {
                     jwt: 'test.jwt.1234',
                     comment: 'That was a nice huck',
                 }),
+                (response: unknown) => {
+                    expect(response).toMatchObject({ status: 'good' })
+                },
             )
         })
     })
@@ -249,10 +246,6 @@ describe('test action comment', () => {
                 pointId,
             ),
         ).then(() => {
-            clientSocket.on('action:error', (action) => {
-                expect(action.message).toBe(Constants.INVALID_DATA)
-                done()
-            })
             clientSocket.emit(
                 'action:comment',
                 JSON.stringify({
@@ -260,6 +253,10 @@ describe('test action comment', () => {
                     actionNumber: 1,
                     comment: 'That was a nice huck',
                 }),
+                (response: unknown) => {
+                    expect(response).toMatchObject({ status: 'error', message: Constants.INVALID_DATA })
+                    done()
+                },
             )
         })
     })
@@ -290,10 +287,6 @@ describe('test action comment', () => {
                 pointId,
             ),
         ).then(() => {
-            clientSocket.on('action:error', (action) => {
-                expect(action.message).toBe(Constants.PROFANE_COMMENT)
-                done()
-            })
             clientSocket.emit(
                 'action:comment',
                 JSON.stringify({
@@ -303,12 +296,16 @@ describe('test action comment', () => {
                     jwt: 'test.jwt.1234',
                     comment: 'Profane shit comment',
                 }),
+                (response: unknown) => {
+                    expect(response).toMatchObject({ status: 'error', message: Constants.PROFANE_COMMENT })
+                    done()
+                },
             )
         })
     })
 })
 
-describe('test delete live action', () => {
+describe('test delete live comment', () => {
     const userData = {
         _id: new Types.ObjectId(),
         firstName: 'Noah',
@@ -430,10 +427,6 @@ describe('test delete live action', () => {
                 )
             })
             .then(() => {
-                clientSocket.on('action:error', (error) => {
-                    expect(error.message).toBe(Constants.UNAUTHENTICATED_USER)
-                    done()
-                })
                 clientSocket.emit(
                     'action:comment:delete',
                     JSON.stringify({
@@ -444,6 +437,10 @@ describe('test delete live action', () => {
                         teamNumber: 'one',
                         jwt: 'test.jwt.1234',
                     }),
+                    (response: unknown) => {
+                        expect(response).toMatchObject({ status: 'error', message: Constants.UNAUTHENTICATED_USER })
+                        done()
+                    },
                 )
             })
     })
@@ -489,10 +486,6 @@ describe('test delete live action', () => {
                 )
             })
             .then(() => {
-                clientSocket.on('action:error', (error) => {
-                    expect(error.message).toBe(Constants.INVALID_DATA)
-                    done()
-                })
                 clientSocket.emit(
                     'action:comment:delete',
                     JSON.stringify({
@@ -500,6 +493,10 @@ describe('test delete live action', () => {
                         actionNumber: 1,
                         commentNumber: 1,
                     }),
+                    (response: unknown) => {
+                        expect(response).toMatchObject({ status: 'error', message: Constants.INVALID_DATA })
+                        done()
+                    },
                 )
             })
     })
@@ -516,11 +513,8 @@ describe('test action undo server', () => {
     })
 
     it('with bad data', (done) => {
-        clientSocket.on('action:error', (data) => {
-            expect(data.message).toBe(Constants.GENERIC_ERROR)
-            done()
-        })
         clientSocket.emit('action:undo:server', '{ asdf54: ')
+        done()
     })
 })
 
@@ -534,10 +528,7 @@ describe('test next point server', () => {
     })
 
     it('should handle invalid data', (done) => {
-        clientSocket.on('action:error', (error) => {
-            expect(error).toBeDefined()
-            done()
-        })
         clientSocket.emit('point:next:server')
+        done()
     })
 })

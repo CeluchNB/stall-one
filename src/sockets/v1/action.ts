@@ -79,11 +79,11 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
         for (const room of socket.rooms) {
             socket.leave(room)
         }
-        logger.logInfo(`Joining game ${gameId}:${pointId}`)
+        logger.logInfo(`Joining point ${gameId}:${pointId}`)
         socket.join(`${gameId}:${pointId}`)
     })
 
-    socket.on('action', async (data) => {
+    socket.on('action', async (data, callback) => {
         let gameId, pointId, team
         try {
             const authResult = await gameAuth(socket)
@@ -102,12 +102,13 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             liveIo.to('servers').emit('action:server', { gameId, pointId, number: action.actionNumber })
 
             logger.logInfo({ message: `Emitted client action: ${gameId}:${team}`, data: action })
+            callback?.({ status: 'good' })
         } catch (error) {
-            handleSocketError(socket, error, logger, { gameId, pointId, team })
+            handleSocketError(error, logger, { gameId, pointId, team }, callback)
         }
     })
 
-    socket.on('action:undo', async (data) => {
+    socket.on('action:undo', async (data, callback) => {
         let gameId, pointId, team
         try {
             const authResult = await gameAuth(socket)
@@ -128,12 +129,13 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
                     .to('servers')
                     .emit('action:undo:server', { gameId, pointId, actionNumber: action.actionNumber, team })
 
-                logger.logInfo({ message: `Emitted client action: ${gameId}:${team}`, data: action })
+                logger.logInfo({ message: `Emitted undo client action: ${gameId}:${team}`, data: action })
             } else {
                 throw new ApiError(Constants.INVALID_DATA, 400)
             }
+            callback?.({ status: 'good' })
         } catch (error) {
-            handleSocketError(socket, error, logger, { gameId, pointId, team })
+            handleSocketError(error, logger, { gameId, pointId, team }, callback)
         }
     })
 
@@ -150,9 +152,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
 
             // send action to client
             liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
-        } catch (error) {
-            handleSocketError(socket, error, logger, { gameId, pointId })
-        }
+        } catch {}
     })
 
     socket.on('action:undo:server', async (data) => {
@@ -165,12 +165,10 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             logger.logInfo({ message: `Undo server action with data: ${gameId}:${pointId}`, data: dataJson })
 
             liveIo.to(`${gameId}:${pointId}`).emit('action:undo:client', dataJson)
-        } catch (error) {
-            handleSocketError(socket, error, logger, { gameId, pointId })
-        }
+        } catch {}
     })
 
-    socket.on('action:comment', async (data) => {
+    socket.on('action:comment', async (data, callback) => {
         let gameId, pointId
         try {
             const dataJson = JSON.parse(data)
@@ -186,12 +184,13 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
 
             liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
             liveIo.to('servers').emit('action:server', { pointId, actionNumber, teamNumber })
+            callback?.({ status: 'good' })
         } catch (error) {
-            handleSocketError(socket, error, logger, { gameId, pointId })
+            handleSocketError(error, logger, { gameId, pointId }, callback)
         }
     })
 
-    socket.on('action:comment:delete', async (data) => {
+    socket.on('action:comment:delete', async (data, callback) => {
         let gameId, pointId
         try {
             const dataJson = JSON.parse(data)
@@ -204,13 +203,14 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             const action = await deleteCommentHandler(client, dataJson)
             liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
             liveIo.to('servers').emit('action:server', { gameId, pointId, actionNumber })
+            callback?.({ status: 'good' })
         } catch (error) {
-            handleSocketError(socket, error, logger, { gameId, pointId })
+            handleSocketError(error, logger, { gameId, pointId }, callback)
         }
     })
 
     // next point event so viewer client can get the next point
-    socket.on('point:next', async (data) => {
+    socket.on('point:next', async (data, callback) => {
         let gameId, pointId
         try {
             const auth = await gameAuth(socket)
@@ -223,8 +223,9 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
 
             liveIo.to(`${gameId}:${pointId}`).emit('point:next:client')
             liveIo.to('servers').emit('point:next:server', { gameId, pointId })
+            callback?.({ status: 'good' })
         } catch (error) {
-            handleSocketError(socket, error, logger, { gameId, pointId })
+            handleSocketError(error, logger, { gameId, pointId }, callback)
         }
     })
 
@@ -238,9 +239,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             logger.logInfo({ message: `Server next point: ${gameId}:${pointId}`, data: dataJson })
 
             liveIo.to(`${gameId}:${pointId}`).emit('point:next:client')
-        } catch (error) {
-            handleSocketError(socket, error, logger, { gameId, pointId })
-        }
+        } catch {}
     })
 }
 

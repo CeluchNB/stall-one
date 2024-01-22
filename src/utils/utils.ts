@@ -1,7 +1,6 @@
 import { Player, TeamNumber, TeamNumberString } from '../types/ultmt'
 import { userErrorResponse } from '../middlware/errors'
 import { Types } from 'mongoose'
-import { Socket } from 'socket.io'
 import { UltmtLogger } from '../logging'
 
 export const getMyTeamNumber = (isMyTeam: boolean, myTeam: TeamNumberString): TeamNumber => {
@@ -25,10 +24,10 @@ export const getActionBaseKey = (pointId: string, number: number, team: TeamNumb
 }
 
 export const handleSocketError = (
-    socket: Socket,
     error: unknown,
     logger: UltmtLogger,
     inputData?: { gameId?: string; pointId?: string; team?: string },
+    callback?: (...args: unknown[]) => void,
 ) => {
     let errorData
     if (error && typeof error === 'object') {
@@ -38,8 +37,7 @@ export const handleSocketError = (
     }
 
     logger.logError({ message: `Action error`, data: { errorData, ...inputData } })
-
-    socket.emit('action:error', errorData)
+    callback?.({ status: 'error', message: errorData.message })
 }
 
 export const parseRedisUser = (redisUser: { [x: string]: string }): Player | undefined => {
