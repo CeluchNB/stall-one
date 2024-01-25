@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { ErrorRequestHandler, RequestHandler } from 'express'
 import cors from 'cors'
 import passport from 'passport'
 import axios from 'axios'
@@ -12,14 +12,19 @@ import { getClient } from './utils/redis'
 import { createLazyRouter } from 'express-lazy-router'
 import { loadPassportMiddleware } from './loaders/passport'
 import dotenv from 'dotenv'
+import { Logger } from './logging'
+import { errorMiddleware } from './middlware/errors'
 
 export const setupApp = async (): Promise<HttpServer> => {
     const pathToEnv = process.cwd() + '/src/config/.env'
     dotenv.config({ path: pathToEnv })
 
+    const logger = Logger()
+
     const app = express()
     app.use(cors())
     app.use(express.json())
+    app.use(logger.requestMiddleware as RequestHandler)
     app.use(passport.initialize())
     loadPassportMiddleware()
 
@@ -41,6 +46,9 @@ export const setupApp = async (): Promise<HttpServer> => {
         res.json({ message: message.message })
     })
 
+    app.use(logger.errorMiddleware as ErrorRequestHandler)
+    app.use(errorMiddleware)
+
     const httpServer = createServer(app)
     httpServer.setTimeout(0)
     const io = new Server<ClientToServerEvents>(httpServer, {})
@@ -50,7 +58,7 @@ export const setupApp = async (): Promise<HttpServer> => {
     const client = await getClient()
 
     io.adapter(adapter)
-    io.of('/live').on('connection', socketHandler(client, io))
+    io.of('/live').on('connection', socketHandler(client, io, logger))
 
     return httpServer
 }

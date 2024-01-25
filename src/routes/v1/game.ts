@@ -4,7 +4,6 @@ import { body, param, query } from 'express-validator'
 import Game from '../../models/game'
 import Point from '../../models/point'
 import Action from '../../models/action'
-import { errorMiddleware } from '../../middlware/errors'
 import passport from 'passport'
 import { GameAuth } from '../../types/game'
 import { TeamNumber } from '../../types/ultmt'
@@ -297,5 +296,3 @@ gameRouter.put(
         }
     },
 )
-
-gameRouter.use(errorMiddleware)

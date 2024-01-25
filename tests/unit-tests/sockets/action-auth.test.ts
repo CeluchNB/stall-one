@@ -108,11 +108,10 @@ describe('test client action sent', () => {
             },
             tags: ['IB'],
         }
-        clientSocket.on('action:error', (error) => {
-            expect(error.message).toBe(Constants.INVALID_ACTION_TYPE)
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }), (response: unknown) => {
+            expect(response).toMatchObject({ status: 'error', message: Constants.INVALID_ACTION_TYPE })
             done()
         })
-        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }))
     })
 
     it('with non object exception', (done) => {
@@ -129,11 +128,11 @@ describe('test client action sent', () => {
             },
             tags: ['IB'],
         }
-        clientSocket.on('action:error', (error) => {
-            expect(error.message).toBe(Constants.GENERIC_ERROR)
+
+        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }), (response: unknown) => {
+            expect(response).toMatchObject({ status: 'error', message: Constants.GENERIC_ERROR })
             done()
         })
-        clientSocket.emit('action', JSON.stringify({ action: actionData, pointId }))
     })
 })
 
@@ -147,11 +146,10 @@ describe('test next point', () => {
     })
 
     it('without a point', (done) => {
-        clientSocket.on('action:error', (error) => {
-            expect(error).toBeDefined()
+        clientSocket.emit('point:next', undefined, (response: unknown) => {
+            expect(response).toMatchObject({ status: 'error' })
             done()
         })
-        clientSocket.emit('point:next')
     })
 })
 
@@ -190,19 +188,17 @@ describe('test client undo action', () => {
     })
 
     it('with bad data', (done) => {
-        clientSocket.on('action:error', (error) => {
-            expect(error.message).toBe(Constants.INVALID_DATA)
+        clientSocket.emit('action:undo', JSON.stringify({}), (response: unknown) => {
+            expect(response).toMatchObject({ status: 'error', message: Constants.INVALID_DATA })
             done()
         })
-        clientSocket.emit('action:undo', JSON.stringify({}))
     })
 
     it('with unfound action', (done) => {
         expect(client.set(`${game?._id.toString()}:${point._id.toString()}:one:actions`, '0')).resolves.toBe('OK')
-        clientSocket.on('action:error', (error) => {
-            expect(error.message).toBe(Constants.INVALID_DATA)
+        clientSocket.emit('action:undo', JSON.stringify({ pointId: point._id }), (response: unknown) => {
+            expect(response).toMatchObject({ status: 'error', message: Constants.INVALID_DATA })
             done()
         })
-        clientSocket.emit('action:undo', JSON.stringify({ pointId: point._id }))
     })
 })

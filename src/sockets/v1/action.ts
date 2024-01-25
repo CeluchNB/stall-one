@@ -6,6 +6,7 @@ import { ApiError } from '../../types/errors'
 import { handleSocketError } from '../../utils/utils'
 import { gameAuth } from '../../middlware/socket-game-auth'
 import { TeamNumberString } from '../../types/ultmt'
+import { UltmtLogger } from '../../logging'
 
 const actionHandler = async (
     data: ClientAction,
@@ -70,7 +71,7 @@ const deleteCommentHandler = async (
     return await services.deleteLiveComment(pointId, actionNumber, commentNumber, jwt, teamNumber)
 }
 
-const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Server) => {
+const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Server, logger: UltmtLogger) => {
     const liveIo = io.of('/live')
 
     socket.on('join:point', (gameId: string, pointId: string) => {
@@ -78,28 +79,46 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
         for (const room of socket.rooms) {
             socket.leave(room)
         }
+        logger.logInfo(`Joining point ${gameId}:${pointId}`)
         socket.join(`${gameId}:${pointId}`)
     })
 
-    socket.on('action', async (data) => {
+    socket.on('action', async (data, callback) => {
+        let gameId, pointId, team
         try {
-            const { gameId, team } = await gameAuth(socket)
+            const authResult = await gameAuth(socket)
+            gameId = authResult.gameId
+            team = authResult.team
+
             const dataJson = JSON.parse(data)
-            const { action: clientAction, pointId } = dataJson
+            pointId = dataJson.pointId
+            const clientAction = dataJson.action
+
+            logger.logInfo({ message: `Client action with data: ${gameId}:${pointId}:${team}`, data: dataJson })
+
             const action = await actionHandler(clientAction, gameId, pointId, team, client)
             // send action to client
             liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
             liveIo.to('servers').emit('action:server', { gameId, pointId, number: action.actionNumber })
+
+            logger.logInfo({ message: `Emitted client action: ${gameId}:${team}`, data: action })
+            callback?.({ status: 'good' })
         } catch (error) {
-            handleSocketError(socket, error)
+            handleSocketError(error, logger, { gameId, pointId, team }, callback)
         }
     })
 
-    socket.on('action:undo', async (data) => {
+    socket.on('action:undo', async (data, callback) => {
+        let gameId, pointId, team
         try {
-            const { gameId, team } = await gameAuth(socket)
+            const authResult = await gameAuth(socket)
+            gameId = authResult.gameId
+            team = authResult.team
+
             const dataJson = JSON.parse(data)
-            const { pointId } = dataJson
+            pointId = dataJson.pointId
+
+            logger.logInfo({ message: `Undo client action with data: ${gameId}:${pointId}:${team}`, data: dataJson })
 
             const action = await undoActionHandler(client, { gameId, team, pointId })
             if (action) {
@@ -109,80 +128,117 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
                 liveIo
                     .to('servers')
                     .emit('action:undo:server', { gameId, pointId, actionNumber: action.actionNumber, team })
+
+                logger.logInfo({ message: `Emitted undo client action: ${gameId}:${team}`, data: action })
             } else {
                 throw new ApiError(Constants.INVALID_DATA, 400)
             }
+            callback?.({ status: 'good' })
         } catch (error) {
-            handleSocketError(socket, error)
+            handleSocketError(error, logger, { gameId, pointId, team }, callback)
         }
     })
 
     socket.on('action:server', async (data) => {
+        let gameId, pointId
         try {
             const dataJson = JSON.parse(data)
-            const { gameId, pointId } = dataJson
+            gameId = dataJson.gameId
+            pointId = dataJson.pointId
+
+            logger.logInfo({ message: `Server action with data: ${gameId}:${pointId}`, data: dataJson })
+
             const action = await serverActionHandler(client, dataJson)
 
             // send action to client
             liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
-        } catch (error) {
-            handleSocketError(socket, error)
-        }
+        } catch {}
     })
 
     socket.on('action:undo:server', async (data) => {
+        let gameId, pointId
         try {
             const dataJson = JSON.parse(data)
-            const { gameId, pointId } = dataJson
+            gameId = dataJson.gameId
+            pointId = dataJson.pointId
+
+            logger.logInfo({ message: `Undo server action with data: ${gameId}:${pointId}`, data: dataJson })
+
             liveIo.to(`${gameId}:${pointId}`).emit('action:undo:client', dataJson)
-        } catch (error) {
-            handleSocketError(socket, error)
-        }
+        } catch {}
     })
 
-    socket.on('action:comment', async (data) => {
+    socket.on('action:comment', async (data, callback) => {
+        let gameId, pointId
         try {
             const dataJson = JSON.parse(data)
-            const { gameId, pointId, actionNumber, teamNumber } = dataJson
+            gameId = dataJson.gameId
+            pointId = dataJson.pointId
+            const { actionNumber, teamNumber } = dataJson
+            logger.logInfo({
+                message: `Action comment: ${gameId}:${pointId}:${actionNumber}:${teamNumber}`,
+            })
+
             const action = await commentHandler(client, dataJson)
+
             liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
             liveIo.to('servers').emit('action:server', { pointId, actionNumber, teamNumber })
+            callback?.({ status: 'good' })
         } catch (error) {
-            handleSocketError(socket, error)
+            handleSocketError(error, logger, { gameId, pointId }, callback)
         }
     })
 
-    socket.on('action:comment:delete', async (data) => {
+    socket.on('action:comment:delete', async (data, callback) => {
+        let gameId, pointId
         try {
             const dataJson = JSON.parse(data)
-            const { gameId, pointId, actionNumber } = dataJson
+            gameId = dataJson.gameId
+            pointId = dataJson.pointId
+            const { actionNumber } = dataJson
+
+            logger.logInfo({ message: `Delete action comment: ${gameId}:${pointId}:${actionNumber}` })
+
             const action = await deleteCommentHandler(client, dataJson)
             liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
             liveIo.to('servers').emit('action:server', { gameId, pointId, actionNumber })
+            callback?.({ status: 'good' })
         } catch (error) {
-            handleSocketError(socket, error)
+            handleSocketError(error, logger, { gameId, pointId }, callback)
         }
     })
 
     // next point event so viewer client can get the next point
-    socket.on('point:next', async (data) => {
+    socket.on('point:next', async (data, callback) => {
+        let gameId, pointId
         try {
-            const { gameId } = await gameAuth(socket)
-            const { pointId } = JSON.parse(data)
+            const auth = await gameAuth(socket)
+            gameId = auth.gameId
+
+            const dataJson = JSON.parse(data)
+            pointId = dataJson.pointId
+
+            logger.logInfo({ message: `Next point: ${gameId}:${pointId}`, data: dataJson })
+
             liveIo.to(`${gameId}:${pointId}`).emit('point:next:client')
             liveIo.to('servers').emit('point:next:server', { gameId, pointId })
+            callback?.({ status: 'good' })
         } catch (error) {
-            handleSocketError(socket, error)
+            handleSocketError(error, logger, { gameId, pointId }, callback)
         }
     })
 
     socket.on('point:next:server', async (data) => {
+        let gameId, pointId
         try {
-            const { gameId, pointId } = JSON.parse(data)
+            const dataJson = JSON.parse(data)
+            gameId = dataJson.gameId
+            pointId = dataJson.pointId
+
+            logger.logInfo({ message: `Server next point: ${gameId}:${pointId}`, data: dataJson })
+
             liveIo.to(`${gameId}:${pointId}`).emit('point:next:client')
-        } catch (error) {
-            handleSocketError(socket, error)
-        }
+        } catch {}
     })
 }
 
