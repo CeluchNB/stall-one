@@ -2,7 +2,6 @@ import Action from '../../models/action'
 import Game from '../../models/game'
 import GameServices from '../../services/v2/game'
 import Point from '../../models/point'
-import { errorMiddleware } from '../../middlware/errors'
 import { getClient } from '../../utils/redis'
 import { Request, Response, Router } from 'express'
 import { param, query } from 'express-validator'
@@ -32,5 +31,3 @@ gameRouter.put(
         }
     },
 )
-
-gameRouter.use(errorMiddleware)
