@@ -177,7 +177,6 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             const { actionNumber, teamNumber } = dataJson
             logger.logInfo({
                 message: `Action comment: ${gameId}:${pointId}:${actionNumber}:${teamNumber}`,
-                data: dataJson,
             })
 
             const action = await commentHandler(client, dataJson)
@@ -198,7 +197,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             pointId = dataJson.pointId
             const { actionNumber } = dataJson
 
-            logger.logInfo({ message: `Delete action comment: ${gameId}:${pointId}:${actionNumber}`, data: dataJson })
+            logger.logInfo({ message: `Delete action comment: ${gameId}:${pointId}:${actionNumber}` })
 
             const action = await deleteCommentHandler(client, dataJson)
             liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
