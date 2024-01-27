@@ -17,14 +17,13 @@ const pointId = 'pointid'
 beforeAll((done) => {
     setupApp().then((app) => {
         httpServer = app
-        app.listen(process.env.PORT, () => {
-            Game.create(createData, (err, game) => {
-                gameId = game._id.toString()
-                clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`)
-                clientSocket.on('connect', () => {
-                    clientSocket.emit('join:point', gameId, pointId)
-                    done()
-                })
+        app.listen(process.env.PORT, async () => {
+            const game = await Game.create(createData)
+            gameId = game._id.toString()
+            clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`)
+            clientSocket.on('connect', () => {
+                clientSocket.emit('join:point', gameId, pointId)
+                done()
             })
         })
     })
