@@ -47,6 +47,7 @@ export const Logger = () => {
                 requestUrl: req.url,
                 requestMethod: req.method,
             },
+            errorMessage: err.message,
         })
         next(err)
     }
