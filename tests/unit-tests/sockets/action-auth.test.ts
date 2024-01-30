@@ -39,16 +39,15 @@ let httpServer: Server
 beforeAll((done) => {
     setupApp().then((app) => {
         httpServer = app
-        app.listen(process.env.PORT, () => {
-            Game.create(createData, (error, game) => {
-                gameId = game._id
-                const token = game.getToken('one')
-                clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`, {
-                    extraHeaders: { authorization: `Bearer ${token}` },
-                })
-                clientSocket.on('connect', () => {
-                    done()
-                })
+        app.listen(process.env.PORT, async () => {
+            const game = await Game.create(createData)
+            gameId = game._id
+            const token = game.getToken('one')
+            clientSocket = ioClient(`http://localhost:${process.env.PORT}/live`, {
+                extraHeaders: { authorization: `Bearer ${token}` },
+            })
+            clientSocket.on('connect', () => {
+                done()
             })
         })
     })

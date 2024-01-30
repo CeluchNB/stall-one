@@ -313,7 +313,7 @@ export default class PointServices {
         await this.redisClient.del(`${gameId}:${pointId}:two:actions`)
         game.points = game.points.filter((id) => !id.equals(point._id))
         await game.save()
-        await point.delete()
+        await point.deleteOne()
     }
 
     /**

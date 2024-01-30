@@ -293,7 +293,7 @@ export default class GameServices {
             } else {
                 // fully delete game if team two is not defined
                 await this.pointModel.deleteMany().where('_id').in(game.points)
-                await game.delete()
+                await game.deleteOne()
             }
         } else if (game.teamTwo._id?.equals(teamId)) {
             // just 'dereference' team since the other team definitely exists

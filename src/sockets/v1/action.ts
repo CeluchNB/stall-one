@@ -79,7 +79,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
         for (const room of socket.rooms) {
             socket.leave(room)
         }
-        logger.logInfo(`Joining point ${gameId}:${pointId}`)
+        logger.logInfo(`join:point - ${gameId}:${pointId}`)
         socket.join(`${gameId}:${pointId}`)
     })
 
@@ -94,14 +94,14 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             pointId = dataJson.pointId
             const clientAction = dataJson.action
 
-            logger.logInfo({ message: `Client action with data: ${gameId}:${pointId}:${team}`, data: dataJson })
+            logger.logInfo({ message: `action - client - receive - ${gameId}:${pointId}:${team}`, data: dataJson })
 
             const action = await actionHandler(clientAction, gameId, pointId, team, client)
             // send action to client
             liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
             liveIo.to('servers').emit('action:server', { gameId, pointId, number: action.actionNumber })
 
-            logger.logInfo({ message: `Emitted client action: ${gameId}:${team}`, data: action })
+            logger.logInfo({ message: `action - client - emit: ${gameId}:${team}`, data: action })
             callback?.({ status: 'good' })
         } catch (error) {
             handleSocketError(error, logger, { gameId, pointId, team }, callback)
@@ -118,7 +118,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             const dataJson = JSON.parse(data)
             pointId = dataJson.pointId
 
-            logger.logInfo({ message: `Undo client action with data: ${gameId}:${pointId}:${team}`, data: dataJson })
+            logger.logInfo({ message: `action:undo - client - receive - ${gameId}:${pointId}:${team}`, data: dataJson })
 
             const action = await undoActionHandler(client, { gameId, team, pointId })
             if (action) {
@@ -129,7 +129,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
                     .to('servers')
                     .emit('action:undo:server', { gameId, pointId, actionNumber: action.actionNumber, team })
 
-                logger.logInfo({ message: `Emitted undo client action: ${gameId}:${team}`, data: action })
+                logger.logInfo({ message: `action:undo - client - emit - ${gameId}:${team}`, data: action })
             } else {
                 throw new ApiError(Constants.INVALID_DATA, 400)
             }
@@ -146,7 +146,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             gameId = dataJson.gameId
             pointId = dataJson.pointId
 
-            logger.logInfo({ message: `Server action with data: ${gameId}:${pointId}`, data: dataJson })
+            logger.logInfo({ message: `action:server - receive - ${gameId}:${pointId}`, data: dataJson })
 
             const action = await serverActionHandler(client, dataJson)
 
@@ -162,7 +162,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             gameId = dataJson.gameId
             pointId = dataJson.pointId
 
-            logger.logInfo({ message: `Undo server action with data: ${gameId}:${pointId}`, data: dataJson })
+            logger.logInfo({ message: `action:undo:server - receive - ${gameId}:${pointId}`, data: dataJson })
 
             liveIo.to(`${gameId}:${pointId}`).emit('action:undo:client', dataJson)
         } catch {}
@@ -176,7 +176,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             pointId = dataJson.pointId
             const { actionNumber, teamNumber } = dataJson
             logger.logInfo({
-                message: `Action comment: ${gameId}:${pointId}:${actionNumber}:${teamNumber}`,
+                message: `action:comment - client - receive - ${gameId}:${pointId}:${actionNumber}:${teamNumber}`,
             })
 
             const action = await commentHandler(client, dataJson)
@@ -197,7 +197,9 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             pointId = dataJson.pointId
             const { actionNumber } = dataJson
 
-            logger.logInfo({ message: `Delete action comment: ${gameId}:${pointId}:${actionNumber}` })
+            logger.logInfo({
+                message: `action:comment:delete - client - receive - ${gameId}:${pointId}:${actionNumber}`,
+            })
 
             const action = await deleteCommentHandler(client, dataJson)
             liveIo.to(`${gameId}:${pointId}`).emit('action:client', action)
@@ -218,7 +220,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             const dataJson = JSON.parse(data)
             pointId = dataJson.pointId
 
-            logger.logInfo({ message: `Next point: ${gameId}:${pointId}`, data: dataJson })
+            logger.logInfo({ message: `point:next - client - receive - ${gameId}:${pointId}`, data: dataJson })
 
             liveIo.to(`${gameId}:${pointId}`).emit('point:next:client')
             liveIo.to('servers').emit('point:next:server', { gameId, pointId })
@@ -235,7 +237,7 @@ const registerActionHandlers = (socket: Socket, client: RedisClientType, io: Ser
             gameId = dataJson.gameId
             pointId = dataJson.pointId
 
-            logger.logInfo({ message: `Server next point: ${gameId}:${pointId}`, data: dataJson })
+            logger.logInfo({ message: `point:next:server - receive - ${gameId}:${pointId}`, data: dataJson })
 
             liveIo.to(`${gameId}:${pointId}`).emit('point:next:client')
         } catch {}
