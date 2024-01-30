@@ -10,7 +10,15 @@ interface UniqueRequest extends Request {
 
 export const Logger = () => {
     const projectId = process.env.GCP_PROJECT_ID
-    const loggingWinston = new LoggingWinston({ projectId, logName: 'stall-one' })
+    const serviceId = 'stall-one'
+    const loggingWinston = new LoggingWinston({
+        projectId,
+        logName: serviceId,
+        serviceContext: { service: serviceId },
+        defaultCallback: (error) => {
+            if (error) console.log('received logging error')
+        },
+    })
     const logger = winston.createLogger({
         level: 'http',
         format: winston.format.json(),
@@ -39,6 +47,7 @@ export const Logger = () => {
                 requestUrl: req.url,
                 requestMethod: req.method,
             },
+            errorMessage: err.message,
         })
         next(err)
     }

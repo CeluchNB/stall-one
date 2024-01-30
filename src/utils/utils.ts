@@ -36,7 +36,7 @@ export const handleSocketError = (
         errorData = userErrorResponse('')
     }
 
-    logger.logError({ message: `Action error`, data: { errorData, ...inputData } })
+    logger.logError({ message: `socket error`, data: { errorData, ...inputData } })
     callback?.({ status: 'error', message: errorData.message })
 }
 
