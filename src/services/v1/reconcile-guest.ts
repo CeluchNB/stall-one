@@ -119,7 +119,7 @@ export const reconcileLiveActions = async (
     }
 }
 
-const replacePlayerInList = (list: Player[], guestId: string, user: Player) => {
+export const replacePlayerInList = (list: Player[], guestId: string, user: Player) => {
     if (list.findIndex((p) => idsAreEqual(p._id, user._id)) >= 0) return
 
     const guestIndex = list.findIndex((p) => idsAreEqual(p._id, guestId))

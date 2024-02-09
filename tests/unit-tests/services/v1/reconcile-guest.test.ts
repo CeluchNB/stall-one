@@ -8,6 +8,7 @@ import {
     reconcileLiveActions,
     reconcilePoints,
     reconcileSavedActions,
+    replacePlayerInList,
 } from '../../../../src/services/v1/reconcile-guest'
 import Point from '../../../../src/models/point'
 import Action from '../../../../src/models/action'
@@ -356,6 +357,29 @@ describe('Reconcile guest pieces', () => {
                 playerTwo: realUser,
                 playerOne: user1,
             })
+        })
+    })
+
+    describe('replacePlayerInList', () => {
+        it('replaces found player', () => {
+            const list = [user1, guest, user2]
+            replacePlayerInList(list, guestId.toHexString(), realUser)
+            expect(list).toEqual(expect.arrayContaining([expect.objectContaining(realUser)]))
+        })
+
+        it('skips if player already in list', () => {
+            const list = [user1, realUser, user2]
+
+            replacePlayerInList(list, guestId.toHexString(), realUser)
+
+            expect(list.length).toBe(3)
+            expect(list).toEqual(expect.arrayContaining([expect.objectContaining(realUser)]))
+        })
+
+        it('skips if guest player not found', () => {
+            const list = [user1, user2]
+            replacePlayerInList(list, guestId.toHexString(), realUser)
+            expect(list).not.toEqual(expect.arrayContaining([expect.objectContaining(realUser)]))
         })
     })
 })
