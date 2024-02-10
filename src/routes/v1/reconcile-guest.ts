@@ -5,7 +5,7 @@ import { body } from 'express-validator'
 export const reconcileGuestRouter = Router()
 
 reconcileGuestRouter.put(
-    '/reconcile-guest',
+    '/games/reconcile-guest',
     body('teams').isArray(),
     body('guestId').escape(),
     body('user').isObject(),

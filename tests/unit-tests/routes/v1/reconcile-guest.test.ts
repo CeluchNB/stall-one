@@ -64,7 +64,7 @@ describe('PUT /reconcile-guest', () => {
         })
 
         await request(app)
-            .put('/api/v1/reconcile-guest')
+            .put('/api/v1/games/reconcile-guest')
             .send({
                 teams: [team._id],
                 guestId: guest._id,
@@ -81,7 +81,7 @@ describe('PUT /reconcile-guest', () => {
         jest.spyOn(ReconcileGuestMethods, 'reconcileGames').mockImplementation(() => Promise.reject('stuff'))
 
         const response = await request(app)
-            .put('/api/v1/reconcile-guest')
+            .put('/api/v1/games/reconcile-guest')
             .send({
                 teams: [team._id],
                 guestId: guest._id,
