@@ -60,33 +60,6 @@ export const getTeam = async (ultmtUrl: string, apiKey: string, teamId?: string)
     }
 }
 
-export const createGuest = async (
-    ultmtUrl: string,
-    apiKey: string,
-    guestUser: { firstName: string; lastName: string },
-    jwt?: string,
-    teamId?: string,
-): Promise<TeamResponse> => {
-    if (!jwt || !teamId) {
-        throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
-    }
-
-    try {
-        const response = await axios.post(
-            `${ultmtUrl}/api/v1/team/${teamId}/guest`,
-            {
-                ...guestUser,
-            },
-            { headers: { Authorization: `Bearer ${jwt}`, 'X-API-Key': apiKey } },
-        )
-
-        const { team } = response.data
-        return team
-    } catch (error) {
-        throw new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 401)
-    }
-}
-
 export const parseUser = (player: Player): Player => {
     return {
         _id: player._id,
