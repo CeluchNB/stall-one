@@ -1,5 +1,6 @@
 import * as Constants from '../../../../src/utils/constants'
 import * as CloudTaskServices from '../../../../src/utils/cloud-tasks'
+import * as UltmtServices from '../../../../src/utils/ultmt'
 import {
     setUpDatabase,
     tearDownDatabase,
@@ -1287,19 +1288,27 @@ describe('test get game by team', () => {
 
 describe('test create full game', () => {
     it('with valid data', async () => {
+        const players = [
+            { _id: new Types.ObjectId(), firstName: 'First 1', lastName: 'Last 1', username: 'firstlast1' },
+            { _id: new Types.ObjectId(), firstName: 'First 2', lastName: 'Last 2', username: 'firstlast2' },
+            { _id: new Types.ObjectId(), firstName: 'First 3', lastName: 'Last 3', username: 'firstlast3' },
+            { _id: new Types.ObjectId(), firstName: 'First 4', lastName: 'Last 4', username: 'firstlast4' },
+            { _id: new Types.ObjectId(), firstName: 'First 5', lastName: 'Last 5', username: 'firstlast5' },
+            { _id: new Types.ObjectId(), firstName: 'First 6', lastName: 'Last 6', username: 'firstlast6' },
+            {
+                _id: new Types.ObjectId(),
+                firstName: 'First 7',
+                lastName: 'Last 7',
+                username: 'firstlast7',
+                guest: true,
+            },
+        ]
+        const spy = jest.spyOn(UltmtServices, 'createGuest').mockReturnValue(Promise.resolve({ players } as any))
         const fullGame: CreateFullGame = {
             ...createData,
             teamOneScore: 2,
             teamTwoScore: 1,
-            teamOnePlayers: [
-                { _id: new Types.ObjectId(), firstName: 'First 1', lastName: 'Last 1', username: 'firstlast1' },
-                { _id: new Types.ObjectId(), firstName: 'First 2', lastName: 'Last 2', username: 'firstlast2' },
-                { _id: new Types.ObjectId(), firstName: 'First 3', lastName: 'Last 3', username: 'firstlast3' },
-                { _id: new Types.ObjectId(), firstName: 'First 4', lastName: 'Last 4', username: 'firstlast4' },
-                { _id: new Types.ObjectId(), firstName: 'First 5', lastName: 'Last 5', username: 'firstlast5' },
-                { _id: new Types.ObjectId(), firstName: 'First 6', lastName: 'Last 6', username: 'firstlast6' },
-                { _id: new Types.ObjectId(), firstName: 'First 7', lastName: 'Last 7', username: 'firstlast7' },
-            ],
+            teamOnePlayers: players,
             points: [
                 {
                     pointNumber: 1,
@@ -1453,6 +1462,7 @@ describe('test create full game', () => {
         expect(gameResponse.teamOneScore).toBe(2)
         expect(gameResponse.teamTwoScore).toBe(1)
         expect(gameResponse.points.length).toBe(3)
+        expect(spy).toHaveBeenCalledTimes(1)
 
         const game = await Game.findOne({})
         expect(game?.points.length).toBe(3)

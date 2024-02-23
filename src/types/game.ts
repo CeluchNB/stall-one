@@ -65,7 +65,7 @@ interface IGame extends CreateGame {
 export interface CreateFullGame extends CreateGame {
     teamOneScore: number
     teamTwoScore: number
-    teamOnePlayers: Player[]
+    teamOnePlayers: (Player & { guest?: boolean })[]
     points: ClientPoint[]
 }
 

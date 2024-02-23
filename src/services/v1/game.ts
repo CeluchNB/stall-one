@@ -5,7 +5,7 @@ import { ApiError } from '../../types/errors'
 import randomstring from 'randomstring'
 import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
 import { findByIdOrThrow } from '../../utils/mongoose'
-import { authenticateManager, getTeam } from '../../utils/ultmt'
+import { authenticateManager, createGuest, getTeam } from '../../utils/ultmt'
 import { IPointModel } from '../../models/point'
 import { IActionModel } from '../../models/action'
 import { FilterQuery, Types } from 'mongoose'
@@ -418,6 +418,25 @@ export default class GameServices {
      */
     createFullGame = async (gameData: CreateFullGame, userJwt: string): Promise<IGame> => {
         const user = await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, gameData.teamOne._id?.toString())
+
+        // create guests if they exist
+        let teamOnePlayers = gameData.teamOnePlayers
+        for (const player of gameData.teamOnePlayers) {
+            if (player.guest) {
+                const team = await createGuest(
+                    this.ultmtUrl,
+                    this.apiKey,
+                    {
+                        firstName: player.firstName,
+                        lastName: player.lastName,
+                    },
+                    userJwt,
+                    gameData.teamOne._id?.toHexString(),
+                )
+                teamOnePlayers = team.players
+            }
+        }
+
         const safeData = {
             creator: user,
             teamOne: gameData.teamOne,
@@ -434,7 +453,7 @@ export default class GameServices {
             tournament: gameData.tournament,
             teamOneScore: gameData.teamOneScore,
             teamTwoScore: gameData.teamTwoScore,
-            teamOnePlayers: gameData.teamOnePlayers,
+            teamOnePlayers: teamOnePlayers,
             teamOneActive: false,
             teamTwoActive: false,
         }
