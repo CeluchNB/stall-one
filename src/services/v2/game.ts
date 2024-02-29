@@ -4,13 +4,14 @@ import IGame from '../../types/game'
 import { IGameModel } from '../../models/game'
 import IPoint from '../../types/point'
 import { IPointModel } from '../../models/point'
-import { TeamNumberString } from '../../types/ultmt'
-import { authenticateManager } from '../../utils/ultmt'
+import { TeamNumber, TeamNumberString } from '../../types/ultmt'
+import { authenticateManager, getTeam } from '../../utils/ultmt'
 import { findByIdOrThrow } from '../../utils/mongoose'
 import { getRedisAction } from '../../utils/redis'
 import { RedisAction, RedisClientType } from '../../types/action'
 import { getTeamNumber } from '../../utils/game'
 import PointServices from '../v1/point'
+import { ApiError } from '../../types/errors'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -81,6 +82,32 @@ export default class GameServices {
         )
 
         return { game, team, token, activePoint, actions }
+    }
+
+    /**
+     * Method to add a guest player to a team for a single game. The guest should already be created at the team level
+     * @param gameId id of game
+     * @param team team to add player to (either 'one' or 'two')
+     * @param player data of player to add
+     * @returns updated game object
+     */
+    updateGamePlayers = async (gameId: string, teamNumber: TeamNumber): Promise<IGame> => {
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+
+        const teamId = teamNumber === TeamNumber.ONE ? game.teamOne._id : game.teamTwo._id
+        const team = await getTeam(this.ultmtUrl, this.apiKey, teamId?.toHexString())
+
+        if (teamNumber === TeamNumber.ONE) {
+            game.teamOnePlayers = team.players
+        } else if (game.teamTwoActive) {
+            game.teamTwoPlayers = team.players
+        } else {
+            throw new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400)
+        }
+
+        await game.save()
+
+        return game
     }
 
     private getLiveActionsForPoint = async (
