@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as Constants from '../../../../src/utils/constants'
-import * as UltmtUtils from '../../../../src/utils/ultmt'
 import { Types } from 'mongoose'
 import { close, setupApp } from '../../../../src/app'
 import request from 'supertest'
@@ -9,11 +8,10 @@ import Game from '../../../../src/models/game'
 import Point from '../../../../src/models/point'
 import { ActionType } from '../../../../src/types/action'
 import { saveRedisAction } from '../../../../src/utils/redis'
-import { client, gameData, getMock, resetDatabase, setUpDatabase, tearDownDatabase } from '../../../fixtures/setup-db'
+import { client, getMock, resetDatabase, setUpDatabase, tearDownDatabase } from '../../../fixtures/setup-db'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import axios from 'axios'
 import { Server } from 'http'
-import { TeamResponse } from '../../../../src/types/ultmt'
 
 let app: Server
 beforeAll(async () => {
@@ -149,55 +147,6 @@ describe('Game Routes v2', () => {
                 .expect(404)
 
             expect(response.body.message).toBe(Constants.UNABLE_TO_FETCH_TEAM)
-        })
-    })
-
-    describe('PUT /game/update-players', () => {
-        it('handles success', async () => {
-            const game = await Game.create(gameData)
-            const token = game.getToken('one')
-
-            const id = new Types.ObjectId()
-            const player = {
-                _id: id,
-                firstName: 'Noah',
-                lastName: 'Celuch',
-                username: 'noah',
-            }
-            jest.spyOn(UltmtUtils, 'getTeam').mockReturnValue(Promise.resolve({ players: [player] } as TeamResponse))
-
-            const response = await request(app)
-                .put('/api/v2/game/update-players')
-                .set('Authorization', `Bearer ${token}`)
-                .send()
-                .expect(200)
-
-            const { game: gameResult } = response.body
-            expect(gameResult.teamOnePlayers.length).toBe(1)
-            expect(gameResult.teamOnePlayers[0]._id.toString()).toBe(id.toHexString())
-            expect(gameResult.teamOnePlayers[0].firstName).toBe('Noah')
-            expect(gameResult.teamOnePlayers[0].lastName).toBe('Celuch')
-            expect(gameResult.teamOnePlayers[0].username).toBe('noah')
-
-            const gameRecord = await Game.findById(game._id)
-            expect(gameRecord?.teamOnePlayers.length).toBe(1)
-            expect(gameRecord?.teamOnePlayers[0]._id.toString()).toBe(id.toHexString())
-            expect(gameRecord?.teamOnePlayers[0].firstName).toBe('Noah')
-            expect(gameRecord?.teamOnePlayers[0].lastName).toBe('Celuch')
-            expect(gameRecord?.teamOnePlayers[0].username).toBe('noah')
-        })
-
-        it('handles error', async () => {
-            const game = await Game.create(gameData)
-            const token = jwt.sign({ sub: game._id, iat: Date.now(), team: 'three' }, process.env.JWT_SECRET as string)
-
-            const response = await request(app)
-                .put('/api/v2/game/update-players')
-                .set('Authorization', `Bearer ${token}`)
-                .send()
-                .expect(400)
-
-            expect(response.body.message).toBe(Constants.UNABLE_TO_ADD_PLAYER)
         })
     })
 })

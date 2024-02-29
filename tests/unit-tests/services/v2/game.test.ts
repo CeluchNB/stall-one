@@ -1,18 +1,14 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import * as Constants from '../../../../src/utils/constants'
-import * as UltmtUtils from '../../../../src/utils/ultmt'
 import Action from '../../../../src/models/action'
 import Game from '../../../../src/models/game'
 import Point from '../../../../src/models/point'
 import GameServices from '../../../../src/services/v2/game'
 import axios from 'axios'
-import { setUpDatabase, tearDownDatabase, client, getMock, resetDatabase, gameData } from '../../../fixtures/setup-db'
-import { ApiError } from '../../../../src/types/errors'
+import { setUpDatabase, tearDownDatabase, client, getMock, resetDatabase } from '../../../fixtures/setup-db'
 import { Types } from 'mongoose'
 import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import { ActionType } from '../../../../src/types/action'
-import { TeamNumber, TeamResponse } from '../../../../src/types/ultmt'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
@@ -303,83 +299,6 @@ describe('Game Services v2', () => {
             const payload = jwt.verify(result.token, process.env.JWT_SECRET as string) as JwtPayload
             expect(payload.sub).toBe(game._id.toString())
             expect(payload.team).toBe('one')
-        })
-    })
-
-    describe('test add guest player to team', () => {
-        it('with valid data for team one', async () => {
-            const game = await Game.create(gameData)
-
-            const id = new Types.ObjectId()
-            const player = {
-                _id: id,
-                firstName: 'Noah',
-                lastName: 'Celuch',
-                username: 'noah',
-            }
-            jest.spyOn(UltmtUtils, 'getTeam').mockReturnValue(Promise.resolve({ players: [player] } as TeamResponse))
-
-            const gameResult = await services.updateGamePlayers(game._id.toString(), TeamNumber.ONE)
-
-            expect(gameResult.teamOnePlayers.length).toBe(1)
-            expect(gameResult.teamOnePlayers[0]._id.toHexString()).toBe(id.toHexString())
-            expect(gameResult.teamOnePlayers[0].firstName).toBe('Noah')
-            expect(gameResult.teamOnePlayers[0].lastName).toBe('Celuch')
-            expect(gameResult.teamOnePlayers[0].username).toBe('noah')
-
-            const gameRecord = await Game.findById(game._id)
-            expect(gameRecord?.teamOnePlayers.length).toBe(1)
-            expect(gameRecord?.teamOnePlayers[0]._id.toHexString()).toBe(id.toHexString())
-            expect(gameRecord?.teamOnePlayers[0].firstName).toBe('Noah')
-            expect(gameRecord?.teamOnePlayers[0].lastName).toBe('Celuch')
-            expect(gameRecord?.teamOnePlayers[0].username).toBe('noah')
-        })
-
-        it('with valid data for team two', async () => {
-            const game = await Game.create(gameData)
-            game.teamTwoActive = true
-            game.teamTwoDefined = true
-            await game.save()
-
-            const id = new Types.ObjectId()
-            const player = {
-                _id: id,
-                firstName: 'Noah',
-                lastName: 'Celuch',
-                username: 'noah',
-            }
-            jest.spyOn(UltmtUtils, 'getTeam').mockReturnValue(Promise.resolve({ players: [player] } as TeamResponse))
-
-            const gameResult = await services.updateGamePlayers(game._id.toString(), TeamNumber.TWO)
-
-            expect(gameResult.teamTwoPlayers.length).toBe(1)
-            expect(gameResult.teamTwoPlayers[0]._id.toHexString()).toBe(id.toHexString())
-            expect(gameResult.teamTwoPlayers[0].firstName).toBe('Noah')
-            expect(gameResult.teamTwoPlayers[0].lastName).toBe('Celuch')
-            expect(gameResult.teamTwoPlayers[0].username).toBe('noah')
-
-            const gameRecord = await Game.findById(game._id)
-            expect(gameRecord?.teamTwoPlayers.length).toBe(1)
-            expect(gameRecord?.teamTwoPlayers[0]._id.toHexString()).toBe(id.toHexString())
-            expect(gameRecord?.teamTwoPlayers[0].firstName).toBe('Noah')
-            expect(gameRecord?.teamTwoPlayers[0].lastName).toBe('Celuch')
-            expect(gameRecord?.teamTwoPlayers[0].username).toBe('noah')
-        })
-
-        it('with unfound game', async () => {
-            await Game.create(gameData)
-
-            await expect(
-                services.updateGamePlayers(new Types.ObjectId().toString(), TeamNumber.ONE),
-            ).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FIND_GAME, 404))
-        })
-
-        it('with unable to add player', async () => {
-            const game = await Game.create(gameData)
-
-            await expect(services.updateGamePlayers(game._id.toString(), TeamNumber.TWO)).rejects.toThrowError(
-                new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400),
-            )
         })
     })
 })

@@ -296,3 +296,24 @@ gameRouter.put(
         }
     },
 )
+
+gameRouter.put(
+    '/game/update-players',
+    passport.authenticate('jwt', { session: false }),
+    async (req: Request, res: Response, next) => {
+        try {
+            const services = new GameServices(
+                Game,
+                Point,
+                Action,
+                process.env.ULTMT_API_URL || '',
+                process.env.API_KEY || '',
+            )
+            const { gameId, team } = req.user as GameAuth
+            const game = await services.updateGamePlayers(gameId, team as TeamNumber)
+            return res.json({ game })
+        } catch (e) {
+            next(e)
+        }
+    },
+)

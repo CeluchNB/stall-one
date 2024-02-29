@@ -505,6 +505,32 @@ export default class GameServices {
             await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
         }
     }
+
+    /**
+     * Method to update players on a game based on a team's players in ultmt-api microservice
+     * @param gameId id of game
+     * @param team team to add player to (either 'one' or 'two')
+     * @param player data of player to add
+     * @returns updated game object
+     */
+    updateGamePlayers = async (gameId: string, teamNumber: TeamNumber): Promise<IGame> => {
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+
+        const teamId = teamNumber === TeamNumber.ONE ? game.teamOne._id : game.teamTwo._id
+        const team = await getTeam(this.ultmtUrl, this.apiKey, teamId?.toHexString())
+
+        if (teamNumber === TeamNumber.ONE) {
+            game.teamOnePlayers = team.players
+        } else if (game.teamTwoActive) {
+            game.teamTwoPlayers = team.players
+        } else {
+            throw new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400)
+        }
+
+        await game.save()
+
+        return game
+    }
 }
 
 const createStatsGame = async (game: IGame) => {
