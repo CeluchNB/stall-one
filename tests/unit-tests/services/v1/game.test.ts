@@ -53,7 +53,7 @@ const userData = {
     openToRequests: false,
 }
 
-const services = new GameServices(Game, Point, Action, '', '')
+const services = new GameServices(Game, Point, Action, Tournament, '', '')
 
 beforeEach(() => {
     jest.spyOn(axios, 'get').mockImplementation(getMock)
@@ -1292,6 +1292,19 @@ describe('test create full game', () => {
             ...createData,
             teamOneScore: 2,
             teamTwoScore: 1,
+            tournament: {
+                _id: new Types.ObjectId(),
+                name: 'Tournament',
+                eventId: 'tourney',
+                startDate: new Date(),
+                endDate: new Date(),
+                creator: {
+                    _id: new Types.ObjectId(),
+                    firstName: 'not',
+                    lastName: 'real',
+                    username: 'test',
+                },
+            },
             teamOnePlayers: [
                 { _id: new Types.ObjectId(), firstName: 'First 1', lastName: 'Last 1', username: 'firstlast1' },
                 { _id: new Types.ObjectId(), firstName: 'First 2', lastName: 'Last 2', username: 'firstlast2' },
@@ -1475,6 +1488,64 @@ describe('test create full game', () => {
         expect(point3.teamTwoScore).toBe(1)
         const actions = await Action.find({})
         expect(actions.length).toBe(7)
+
+        const tournament = await Tournament.findOne()
+        expect(tournament).toMatchObject({
+            name: 'Tournament',
+            eventId: 'tourney',
+        })
+        expect(tournament?.creator.username).toBe('firstlast')
+    })
+
+    it('with found tournament', async () => {
+        const fullGame: CreateFullGame = {
+            ...createData,
+            teamOneScore: 2,
+            teamTwoScore: 1,
+            tournament: {
+                _id: new Types.ObjectId(),
+                name: 'Tournament',
+                eventId: 'tourney',
+                startDate: new Date(),
+                endDate: new Date(),
+                creator: {
+                    _id: new Types.ObjectId(),
+                    firstName: 'not',
+                    lastName: 'real',
+                    username: 'test',
+                },
+            },
+            teamOnePlayers: [
+                { _id: new Types.ObjectId(), firstName: 'First 1', lastName: 'Last 1', username: 'firstlast1' },
+                { _id: new Types.ObjectId(), firstName: 'First 2', lastName: 'Last 2', username: 'firstlast2' },
+                { _id: new Types.ObjectId(), firstName: 'First 3', lastName: 'Last 3', username: 'firstlast3' },
+                { _id: new Types.ObjectId(), firstName: 'First 4', lastName: 'Last 4', username: 'firstlast4' },
+                { _id: new Types.ObjectId(), firstName: 'First 5', lastName: 'Last 5', username: 'firstlast5' },
+                { _id: new Types.ObjectId(), firstName: 'First 6', lastName: 'Last 6', username: 'firstlast6' },
+                { _id: new Types.ObjectId(), firstName: 'First 7', lastName: 'Last 7', username: 'firstlast7' },
+            ],
+            points: [],
+        }
+
+        const realTourney = await Tournament.create({
+            name: 'Tournament',
+            eventId: 'tourney',
+            startDate: new Date(),
+            endDate: new Date(),
+            creator: {
+                _id: new Types.ObjectId(),
+                firstName: 'not',
+                lastName: 'real',
+                username: 'test',
+            },
+        })
+
+        const gameResponse = await services.createFullGame(fullGame, 'jwt')
+
+        expect(gameResponse.tournament?._id.toHexString()).toBe(realTourney._id.toHexString())
+
+        const tournaments = await Tournament.find()
+        expect(tournaments.length).toBe(1)
     })
 })
 

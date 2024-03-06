@@ -5,18 +5,20 @@ import { ApiError } from '../../types/errors'
 import randomstring from 'randomstring'
 import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
 import { findByIdOrThrow } from '../../utils/mongoose'
-import { authenticateManager, getTeam } from '../../utils/ultmt'
+import { authenticateManager, getTeam, parseUser } from '../../utils/ultmt'
 import { IPointModel } from '../../models/point'
 import { IActionModel } from '../../models/action'
 import { FilterQuery, Types } from 'mongoose'
 import IPoint from '../../types/point'
 import { sendCloudTask } from '../../utils/cloud-tasks'
 import IAction from '../../types/action'
+import { ITournamentModel } from '../../models/tournament'
 
 export default class GameServices {
     gameModel: IGameModel
     pointModel: IPointModel
     actionModel: IActionModel
+    tournamentModel: ITournamentModel
     ultmtUrl: string
     apiKey: string
 
@@ -24,12 +26,14 @@ export default class GameServices {
         gameModel: IGameModel,
         pointModel: IPointModel,
         actionModel: IActionModel,
+        tournamentModel: ITournamentModel,
         ultmtUrl: string,
         apiKey: string,
     ) {
         this.gameModel = gameModel
         this.pointModel = pointModel
         this.actionModel = actionModel
+        this.tournamentModel = tournamentModel
         this.ultmtUrl = ultmtUrl
         this.apiKey = apiKey
     }
@@ -437,6 +441,23 @@ export default class GameServices {
             teamOnePlayers: gameData.teamOnePlayers,
             teamOneActive: false,
             teamTwoActive: false,
+        }
+
+        if (safeData.tournament) {
+            const tournament = await this.tournamentModel.findOne({ eventId: safeData.tournament.eventId })
+            if (tournament) {
+                safeData.tournament = tournament
+            } else {
+                const { name, eventId, startDate, endDate } = safeData.tournament
+                const newTournament = await this.tournamentModel.create({
+                    name,
+                    eventId,
+                    startDate,
+                    endDate,
+                    creator: parseUser(user),
+                })
+                safeData.tournament = newTournament
+            }
         }
 
         const game = await this.gameModel.create(safeData)
