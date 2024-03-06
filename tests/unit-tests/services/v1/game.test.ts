@@ -108,13 +108,15 @@ describe('test create game', () => {
             'jwt',
         )
 
+        const tournament = await Tournament.findOne()
+
         const gameRecord = await Game.findById(game._id)
         expect(game._id.toString()).toBe(gameRecord?._id.toString())
         expect(game.teamOneScore).toBe(0)
         expect(game.teamTwoScore).toBe(0)
         expect(game.teamTwoActive).toBe(false)
         expect(game.teamTwoDefined).toBe(true)
-        expect(game.tournament?._id.toString()).toBe(tournamentId.toString())
+        expect(game.tournament?._id.toString()).toBe(tournament?._id.toHexString())
         expect(game.tournament?.eventId).toBe('mareg22')
         expect(token.length).toBeGreaterThan(20)
         expect(gameRecord?.teamOneActive).toBe(true)
@@ -122,7 +124,7 @@ describe('test create game', () => {
         expect(gameRecord?.creator.username).toBe('firstlast')
         expect(gameRecord?.teamOnePlayers.length).toBe(2)
         expect(gameRecord?.teamTwoPlayers.length).toBe(2)
-        expect(gameRecord?.tournament?._id.toString()).toBe(tournamentId.toString())
+        expect(gameRecord?.tournament?._id.toHexString()).toBe(tournament?._id.toHexString())
         expect(gameRecord?.tournament?.eventId).toBe('mareg22')
         const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
         expect(payload.sub).toBe(game._id.toString())

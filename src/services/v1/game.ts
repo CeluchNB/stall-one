@@ -3,7 +3,7 @@ import Game, { IGameModel } from '../../models/game'
 import IGame, { CreateFullGame, CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import randomstring from 'randomstring'
-import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
+import { Player, TeamNumber, TeamNumberString, UserResponse } from '../../types/ultmt'
 import { findByIdOrThrow } from '../../utils/mongoose'
 import { authenticateManager, getTeam, parseUser } from '../../utils/ultmt'
 import { IPointModel } from '../../models/point'
@@ -62,6 +62,8 @@ export default class GameServices {
             floaterTimeout: gameData.floaterTimeout,
             tournament: gameData.tournament,
         }
+
+        await this.findOrCreateTournament(safeData, user)
 
         const teamOne = await getTeam(this.ultmtUrl, this.apiKey, safeData.teamOne._id?.toString())
 
@@ -443,22 +445,7 @@ export default class GameServices {
             teamTwoActive: false,
         }
 
-        if (safeData.tournament) {
-            const tournament = await this.tournamentModel.findOne({ eventId: safeData.tournament.eventId })
-            if (tournament) {
-                safeData.tournament = tournament
-            } else {
-                const { name, eventId, startDate, endDate } = safeData.tournament
-                const newTournament = await this.tournamentModel.create({
-                    name,
-                    eventId,
-                    startDate,
-                    endDate,
-                    creator: parseUser(user),
-                })
-                safeData.tournament = newTournament
-            }
-        }
+        await this.findOrCreateTournament(safeData, user)
 
         const game = await this.gameModel.create(safeData)
         await createStatsGame(game)
@@ -551,6 +538,25 @@ export default class GameServices {
         await game.save()
 
         return game
+    }
+
+    private findOrCreateTournament = async (data: CreateGame, user: UserResponse) => {
+        if (data.tournament) {
+            const tournament = await this.tournamentModel.findOne({ eventId: data.tournament.eventId })
+            if (tournament) {
+                data.tournament = tournament
+            } else {
+                const { name, eventId, startDate, endDate } = data.tournament
+                const newTournament = await this.tournamentModel.create({
+                    name,
+                    eventId,
+                    startDate,
+                    endDate,
+                    creator: parseUser(user),
+                })
+                data.tournament = newTournament
+            }
+        }
     }
 }
 
