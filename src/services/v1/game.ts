@@ -3,20 +3,22 @@ import Game, { IGameModel } from '../../models/game'
 import IGame, { CreateFullGame, CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import randomstring from 'randomstring'
-import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
+import { Player, TeamNumber, TeamNumberString, UserResponse } from '../../types/ultmt'
 import { findByIdOrThrow } from '../../utils/mongoose'
-import { authenticateManager, getTeam } from '../../utils/ultmt'
+import { authenticateManager, getTeam, parseUser } from '../../utils/ultmt'
 import { IPointModel } from '../../models/point'
 import { IActionModel } from '../../models/action'
 import { FilterQuery, Types } from 'mongoose'
 import IPoint from '../../types/point'
 import { sendCloudTask } from '../../utils/cloud-tasks'
 import IAction from '../../types/action'
+import { ITournamentModel } from '../../models/tournament'
 
 export default class GameServices {
     gameModel: IGameModel
     pointModel: IPointModel
     actionModel: IActionModel
+    tournamentModel: ITournamentModel
     ultmtUrl: string
     apiKey: string
 
@@ -24,12 +26,14 @@ export default class GameServices {
         gameModel: IGameModel,
         pointModel: IPointModel,
         actionModel: IActionModel,
+        tournamentModel: ITournamentModel,
         ultmtUrl: string,
         apiKey: string,
     ) {
         this.gameModel = gameModel
         this.pointModel = pointModel
         this.actionModel = actionModel
+        this.tournamentModel = tournamentModel
         this.ultmtUrl = ultmtUrl
         this.apiKey = apiKey
     }
@@ -58,6 +62,8 @@ export default class GameServices {
             floaterTimeout: gameData.floaterTimeout,
             tournament: gameData.tournament,
         }
+
+        await this.findOrCreateTournament(safeData, user)
 
         const teamOne = await getTeam(this.ultmtUrl, this.apiKey, safeData.teamOne._id?.toString())
 
@@ -439,6 +445,8 @@ export default class GameServices {
             teamTwoActive: false,
         }
 
+        await this.findOrCreateTournament(safeData, user)
+
         const game = await this.gameModel.create(safeData)
         await createStatsGame(game)
 
@@ -503,6 +511,51 @@ export default class GameServices {
 
         if (!game.teamOneActive && !game.teamTwoActive) {
             await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
+        }
+    }
+
+    /**
+     * Method to update players on a game based on a team's players in ultmt-api microservice
+     * @param gameId id of game
+     * @param team team to add player to (either 'one' or 'two')
+     * @param player data of player to add
+     * @returns updated game object
+     */
+    updateGamePlayers = async (gameId: string, teamNumber: TeamNumber): Promise<IGame> => {
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+
+        const teamId = teamNumber === TeamNumber.ONE ? game.teamOne._id : game.teamTwo._id
+        const team = await getTeam(this.ultmtUrl, this.apiKey, teamId?.toHexString())
+
+        if (teamNumber === TeamNumber.ONE) {
+            game.teamOnePlayers = team.players
+        } else if (game.teamTwoActive) {
+            game.teamTwoPlayers = team.players
+        } else {
+            throw new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400)
+        }
+
+        await game.save()
+
+        return game
+    }
+
+    private findOrCreateTournament = async (data: CreateGame, user: UserResponse) => {
+        if (data.tournament) {
+            const tournament = await this.tournamentModel.findOne({ eventId: data.tournament.eventId })
+            if (tournament) {
+                data.tournament = tournament
+            } else {
+                const { name, eventId, startDate, endDate } = data.tournament
+                const newTournament = await this.tournamentModel.create({
+                    name,
+                    eventId,
+                    startDate,
+                    endDate,
+                    creator: parseUser(user),
+                })
+                data.tournament = newTournament
+            }
         }
     }
 }
