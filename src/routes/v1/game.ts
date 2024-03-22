@@ -4,6 +4,7 @@ import { body, param, query } from 'express-validator'
 import Game from '../../models/game'
 import Point from '../../models/point'
 import Action from '../../models/action'
+import Tournament from '../../models/tournament'
 import passport from 'passport'
 import { GameAuth } from '../../types/game'
 import { TeamNumber } from '../../types/ultmt'
@@ -18,6 +19,7 @@ gameRouter.post('/game', body('createGameData').isObject(), async (req: Request,
             Game,
             Point,
             Action,
+            Tournament,
             process.env.ULTMT_API_URL || '',
             process.env.API_KEY || '',
         )
@@ -39,6 +41,7 @@ gameRouter.put(
                 Game,
                 Point,
                 Action,
+                Tournament,
                 process.env.ULTMT_API_URL || '',
                 process.env.API_KEY || '',
             )
@@ -66,6 +69,7 @@ gameRouter.put(
                 Game,
                 Point,
                 Action,
+                Tournament,
                 process.env.ULTMT_API_URL || '',
                 process.env.API_KEY || '',
             )
@@ -87,6 +91,7 @@ gameRouter.put(
                 Game,
                 Point,
                 Action,
+                Tournament,
                 process.env.ULTMT_API_URL || '',
                 process.env.API_KEY || '',
             )
@@ -108,6 +113,7 @@ gameRouter.put(
                 Game,
                 Point,
                 Action,
+                Tournament,
                 process.env.ULTMT_API_URL || '',
                 process.env.API_KEY || '',
             )
@@ -131,6 +137,7 @@ gameRouter.put(
                 Game,
                 Point,
                 Action,
+                Tournament,
                 process.env.ULTMT_API_URL || '',
                 process.env.API_KEY || '',
             )
@@ -153,6 +160,7 @@ gameRouter.delete(
                 Game,
                 Point,
                 Action,
+                Tournament,
                 process.env.ULTMT_API_URL || '',
                 process.env.API_KEY || '',
             )
@@ -171,6 +179,7 @@ gameRouter.get('/game/search', async (req: Request, res: Response, next) => {
             Game,
             Point,
             Action,
+            Tournament,
             process.env.ULTMT_API_URL || '',
             process.env.API_KEY || '',
         )
@@ -199,6 +208,7 @@ gameRouter.get('/game/:id', param('id').escape(), async (req: Request, res: Resp
             Game,
             Point,
             Action,
+            Tournament,
             process.env.ULTMT_API_URL || '',
             process.env.API_KEY || '',
         )
@@ -215,6 +225,7 @@ gameRouter.get('/game/:id/points', param('id').escape(), async (req: Request, re
             Game,
             Point,
             Action,
+            Tournament,
             process.env.ULTMT_API_URL || '',
             process.env.API_KEY || '',
         )
@@ -232,6 +243,7 @@ gameRouter.post('/game/full', body('gameData').isObject(), async (req: Request, 
             Game,
             Point,
             Action,
+            Tournament,
             process.env.ULTMT_API_URL || '',
             process.env.API_KEY || '',
         )
@@ -248,6 +260,7 @@ gameRouter.get('/game/team/:id', async (req: Request, res: Response, next) => {
             Game,
             Point,
             Action,
+            Tournament,
             process.env.ULTMT_API_URL || '',
             process.env.API_KEY || '',
         )
@@ -264,6 +277,7 @@ gameRouter.put('/game/:id/open', async (req: Request, res: Response, next) => {
             Game,
             Point,
             Action,
+            Tournament,
             process.env.ULTMT_API_URL || '',
             process.env.API_KEY || '',
         )
@@ -284,6 +298,7 @@ gameRouter.put(
                 Game,
                 Point,
                 Action,
+                Tournament,
                 process.env.ULTMT_API_URL || '',
                 process.env.API_KEY || '',
             )
@@ -291,6 +306,28 @@ gameRouter.put(
             const teamId = req.query.team
             await services.rebuildStatsForGame(gameId, teamId as string)
             return res.send()
+        } catch (e) {
+            next(e)
+        }
+    },
+)
+
+gameRouter.put(
+    '/game/update-players',
+    passport.authenticate('jwt', { session: false }),
+    async (req: Request, res: Response, next) => {
+        try {
+            const services = new GameServices(
+                Game,
+                Point,
+                Action,
+                Tournament,
+                process.env.ULTMT_API_URL || '',
+                process.env.API_KEY || '',
+            )
+            const { gameId, team } = req.user as GameAuth
+            const game = await services.updateGamePlayers(gameId, team as TeamNumber)
+            return res.json({ game })
         } catch (e) {
             next(e)
         }

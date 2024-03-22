@@ -1,5 +1,6 @@
 import * as Constants from '../../../../src/utils/constants'
 import * as CloudTaskServices from '../../../../src/utils/cloud-tasks'
+import * as UltmtUtils from '../../../../src/utils/ultmt'
 import {
     setUpDatabase,
     tearDownDatabase,
@@ -12,7 +13,7 @@ import GameServices from '../../../../src/services/v1/game'
 import Game from '../../../../src/models/game'
 import { ApiError } from '../../../../src/types/errors'
 import { CreateFullGame, CreateGame } from '../../../../src/types/game'
-import { Team, TeamNumber } from '../../../../src/types/ultmt'
+import { Team, TeamNumber, TeamResponse } from '../../../../src/types/ultmt'
 import { Types } from 'mongoose'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import axios from 'axios'
@@ -52,7 +53,7 @@ const userData = {
     openToRequests: false,
 }
 
-const services = new GameServices(Game, Point, Action, '', '')
+const services = new GameServices(Game, Point, Action, Tournament, '', '')
 
 beforeEach(() => {
     jest.spyOn(axios, 'get').mockImplementation(getMock)
@@ -107,13 +108,15 @@ describe('test create game', () => {
             'jwt',
         )
 
+        const tournament = await Tournament.findOne()
+
         const gameRecord = await Game.findById(game._id)
         expect(game._id.toString()).toBe(gameRecord?._id.toString())
         expect(game.teamOneScore).toBe(0)
         expect(game.teamTwoScore).toBe(0)
         expect(game.teamTwoActive).toBe(false)
         expect(game.teamTwoDefined).toBe(true)
-        expect(game.tournament?._id.toString()).toBe(tournamentId.toString())
+        expect(game.tournament?._id.toString()).toBe(tournament?._id.toHexString())
         expect(game.tournament?.eventId).toBe('mareg22')
         expect(token.length).toBeGreaterThan(20)
         expect(gameRecord?.teamOneActive).toBe(true)
@@ -121,7 +124,7 @@ describe('test create game', () => {
         expect(gameRecord?.creator.username).toBe('firstlast')
         expect(gameRecord?.teamOnePlayers.length).toBe(2)
         expect(gameRecord?.teamTwoPlayers.length).toBe(2)
-        expect(gameRecord?.tournament?._id.toString()).toBe(tournamentId.toString())
+        expect(gameRecord?.tournament?._id.toHexString()).toBe(tournament?._id.toHexString())
         expect(gameRecord?.tournament?.eventId).toBe('mareg22')
         const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
         expect(payload.sub).toBe(game._id.toString())
@@ -1291,6 +1294,19 @@ describe('test create full game', () => {
             ...createData,
             teamOneScore: 2,
             teamTwoScore: 1,
+            tournament: {
+                _id: new Types.ObjectId(),
+                name: 'Tournament',
+                eventId: 'tourney',
+                startDate: new Date(),
+                endDate: new Date(),
+                creator: {
+                    _id: new Types.ObjectId(),
+                    firstName: 'not',
+                    lastName: 'real',
+                    username: 'test',
+                },
+            },
             teamOnePlayers: [
                 { _id: new Types.ObjectId(), firstName: 'First 1', lastName: 'Last 1', username: 'firstlast1' },
                 { _id: new Types.ObjectId(), firstName: 'First 2', lastName: 'Last 2', username: 'firstlast2' },
@@ -1474,6 +1490,64 @@ describe('test create full game', () => {
         expect(point3.teamTwoScore).toBe(1)
         const actions = await Action.find({})
         expect(actions.length).toBe(7)
+
+        const tournament = await Tournament.findOne()
+        expect(tournament).toMatchObject({
+            name: 'Tournament',
+            eventId: 'tourney',
+        })
+        expect(tournament?.creator.username).toBe('firstlast')
+    })
+
+    it('with found tournament', async () => {
+        const fullGame: CreateFullGame = {
+            ...createData,
+            teamOneScore: 2,
+            teamTwoScore: 1,
+            tournament: {
+                _id: new Types.ObjectId(),
+                name: 'Tournament',
+                eventId: 'tourney',
+                startDate: new Date(),
+                endDate: new Date(),
+                creator: {
+                    _id: new Types.ObjectId(),
+                    firstName: 'not',
+                    lastName: 'real',
+                    username: 'test',
+                },
+            },
+            teamOnePlayers: [
+                { _id: new Types.ObjectId(), firstName: 'First 1', lastName: 'Last 1', username: 'firstlast1' },
+                { _id: new Types.ObjectId(), firstName: 'First 2', lastName: 'Last 2', username: 'firstlast2' },
+                { _id: new Types.ObjectId(), firstName: 'First 3', lastName: 'Last 3', username: 'firstlast3' },
+                { _id: new Types.ObjectId(), firstName: 'First 4', lastName: 'Last 4', username: 'firstlast4' },
+                { _id: new Types.ObjectId(), firstName: 'First 5', lastName: 'Last 5', username: 'firstlast5' },
+                { _id: new Types.ObjectId(), firstName: 'First 6', lastName: 'Last 6', username: 'firstlast6' },
+                { _id: new Types.ObjectId(), firstName: 'First 7', lastName: 'Last 7', username: 'firstlast7' },
+            ],
+            points: [],
+        }
+
+        const realTourney = await Tournament.create({
+            name: 'Tournament',
+            eventId: 'tourney',
+            startDate: new Date(),
+            endDate: new Date(),
+            creator: {
+                _id: new Types.ObjectId(),
+                firstName: 'not',
+                lastName: 'real',
+                username: 'test',
+            },
+        })
+
+        const gameResponse = await services.createFullGame(fullGame, 'jwt')
+
+        expect(gameResponse.tournament?._id.toHexString()).toBe(realTourney._id.toHexString())
+
+        const tournaments = await Tournament.find()
+        expect(tournaments.length).toBe(1)
     })
 })
 
@@ -1625,5 +1699,82 @@ describe('test rebuild full stats for game', () => {
         await services.rebuildStatsForGame(game._id.toHexString(), game.teamTwo._id?.toHexString() as string)
 
         expect(cloudTaskSpy).toBeCalledTimes(3)
+    })
+})
+
+describe('test add guest player to team', () => {
+    it('with valid data for team one', async () => {
+        const game = await Game.create(gameData)
+
+        const id = new Types.ObjectId()
+        const player = {
+            _id: id,
+            firstName: 'Noah',
+            lastName: 'Celuch',
+            username: 'noah',
+        }
+        jest.spyOn(UltmtUtils, 'getTeam').mockReturnValue(Promise.resolve({ players: [player] } as TeamResponse))
+
+        const gameResult = await services.updateGamePlayers(game._id.toString(), TeamNumber.ONE)
+
+        expect(gameResult.teamOnePlayers.length).toBe(1)
+        expect(gameResult.teamOnePlayers[0]._id.toHexString()).toBe(id.toHexString())
+        expect(gameResult.teamOnePlayers[0].firstName).toBe('Noah')
+        expect(gameResult.teamOnePlayers[0].lastName).toBe('Celuch')
+        expect(gameResult.teamOnePlayers[0].username).toBe('noah')
+
+        const gameRecord = await Game.findById(game._id)
+        expect(gameRecord?.teamOnePlayers.length).toBe(1)
+        expect(gameRecord?.teamOnePlayers[0]._id.toHexString()).toBe(id.toHexString())
+        expect(gameRecord?.teamOnePlayers[0].firstName).toBe('Noah')
+        expect(gameRecord?.teamOnePlayers[0].lastName).toBe('Celuch')
+        expect(gameRecord?.teamOnePlayers[0].username).toBe('noah')
+    })
+
+    it('with valid data for team two', async () => {
+        const game = await Game.create(gameData)
+        game.teamTwoActive = true
+        game.teamTwoDefined = true
+        await game.save()
+
+        const id = new Types.ObjectId()
+        const player = {
+            _id: id,
+            firstName: 'Noah',
+            lastName: 'Celuch',
+            username: 'noah',
+        }
+        jest.spyOn(UltmtUtils, 'getTeam').mockReturnValue(Promise.resolve({ players: [player] } as TeamResponse))
+
+        const gameResult = await services.updateGamePlayers(game._id.toString(), TeamNumber.TWO)
+
+        expect(gameResult.teamTwoPlayers.length).toBe(1)
+        expect(gameResult.teamTwoPlayers[0]._id.toHexString()).toBe(id.toHexString())
+        expect(gameResult.teamTwoPlayers[0].firstName).toBe('Noah')
+        expect(gameResult.teamTwoPlayers[0].lastName).toBe('Celuch')
+        expect(gameResult.teamTwoPlayers[0].username).toBe('noah')
+
+        const gameRecord = await Game.findById(game._id)
+        expect(gameRecord?.teamTwoPlayers.length).toBe(1)
+        expect(gameRecord?.teamTwoPlayers[0]._id.toHexString()).toBe(id.toHexString())
+        expect(gameRecord?.teamTwoPlayers[0].firstName).toBe('Noah')
+        expect(gameRecord?.teamTwoPlayers[0].lastName).toBe('Celuch')
+        expect(gameRecord?.teamTwoPlayers[0].username).toBe('noah')
+    })
+
+    it('with unfound game', async () => {
+        await Game.create(gameData)
+
+        await expect(services.updateGamePlayers(new Types.ObjectId().toString(), TeamNumber.ONE)).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_FIND_GAME, 404),
+        )
+    })
+
+    it('with unable to add player', async () => {
+        const game = await Game.create(gameData)
+
+        await expect(services.updateGamePlayers(game._id.toString(), TeamNumber.TWO)).rejects.toThrowError(
+            new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400),
+        )
     })
 })
