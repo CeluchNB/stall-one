@@ -302,21 +302,28 @@ export default class GameServices {
                 await game.deleteOne()
             }
         } else if (game.teamTwo._id?.equals(teamId)) {
-            // just 'dereference' team since the other team definitely exists
-            game.teamTwo._id = undefined
-            game.teamTwo.teamname = undefined
+            // delete actions
             const actionIds = points.reduce(
                 (prev: Types.ObjectId[], current) => prev.concat(current.teamTwoActions),
                 [],
             )
             await this.actionModel.deleteMany().where('_id').in(actionIds)
 
-            for (const point of points) {
-                point.teamTwoActions = []
-                await point.save()
-            }
+            // undefined team one _id means team one has already deleted
+            if (!game.teamOne._id) {
+                await this.pointModel.deleteMany().where('_id').in(game.points)
+                await game.deleteOne()
+            } else {
+                game.teamTwo._id = undefined
+                game.teamTwo.teamname = undefined
+                game.teamTwoJoined = false
+                await game.save()
 
-            await game.save()
+                for (const point of points) {
+                    point.teamTwoActions = []
+                    await point.save()
+                }
+            }
         }
         await sendCloudTask(`/api/v1/stats/game/delete/${gameId}?team=${teamId}`, {}, 'PUT')
     }

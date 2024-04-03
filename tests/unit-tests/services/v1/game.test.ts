@@ -841,7 +841,7 @@ describe('test delete game', () => {
         expect(games[0].teamTwo.teamname).toBe(team2.teamname)
     })
 
-    it('with team two', async () => {
+    it('with team two and team one not deleted', async () => {
         const [action1, action2, action3] = await Action.find({})
         const action4 = await Action.create({
             team: team2,
@@ -918,6 +918,56 @@ describe('test delete game', () => {
         expect(games[0].teamTwo.name).toBe(team2.name)
         expect(games[0].teamOne._id?.toString()).toBe(team._id?.toString())
         expect(games[0].teamOne.teamname).toBe(team.teamname)
+    })
+
+    it('with team two and team one deleted', async () => {
+        await Action.deleteMany({})
+        const action4 = await Action.create({
+            team: team2,
+            actionNumber: 1,
+            actionType: 'Drop',
+        })
+        const action5 = await Action.create({
+            team: team2,
+            actionNumber: 1,
+            actionType: 'TeamOneScore',
+        })
+        const [point1, point2] = await Point.find({})
+        point1.pullingTeam = team2
+        await point1.save()
+        point2.teamTwoActions = [action4._id, action5._id]
+        point2.receivingTeam = team2
+        await point2.save()
+        const game = await Game.create({
+            teamOne: { ...team, _id: undefined },
+            teamTwo: team2,
+            teamTwoDefined: true,
+            scoreLimit: 15,
+            halfScore: 8,
+            startTime: new Date(),
+            softcapMins: 75,
+            hardcapMins: 90,
+            playersPerPoint: 7,
+            timeoutPerHalf: 1,
+            floaterTimeout: true,
+            creator: {
+                _id: new Types.ObjectId(),
+                firstName: 'First1',
+                lastName: 'Last1',
+                username: 'first1last1',
+            },
+            points: [point1._id, point2._id],
+        })
+
+        await services.deleteGame(game._id.toString(), 'jwt', team2._id?.toString() || '')
+        const actions = await Action.find({})
+        expect(actions.length).toBe(0)
+
+        const points = await Point.find({})
+        expect(points.length).toBe(0)
+
+        const games = await Game.find({})
+        expect(games.length).toBe(0)
     })
 })
 
