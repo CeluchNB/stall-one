@@ -52,12 +52,9 @@ export default class PointServices {
         }
 
         // check if this point has already been created
-        const pointRecord = await this.pointModel
-            .findOne({
-                pointNumber,
-            })
-            .where('_id')
-            .in(game.points)
+        const pointRecord = await this.pointModel.where('_id').in(game.points).findOne({
+            pointNumber,
+        })
 
         if (pointRecord) {
             // checking name because it is only guaranteed field available
@@ -291,18 +288,18 @@ export default class PointServices {
             throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400)
         }
 
-        // cannot delete if any live actions
+        // cannot delete if any saved actions
         if (point.teamOneActions.length > 0 || point.teamTwoActions.length > 0) {
             throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400)
         }
 
-        // cannot delete point if any actions exist in redis
+        // cannot delete point if any live actions exist
         const teamOneActions = await this.redisClient.get(`${gameId}:${pointId}:one:actions`)
         if (Number(teamOneActions) > 0) {
             throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400)
         }
 
-        // cannot delete point if any actions exist in redis
+        // cannot delete point if any live actions exist
         const teamTwoActions = await this.redisClient.get(`${gameId}:${pointId}:two:actions`)
         if (Number(teamTwoActions) > 0) {
             throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400)
