@@ -459,10 +459,22 @@ export default class GameServices {
 
         const points = gameData.points
         for (const p of points) {
-            const point = await this.pointModel.create({ ...p, teamOneActive: false, teamTwoActive: false })
+            const point = await this.pointModel.create({
+                ...p,
+                teamOneActive: false,
+                teamTwoActive: false,
+                teamOneStatus: 'complete',
+                teamTwoStatus: 'future',
+                gameId: game._id,
+            })
             const actions = []
             for (const [i, a] of p.actions.entries()) {
-                const action = await this.actionModel.create({ ...a, actionNumber: i + 1, team: gameData.teamOne })
+                const action = await this.actionModel.create({
+                    ...a,
+                    pointId: point._id,
+                    actionNumber: i + 1,
+                    team: gameData.teamOne,
+                })
                 actions.push(action)
                 point.teamOneActions.push(action._id)
             }

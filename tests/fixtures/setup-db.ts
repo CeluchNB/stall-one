@@ -1,8 +1,8 @@
 /* istanbul ignore file */
 import { connect, connection, Types } from 'mongoose'
 import { createClient } from 'redis'
-import IGame, { CreateGame } from '../../src/types/game'
-import IPoint from '../../src/types/point'
+import IGame, { CreateGame, GameStatus } from '../../src/types/game'
+import IPoint, { PointStatus } from '../../src/types/point'
 import Game from '../../src/models/game'
 import Point from '../../src/models/point'
 import Action from '../../src/models/action'
@@ -73,6 +73,8 @@ export const gameData: IGame = {
     teamTwoJoined: false,
     totalViews: 0,
     points: [],
+    teamOneStatus: GameStatus.ACTIVE,
+    teamTwoStatus: GameStatus.GUEST,
     getToken: () => '',
 }
 
@@ -101,6 +103,9 @@ export const createPointData: IPoint = {
     teamTwoActive: true,
     teamOneActions: [],
     teamTwoActions: [],
+    gameId: new Types.ObjectId(),
+    teamOneStatus: PointStatus.ACTIVE,
+    teamTwoStatus: PointStatus.ACTIVE,
 }
 
 export const getMock = jest.fn((url) => {

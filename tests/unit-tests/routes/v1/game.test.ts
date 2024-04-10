@@ -381,22 +381,31 @@ describe('test /DELETE game', () => {
         teamname: 'placename',
     }
     beforeEach(async () => {
+        const gameId = new Types.ObjectId()
+        const pointOneId = new Types.ObjectId()
+        const pointTwoId = new Types.ObjectId()
+
         const action1 = await Action.create({
             team,
             actionNumber: 1,
             actionType: 'TeamOneScore',
+            pointId: pointOneId,
         })
         const action2 = await Action.create({
             team,
             actionNumber: 1,
             actionType: 'Pull',
+            pointId: pointTwoId,
         })
         const action3 = await Action.create({
             team,
             actionNumber: 2,
             actionType: 'TeamOneScore',
+            pointId: pointTwoId,
         })
         await Point.create({
+            _id: pointOneId,
+            gameId,
             pointNumber: 1,
             teamOneScore: 1,
             teamTwoScore: 0,
@@ -408,6 +417,8 @@ describe('test /DELETE game', () => {
             teamOneActions: [action1._id],
         })
         await Point.create({
+            _id: pointTwoId,
+            gameId,
             pointNumber: 2,
             teamOneScore: 2,
             teamTwoScore: 0,
@@ -507,7 +518,9 @@ describe('test /GET game', () => {
 
 describe('test /GET game points', () => {
     it('with found points', async () => {
+        const gameId = new Types.ObjectId()
         const point1 = await Point.create({
+            gameId,
             pointNumber: 1,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
@@ -515,6 +528,7 @@ describe('test /GET game points', () => {
             teamTwoScore: 1,
         })
         const point2 = await Point.create({
+            gameId,
             pointNumber: 2,
             pullingTeam: { name: 'Team 2' },
             receivingTeam: { name: 'Team 1' },
@@ -522,13 +536,14 @@ describe('test /GET game points', () => {
             teamTwoScore: 1,
         })
         await Point.create({
+            gameId,
             pointNumber: 3,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
             teamOneScore: 1,
             teamTwoScore: 2,
         })
-        const game = await Game.create(createData)
+        const game = await Game.create({ ...createData, _id: gameId })
 
         game.points = [point1._id, point2._id]
         await game.save()
@@ -891,24 +906,33 @@ describe('test PUT rebuild game stats', () => {
     }
     beforeEach(async () => {
         jest.resetAllMocks()
+        const gameId = new Types.ObjectId()
+        const pointOneId = new Types.ObjectId()
+        const pointTwoId = new Types.ObjectId()
+        const pointThreeId = new Types.ObjectId()
 
         const action1 = await Action.create({
             team,
             actionNumber: 1,
             actionType: 'TeamOneScore',
+            pointId: pointOneId,
         })
         const action2 = await Action.create({
             team,
             actionNumber: 1,
             actionType: 'Pull',
+            pointId: pointTwoId,
         })
         const action3 = await Action.create({
             team,
             actionNumber: 2,
             actionType: 'TeamOneScore',
+            pointId: pointThreeId,
         })
 
         await Point.create({
+            _id: pointOneId,
+            gameId,
             pointNumber: 1,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
@@ -917,6 +941,8 @@ describe('test PUT rebuild game stats', () => {
             teamOneActions: [action1._id],
         })
         await Point.create({
+            _id: pointTwoId,
+            gameId,
             pointNumber: 2,
             pullingTeam: { name: 'Team 2' },
             receivingTeam: { name: 'Team 1' },
@@ -925,6 +951,8 @@ describe('test PUT rebuild game stats', () => {
             teamOneActions: [action2._id],
         })
         await Point.create({
+            _id: pointThreeId,
+            gameId,
             pointNumber: 3,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },

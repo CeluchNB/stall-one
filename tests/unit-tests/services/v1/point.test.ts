@@ -110,6 +110,7 @@ describe('test create point', () => {
     it('with valid first point data and previous creation', async () => {
         const game = await Game.create(gameData)
         const point1 = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -143,6 +144,7 @@ describe('test create point', () => {
     it('with valid third point data', async () => {
         const game = await Game.create(gameData)
         const point1 = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
@@ -150,6 +152,7 @@ describe('test create point', () => {
             teamTwoScore: 1,
         })
         const point2 = await Point.create({
+            gameId: game._id,
             pointNumber: 2,
             pullingTeam: game.teamOne,
             receivingTeam: game.teamTwo,
@@ -189,6 +192,7 @@ describe('test create point', () => {
     it('with team two conflicting possession', async () => {
         const game = await Game.create(gameData)
         const point = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -208,6 +212,7 @@ describe('test create point', () => {
     it('with team one conflicting posession', async () => {
         const game = await Game.create(gameData)
         const point = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -227,6 +232,7 @@ describe('test create point', () => {
     it('with null team one id', async () => {
         const game = await Game.create({ ...gameData, teamOne: { name: 'Test Team One' } })
         const point = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -254,6 +260,7 @@ describe('test create point', () => {
     it('with no previous point', async () => {
         const game = await Game.create({ ...gameData, teamOne: { name: 'Test Team One' } })
         await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -410,6 +417,7 @@ describe('test add players to point', () => {
     it('with valid data for team one', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -455,6 +463,7 @@ describe('test add players to point', () => {
     it('with valid data for team two', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -504,7 +513,9 @@ describe('test add players to point', () => {
     })
 
     it('with unfound game', async () => {
+        const gameId = new Types.ObjectId()
         const point = await Point.create({
+            gameId,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -521,6 +532,7 @@ describe('test add players to point', () => {
     it('with non point not on game', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -538,6 +550,7 @@ describe('test add players to point', () => {
     it('with wrong number of players', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -717,6 +730,7 @@ describe('test finish point', () => {
             team: game.teamTwo,
             tags: [],
             comments: [],
+            pointId: point._id,
         })
         point.teamOneActions.push(action._id)
         point.teamOneActive = false
@@ -767,6 +781,7 @@ describe('test finish point', () => {
             team: game.teamTwo,
             tags: [],
             comments: [],
+            pointId: point._id,
         })
         point.teamTwoActions.push(action._id)
         await point.save()
@@ -810,6 +825,7 @@ describe('test finish point', () => {
             team: game.teamTwo,
             tags: [],
             comments: [],
+            pointId: point._id,
         })
         point.teamOneActions.push(action._id)
         await point.save()
@@ -1012,6 +1028,7 @@ describe('test delete point', () => {
 
 describe('test reactivate point', () => {
     beforeEach(async () => {
+        const pointId = new Types.ObjectId()
         const action1 = await Action.create({
             team: {
                 _id: new Types.ObjectId(),
@@ -1024,6 +1041,7 @@ describe('test reactivate point', () => {
             actionNumber: 1,
             actionType: 'Pull',
             playerOne: { firstName: 'Name1', lastName: 'Last1' },
+            pointId,
         })
         const action2 = await Action.create({
             team: {
@@ -1036,9 +1054,11 @@ describe('test reactivate point', () => {
             },
             actionNumber: 2,
             actionType: 'TeamTwoScore',
+            pointId,
         })
         const game = await Game.create(gameData)
         const prevPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneActive: false,
             teamTwoActive: false,
@@ -1055,6 +1075,8 @@ describe('test reactivate point', () => {
             teamTwoScore: 0,
         })
         const initialPoint = await Point.create({
+            _id: pointId,
+            gameId: game._id,
             pointNumber: 2,
             teamOneActive: false,
             teamTwoActive: false,
@@ -1216,19 +1238,24 @@ describe('test get actions', () => {
         name: 'Name 1',
         teamname: 'placename',
     }
+    const gameId = new Types.ObjectId()
+    const pointId = new Types.ObjectId()
     beforeEach(async () => {
         await Action.create({
             team,
+            pointId,
             actionNumber: 1,
             actionType: 'TeamOneScore',
         })
         await Action.create({
             team,
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
         })
         await Action.create({
             team,
+            pointId,
             actionNumber: 2,
             actionType: 'TeamOneScore',
         })
@@ -1236,6 +1263,8 @@ describe('test get actions', () => {
     it('with found actions on team one', async () => {
         const [action1, action2, action3] = await Action.find({})
         const point = await Point.create({
+            _id: pointId,
+            gameId,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -1260,6 +1289,8 @@ describe('test get actions', () => {
     it('with actions from two', async () => {
         const [action1, action2, action3] = await Action.find({})
         const point = await Point.create({
+            _id: pointId,
+            gameId,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -1280,6 +1311,8 @@ describe('test get actions', () => {
 
     it('with empty array', async () => {
         const point = await Point.create({
+            _id: pointId,
+            gameId,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,

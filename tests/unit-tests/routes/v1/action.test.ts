@@ -35,6 +35,7 @@ const userData = {
     openToRequests: false,
 }
 
+const pointId = new Types.ObjectId()
 describe('test /PUT action', () => {
     it('with valid data', async () => {
         jest.spyOn(axios, 'get').mockImplementationOnce(() => {
@@ -48,6 +49,7 @@ describe('test /PUT action', () => {
             username: 'firstlast2',
         }
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {
@@ -101,6 +103,7 @@ describe('test /POST comment', () => {
             return Promise.resolve({ data: { user: userData }, status: 200 })
         })
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {
@@ -148,6 +151,7 @@ describe('test /DELETE comment', () => {
             return Promise.resolve({ data: { user: userData }, status: 200 })
         })
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {

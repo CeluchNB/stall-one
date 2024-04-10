@@ -54,10 +54,14 @@ export default class PointBackgroundServices {
         point: IPoint,
     ) => {
         if (team === TeamNumber.ONE) {
-            const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamOne })))
+            const actions = await this.actionModel.create(
+                redisActions.map((a) => ({ ...a, team: game.teamOne, pointId: point._id })),
+            )
             point.teamOneActions = actions.map((a) => a._id)
         } else {
-            const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamTwo })))
+            const actions = await this.actionModel.create(
+                redisActions.map((a) => ({ ...a, team: game.teamTwo, pointId: point._id })),
+            )
             point.teamTwoActions = actions.map((a) => a._id)
         }
     }

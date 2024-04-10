@@ -1,5 +1,5 @@
 import { Schema, model, SchemaTypes } from 'mongoose'
-import IPoint from '../types/point'
+import IPoint, { PointStatus } from '../types/point'
 
 const schema = new Schema<IPoint>({
     pointNumber: Number,
@@ -81,6 +81,17 @@ const schema = new Schema<IPoint>({
     },
     teamOneActions: [SchemaTypes.ObjectId],
     teamTwoActions: [SchemaTypes.ObjectId],
+    gameId: { type: SchemaTypes.ObjectId, required: true },
+    teamOneStatus: {
+        type: String,
+        enum: Object.values(PointStatus),
+        default: PointStatus.ACTIVE,
+    },
+    teamTwoStatus: {
+        type: String,
+        enum: Object.values(PointStatus),
+        default: PointStatus.FUTURE,
+    },
 })
 
 const Point = model<IPoint>('Point', schema)

@@ -50,35 +50,43 @@ describe('Game Services v2', () => {
         }
 
         const gameId = new Types.ObjectId()
+        const pointOneId = new Types.ObjectId(0)
         beforeEach(async () => {
             const action11 = await Action.create({
                 team: teamOne,
                 actionNumber: 1,
                 actionType: 'Catch',
+                pointId: pointOneId,
             })
             const action12 = await Action.create({
                 team: teamOne,
                 actionNumber: 2,
                 actionType: 'Catch',
+                pointId: pointOneId,
             })
             const action13 = await Action.create({
                 team: teamOne,
                 actionNumber: 3,
                 actionType: 'TeamOneScore',
+                pointId: pointOneId,
             })
 
             const action21 = await Action.create({
                 team: teamTwo,
                 actionNumber: 1,
                 actionType: 'Pull',
+                pointId: pointOneId,
             })
             const action22 = await Action.create({
                 team: teamTwo,
                 actionNumber: 2,
                 actionType: 'TeamOneScore',
+                pointId: pointOneId,
             })
 
             const point1 = await Point.create({
+                gameId,
+                _id: pointOneId,
                 pointNumber: 1,
                 teamOneScore: 1,
                 teamTwoScore: 0,
@@ -92,6 +100,7 @@ describe('Game Services v2', () => {
             })
 
             const point2 = await Point.create({
+                gameId,
                 pointNumber: 2,
                 teamOneScore: 1,
                 teamTwoScore: 0,

@@ -680,6 +680,10 @@ describe('test delete game', () => {
         name: 'Name 2',
         teamname: 'placename2',
     }
+    const gameId = new Types.ObjectId()
+    const pointOneId = new Types.ObjectId()
+    const pointTwoId = new Types.ObjectId()
+
     beforeAll(() => {
         getMock.mockImplementationOnce(() => {
             return Promise.resolve({ data: { user: userData }, status: 200 })
@@ -691,19 +695,23 @@ describe('test delete game', () => {
             team,
             actionNumber: 1,
             actionType: 'TeamOneScore',
+            pointId: pointOneId,
         })
         const action2 = await Action.create({
             team,
             actionNumber: 1,
             actionType: 'Pull',
+            pointId: pointTwoId,
         })
         const action3 = await Action.create({
             team,
             actionNumber: 2,
             actionType: 'TeamOneScore',
+            pointId: pointTwoId,
         })
 
         await Point.create({
+            gameId,
             pointNumber: 1,
             teamOneScore: 1,
             teamTwoScore: 0,
@@ -715,6 +723,7 @@ describe('test delete game', () => {
             teamOneActions: [action1._id],
         })
         await Point.create({
+            gameId,
             pointNumber: 2,
             teamOneScore: 2,
             teamTwoScore: 0,
@@ -730,6 +739,7 @@ describe('test delete game', () => {
     it('with team one and team two not joined', async () => {
         const [point1, point2] = await Point.find({})
         const game = await Game.create({
+            _id: gameId,
             teamOne: team,
             teamTwo: { name: 'Name 2' },
             teamTwoDefined: false,
@@ -766,11 +776,13 @@ describe('test delete game', () => {
             team: team2,
             actionNumber: 1,
             actionType: 'Drop',
+            pointId: pointTwoId,
         })
         const action5 = await Action.create({
             team: team2,
             actionNumber: 1,
             actionType: 'TeamOneScore',
+            pointId: pointTwoId,
         })
 
         const [point1, point2] = await Point.find({})
@@ -782,6 +794,7 @@ describe('test delete game', () => {
         await point2.save()
 
         const game = await Game.create({
+            _id: gameId,
             teamOne: team,
             teamTwo: team2,
             teamTwoDefined: true,
@@ -847,11 +860,13 @@ describe('test delete game', () => {
             team: team2,
             actionNumber: 1,
             actionType: 'Drop',
+            pointId: pointTwoId,
         })
         const action5 = await Action.create({
             team: team2,
             actionNumber: 1,
             actionType: 'TeamOneScore',
+            pointId: pointTwoId,
         })
         const [point1, point2] = await Point.find({})
         point1.pullingTeam = team2
@@ -860,6 +875,7 @@ describe('test delete game', () => {
         point2.receivingTeam = team2
         await point2.save()
         const game = await Game.create({
+            _id: gameId,
             teamOne: team,
             teamTwo: team2,
             teamTwoDefined: true,
@@ -926,11 +942,13 @@ describe('test delete game', () => {
             team: team2,
             actionNumber: 1,
             actionType: 'Drop',
+            pointId: pointTwoId,
         })
         const action5 = await Action.create({
             team: team2,
             actionNumber: 1,
             actionType: 'TeamOneScore',
+            pointId: pointTwoId,
         })
         const [point1, point2] = await Point.find({})
         point1.pullingTeam = team2
@@ -939,6 +957,7 @@ describe('test delete game', () => {
         point2.receivingTeam = team2
         await point2.save()
         const game = await Game.create({
+            _id: gameId,
             teamOne: { ...team, _id: undefined },
             teamTwo: team2,
             teamTwoDefined: true,
@@ -999,8 +1018,10 @@ describe('test get game', () => {
 })
 
 describe('test get points', () => {
+    const gameId = new Types.ObjectId()
     beforeEach(async () => {
         await Point.create({
+            gameId,
             pointNumber: 1,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
@@ -1008,6 +1029,7 @@ describe('test get points', () => {
             teamTwoScore: 1,
         })
         await Point.create({
+            gameId,
             pointNumber: 2,
             pullingTeam: { name: 'Team 2' },
             receivingTeam: { name: 'Team 1' },
@@ -1015,6 +1037,7 @@ describe('test get points', () => {
             teamTwoScore: 1,
         })
         await Point.create({
+            gameId,
             pointNumber: 3,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
@@ -1025,7 +1048,7 @@ describe('test get points', () => {
 
     it('with multiple found points', async () => {
         const [point1, point2] = await Point.find({})
-        const game = await Game.create(createData)
+        const game = await Game.create({ ...createData, _id: gameId })
         game.points = [point1._id, point2._id]
         await game.save()
 
@@ -1041,13 +1064,13 @@ describe('test get points', () => {
     })
 
     it('with no found points', async () => {
-        const game = await Game.create(createData)
+        const game = await Game.create({ ...createData, _id: gameId })
         const points = await services.getPointsByGame(game._id.toString())
         expect(points.length).toBe(0)
     })
 
     it('with unfound values in array', async () => {
-        const game = await Game.create(createData)
+        const game = await Game.create({ ...createData, _id: gameId })
         game.points = [new Types.ObjectId(), new Types.ObjectId()]
         await game.save()
         const points = await services.getPointsByGame(game._id.toString())
@@ -1642,26 +1665,36 @@ describe('test rebuild full stats for game', () => {
         name: 'Name 1',
         teamname: 'placename',
     }
+    const gameId = new Types.ObjectId()
     beforeEach(async () => {
         jest.resetAllMocks()
+
+        const pointOneId = new Types.ObjectId()
+        const pointTwoId = new Types.ObjectId()
+        const pointThreeId = new Types.ObjectId()
 
         const action1 = await Action.create({
             team,
             actionNumber: 1,
             actionType: 'TeamOneScore',
+            pointId: pointOneId,
         })
         const action2 = await Action.create({
             team,
             actionNumber: 1,
             actionType: 'Pull',
+            pointId: pointTwoId,
         })
         const action3 = await Action.create({
             team,
             actionNumber: 2,
             actionType: 'TeamOneScore',
+            pointId: pointThreeId,
         })
 
         await Point.create({
+            _id: pointOneId,
+            gameId,
             pointNumber: 1,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
@@ -1672,6 +1705,8 @@ describe('test rebuild full stats for game', () => {
             teamTwoActive: false,
         })
         await Point.create({
+            _id: pointTwoId,
+            gameId,
             pointNumber: 2,
             pullingTeam: { name: 'Team 2' },
             receivingTeam: { name: 'Team 1' },
@@ -1682,6 +1717,8 @@ describe('test rebuild full stats for game', () => {
             teamTwoActive: false,
         })
         await Point.create({
+            _id: pointThreeId,
+            gameId,
             pointNumber: 3,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
@@ -1698,7 +1735,7 @@ describe('test rebuild full stats for game', () => {
             .spyOn(CloudTaskServices, 'sendCloudTask')
             .mockReturnValue(Promise.resolve([] as never))
         const [point1, point2, point3] = await Point.find()
-        const game = await Game.create(createData)
+        const game = await Game.create({ ...createData, _id: gameId })
         game.points = [point1._id, point2._id, point3._id]
         game.teamOneActive = false
         game.teamTwoActive = false
@@ -1725,7 +1762,7 @@ describe('test rebuild full stats for game', () => {
         const cloudTaskSpy = jest
             .spyOn(CloudTaskServices, 'sendCloudTask')
             .mockReturnValue(Promise.resolve([] as never))
-        const game = await Game.create(createData)
+        const game = await Game.create({ ...createData, _id: gameId })
 
         await expect(
             services.rebuildStatsForGame(game._id.toHexString(), new Types.ObjectId().toHexString()),
@@ -1742,7 +1779,11 @@ describe('test rebuild full stats for game', () => {
         const teamTwoId = new Types.ObjectId()
 
         const [point1, point3] = await Point.find()
-        const game = await Game.create({ ...createData, teamTwo: { _id: teamTwoId, place: 'Test', name: 'Test' } })
+        const game = await Game.create({
+            ...createData,
+            _id: gameId,
+            teamTwo: { _id: teamTwoId, place: 'Test', name: 'Test' },
+        })
         game.points = [point1._id, new Types.ObjectId(), point3._id]
         await game.save()
 

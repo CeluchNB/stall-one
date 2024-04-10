@@ -81,8 +81,10 @@ export default class PointServices {
             teamTwoActive: game.teamTwoActive,
             pullingTeam: pullingTeam === TeamNumber.ONE ? game.teamOne : game.teamTwo,
             receivingTeam: pullingTeam === TeamNumber.ONE ? game.teamTwo : game.teamOne,
+            gameId: game._id,
         })
 
+        // TODO: REMOVE
         game.points.push(point._id)
         await game.save()
 

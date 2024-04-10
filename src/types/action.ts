@@ -141,6 +141,7 @@ interface IAction {
     playerOne?: Player
     playerTwo?: Player
     tags: string[]
+    pointId: Types.ObjectId
 }
 
 export type RedisClientType = ReturnType<typeof createClient>

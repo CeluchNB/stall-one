@@ -79,6 +79,7 @@ describe('test POST first point route', () => {
     it('with invalid data', async () => {
         const game = await Game.create(gameData)
         const point = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -105,6 +106,7 @@ describe('test PUT pulling team', () => {
     it('with valid data for team one', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -135,6 +137,7 @@ describe('test PUT pulling team', () => {
     it('with valid data for team two', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -165,6 +168,7 @@ describe('test PUT pulling team', () => {
     it('with invalid team value', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -189,6 +193,7 @@ describe('test PUT pulling team', () => {
     it('with bad authentication', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -212,6 +217,7 @@ describe('test PUT set players', () => {
     it('with valid data', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -253,6 +259,7 @@ describe('test PUT set players', () => {
     it('with bad token', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -284,6 +291,7 @@ describe('test PUT set players', () => {
     it('with player error', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -432,8 +440,10 @@ describe('test PUT finish point', () => {
 })
 
 describe('test PUT reactivate point', () => {
+    const pointId = new Types.ObjectId()
     beforeEach(async () => {
         const action1 = await Action.create({
+            pointId,
             team: {
                 _id: new Types.ObjectId(),
                 place: 'Place1',
@@ -447,6 +457,7 @@ describe('test PUT reactivate point', () => {
             playerOne: { firstName: 'Name1', lastName: 'Last1' },
         })
         const action2 = await Action.create({
+            pointId,
             team: {
                 _id: new Types.ObjectId(),
                 place: 'Place1',
@@ -459,6 +470,7 @@ describe('test PUT reactivate point', () => {
             actionType: 'TeamTwoScore',
         })
         const prevPoint = await Point.create({
+            gameId: gameData._id,
             pointNumber: 1,
             teamOneActive: false,
             teamTwoActive: false,
@@ -475,6 +487,8 @@ describe('test PUT reactivate point', () => {
             teamTwoScore: 0,
         })
         const initialPoint = await Point.create({
+            _id: pointId,
+            gameId: gameData._id,
             pointNumber: 2,
             teamOneActive: false,
             teamTwoActive: false,
@@ -623,18 +637,23 @@ describe('test GET actions by point', () => {
         name: 'Name 1',
         teamname: 'placename',
     }
+    const gameId = new Types.ObjectId()
+    const pointId = new Types.ObjectId()
     beforeEach(async () => {
         await Action.create({
+            pointId,
             team,
             actionNumber: 1,
             actionType: 'TeamOneScore',
         })
         await Action.create({
+            pointId,
             team,
             actionNumber: 1,
             actionType: 'Pull',
         })
         await Action.create({
+            pointId,
             team,
             actionNumber: 2,
             actionType: 'TeamOneScore',
@@ -644,6 +663,8 @@ describe('test GET actions by point', () => {
     it('with team one actions', async () => {
         const [action1, action2, action3] = await Action.find({})
         const point = await Point.create({
+            _id: pointId,
+            gameId,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -672,6 +693,8 @@ describe('test GET actions by point', () => {
     it('with team two actions', async () => {
         const [action1, action2, action3] = await Action.find({})
         const point = await Point.create({
+            _id: pointId,
+            gameId,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -697,6 +720,8 @@ describe('test GET actions by point', () => {
 
     it('with unfound actions', async () => {
         const point = await Point.create({
+            _id: pointId,
+            gameId,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -793,7 +818,12 @@ describe('test GET live actions of a point', () => {
 describe('test PUT finish background point', () => {
     it('with successful call', async () => {
         const game = await Game.create(createData)
-        const point = await Point.create({ ...createPointData, teamTwoActive: false, teamOneActive: false })
+        const point = await Point.create({
+            ...createPointData,
+            gameId: game._id,
+            teamTwoActive: false,
+            teamOneActive: false,
+        })
         game.teamTwoActive = false
         game.teamTwoDefined = false
         game.points.push(point._id)
