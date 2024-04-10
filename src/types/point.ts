@@ -14,6 +14,7 @@ export interface ClientPoint {
 }
 
 export enum PointStatus {
+    GUEST = 'guest',
     FUTURE = 'future',
     ACTIVE = 'active',
     COMPLETE = 'complete',
