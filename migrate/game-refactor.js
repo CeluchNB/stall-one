@@ -3,12 +3,10 @@ db = connect('') // PROD ENDPOINT GOES HERE
 async function run() {
     const games = db.games.find().toArray()
 
-    // console.log('games', games.length)
     const gameResult = await db.games.updateMany({}, { $set: { teamOneStatus: 'complete', teamTwoStatus: 'guest' } })
     console.log('game result', gameResult.modifiedCount)
     for (const game of games) {
         const points = db.points.find({ _id: { $in: game.points } }).toArray()
-        // console.log('points', points.length)
         const pointResult = await db.points.updateMany(
             { _id: { $in: game.points } },
             { $set: { gameId: game._id, teamOneStatus: 'complete', teamTwoStatus: 'guest' } },

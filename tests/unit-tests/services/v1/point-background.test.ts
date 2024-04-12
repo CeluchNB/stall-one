@@ -9,15 +9,15 @@ import {
 import Point from '../../../../src/models/point'
 import Game from '../../../../src/models/game'
 import { TeamNumber } from '../../../../src/types/ultmt'
-import Action from '../../../../src/models/action'
 import { saveRedisAction } from '../../../../src/utils/redis'
 import { ActionType, RedisAction } from '../../../../src/types/action'
-import PointBackgroundServices from '../../../../src/services/v1/point-background'
 import { getClient } from '../../../../src/utils/redis'
+import { container, registerDependencies } from '../../../../src/di'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
 beforeAll(async () => {
+    registerDependencies()
     await setUpDatabase()
 })
 
@@ -32,8 +32,8 @@ afterEach(async () => {
 })
 
 describe('handles finish point background service', () => {
-    const services = new PointBackgroundServices(Point, Game, Action)
     it('handles team one score', async () => {
+        const services = container.resolve('pointBackgroundService')
         const game = await Game.create(createData)
         const point = await Point.create({ ...createPointData, teamTwoActive: false, teamOneActive: false })
         game.teamTwoActive = false
@@ -84,6 +84,7 @@ describe('handles finish point background service', () => {
     })
 
     it('handles team two score', async () => {
+        const services = container.resolve('pointBackgroundService')
         const game = await Game.create(createData)
         const point = await Point.create({ ...createPointData, teamTwoActive: false, teamOneActive: false })
         game.teamTwoActive = true

@@ -15,10 +15,10 @@ export default class PointBackgroundServices {
     gameModel: IGameModel
     actionModel: IActionModel
 
-    constructor(pointModel: IPointModel, gameModel: IGameModel, actionModel: IActionModel) {
-        this.pointModel = pointModel
-        this.gameModel = gameModel
-        this.actionModel = actionModel
+    constructor(opts: { pointModel: IPointModel; gameModel: IGameModel; actionModel: IActionModel }) {
+        this.pointModel = opts.pointModel
+        this.gameModel = opts.gameModel
+        this.actionModel = opts.actionModel
     }
 
     finishPoint = async (pointId: string, gameId: string, team: TeamNumberString) => {
