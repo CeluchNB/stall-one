@@ -12,14 +12,14 @@ import { RedisAction, RedisClientType } from '../../types/action'
 import { getTeamNumber } from '../../utils/game'
 import PointServicesV1 from '../v1/point'
 import { ApiError } from '../../types/errors'
-import { verifyScoreOccurred } from '../../domains/point/next'
+import { handleCurrentPointUpdates } from '../../domains/point/next'
 import { sendCloudTask } from '../../utils/cloud-tasks'
 
 export default class PointServices {
     gameModel: IGameModel
     pointModel: IPointModel
     actionModel: IActionModel
-    // redisClient: RedisClientType
+    redisClient: RedisClientType
     ultmtUrl: string
     apiKey: string
 
@@ -27,46 +27,44 @@ export default class PointServices {
         gameModel: IGameModel
         pointModel: IPointModel
         actionModel: IActionModel
-        // redisClient: RedisClientType
+        redisClient: RedisClientType
         ultmtUrl: string
         apiKey: string
     }) {
         this.gameModel = opts.gameModel
         this.pointModel = opts.pointModel
         this.actionModel = opts.actionModel
-        // this.redisClient = opts.redisClient
+        this.redisClient = opts.redisClient
         this.ultmtUrl = opts.ultmtUrl
         this.apiKey = opts.apiKey
     }
 
     next = async (gameId: string, team: TeamNumber, pointId: string): Promise<IPoint> => {
-        // const teamFilter =
-        //     team === 'one' ? { teamTwoStatus: PointStatus.ACTIVE } : { teamTwoActive: PointStatus.ACTIVE }
-        // get current point
-        const point = await this.pointModel.findById(pointId)
-        if (!point) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
-        }
         // verify score occurred
-        await verifyScoreOccurred()
-        // update game score
-        // update team's status on current point
+        const prevPoint = await handleCurrentPointUpdates(gameId, team, pointId)
 
         // finish current point
-        // await sendCloudTask(
-        //     `/api/v1/point/${point._id}/background-finish`,
-        //     {
-        //         finishPointData: {
-        //             gameId,
-        //             team,
-        //         },
-        //     },
-        //     'PUT',
-        // )
+        await sendCloudTask(
+            `/api/v1/point/${prevPoint._id}/background-finish`,
+            {
+                finishPointData: {
+                    gameId,
+                    team,
+                },
+            },
+            'PUT',
+        )
 
+        const teamFilter =
+            team === 'one' ? { teamTwoStatus: PointStatus.ACTIVE } : { teamTwoActive: PointStatus.ACTIVE }
         // find or create next point
+        const nextPoint = await this.pointModel.findOneAndUpdate(
+            { pointNumber: prevPoint.pointNumber + 1, gameId },
+            teamFilter,
+            { upsert: true },
+        )
 
-        return point
+        return prevPoint
     }
 
     // back = async () => {}

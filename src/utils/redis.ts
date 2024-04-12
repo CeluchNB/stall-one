@@ -3,7 +3,7 @@ import { getActionBaseKey, parseRedisUser } from './utils'
 import { Player, TeamNumberString } from '../types/ultmt'
 import { createClient } from 'redis'
 
-const client = createClient({ url: process.env.REDIS_URL })
+export const client = createClient({ url: process.env.REDIS_URL })
 export const getClient = async () => {
     if (!client.isOpen) {
         await client.connect()
