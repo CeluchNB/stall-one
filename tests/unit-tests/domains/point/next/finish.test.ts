@@ -1,15 +1,21 @@
-import * as Constants from '../../../../src/utils/constants'
+import * as Constants from '../../../../../src/utils/constants'
 import { Types } from 'mongoose'
-import { container } from '../../../../src/di'
-import Game from '../../../../src/models/game'
-import Point from '../../../../src/models/point'
-import { ActionType, RedisAction } from '../../../../src/types/action'
-import Dependencies from '../../../../src/types/di'
-import { PointStatus } from '../../../../src/types/point'
-import { Team, TeamNumber } from '../../../../src/types/ultmt'
-import { setUpDatabase, tearDownDatabase, resetDatabase, createPointData, gameData } from '../../../fixtures/setup-db'
-import Action from '../../../../src/models/action'
-import { client, saveRedisAction } from '../../../../src/utils/redis'
+import { container } from '../../../../../src/di'
+import Game from '../../../../../src/models/game'
+import Point from '../../../../../src/models/point'
+import { ActionType, RedisAction } from '../../../../../src/types/action'
+import Dependencies from '../../../../../src/types/di'
+import { PointStatus } from '../../../../../src/types/point'
+import { Team, TeamNumber } from '../../../../../src/types/ultmt'
+import {
+    setUpDatabase,
+    tearDownDatabase,
+    resetDatabase,
+    createPointData,
+    gameData,
+} from '../../../../fixtures/setup-db'
+import Action from '../../../../../src/models/action'
+import { client, saveRedisAction } from '../../../../../src/utils/redis'
 
 beforeAll(async () => {
     client.connect()

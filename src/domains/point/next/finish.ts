@@ -1,13 +1,13 @@
-import * as Constants from '../../utils/constants'
-import { ActionType, RedisAction } from '../../types/action'
-import { ApiError } from '../../types/errors'
-import { Team, TeamNumber } from '../../types/ultmt'
-import { getRedisAction } from '../../utils/redis'
-import { findByIdOrThrow } from '../../utils/mongoose'
-import IPoint, { PointStatus } from '../../types/point'
-import IGame from '../../types/game'
+import * as Constants from '../../../utils/constants'
+import { ActionType, RedisAction } from '../../../types/action'
+import { ApiError } from '../../../types/errors'
+import { Team, TeamNumber } from '../../../types/ultmt'
+import { getRedisAction } from '../../../utils/redis'
+import { findByIdOrThrow } from '../../../utils/mongoose'
+import IPoint, { PointStatus } from '../../../types/point'
+import IGame from '../../../types/game'
 import { Document } from 'mongoose'
-import Dependencies from '../../types/di'
+import Dependencies from '../../../types/di'
 
 export const finishPoint = ({ gameModel, pointModel, actionModel, redisClient }: Dependencies) => {
     const perform = async (gameId: string, team: TeamNumber, pointId: string): Promise<IPoint> => {
