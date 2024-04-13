@@ -32,13 +32,7 @@ export const finishPoint = ({ gameModel, pointModel, actionModel, redisClient }:
         const totalActions = await redisClient.get(
             `${game._id.toHexString()}:${point._id.toHexString()}:${team}:actions`,
         )
-        console.log(
-            'total actions',
-            `${game._id.toHexString()}:${point._id.toHexString()}:${team}:actions`,
-            totalActions,
-        )
         const lastAction = await getRedisAction(redisClient, point._id.toHexString(), Number(totalActions), team)
-        console.log('last action', lastAction)
 
         const teamOneFirstReporting = team === 'one' && point.teamTwoStatus !== PointStatus.COMPLETE
         const teamTwoFirstReporting = team === 'two' && point.teamOneStatus !== PointStatus.COMPLETE

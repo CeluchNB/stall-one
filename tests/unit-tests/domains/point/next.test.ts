@@ -33,8 +33,32 @@ describe('Next Point Domain', () => {
         })
 
         describe('perform', () => {
-            it('sample test', () => {
-                expect(1 + 1).toBe(2)
+            it('updates point successfully', async () => {
+                const game = await Game.create(gameData)
+                const point = await Point.create(createPointData)
+                await client.set(`${game._id.toHexString()}:${point._id.toHexString()}:one:actions`, 1)
+                await saveRedisAction(
+                    client,
+                    {
+                        teamNumber: 'one',
+                        actionNumber: 1,
+                        actionType: ActionType.TEAM_ONE_SCORE,
+                        comments: [],
+                        tags: [],
+                    },
+                    point._id.toHexString(),
+                )
+
+                const result = await finishPoint.perform(
+                    game._id.toHexString(),
+                    TeamNumber.ONE,
+                    point._id.toHexString(),
+                )
+                expect(result.teamOneScore).toBe(1)
+                expect(result.scoringTeam?.name).toBe(game.teamOne.name)
+
+                const updatedGame = await Game.findOne({})
+                expect(updatedGame?.teamOneScore).toBe(1)
             })
         })
 
