@@ -15,7 +15,7 @@ export const finishPoint = ({ gameModel, pointModel, actionModel, redisClient }:
         const game = await findByIdOrThrow<IGame>(gameId, gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         await handlePointScore(game, team, point)
-        updatePointStatus(point, team)
+        completePoint(point, team)
         await point.save()
 
         updateGameScore(game, point)
@@ -98,7 +98,7 @@ export const finishPoint = ({ gameModel, pointModel, actionModel, redisClient }:
         game.teamTwoScore = point.teamTwoScore
     }
 
-    const updatePointStatus = (point: IPoint, team: TeamNumber) => {
+    const completePoint = (point: IPoint, team: TeamNumber) => {
         if (team === 'one') {
             point.teamOneStatus = PointStatus.COMPLETE
         } else if (team === 'two') {
@@ -114,7 +114,7 @@ export const finishPoint = ({ gameModel, pointModel, actionModel, redisClient }:
             checkConflictingLiveScore,
             checkConflictingSavedScore,
             updateGameScore,
-            updatePointStatus,
+            completePoint,
         },
     }
 }
