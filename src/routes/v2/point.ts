@@ -4,7 +4,7 @@ import { container } from '../../di'
 
 export const pointRouter = Router()
 
-const services = container.resolve('pointServicesV2')
+const services = container.resolve('pointServiceV2')
 
 pointRouter.put(
     '/point/:id/next',

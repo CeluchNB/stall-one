@@ -7,9 +7,11 @@ import Game from '../../src/models/game'
 import Point from '../../src/models/point'
 import Action from '../../src/models/action'
 import Tournament from '../../src/models/tournament'
+import { registerDependencies } from '../../src/di'
 
 export const client = createClient({ url: process.env.REDIS_URL })
 export const setUpDatabase = async () => {
+    registerDependencies()
     await connect(process.env.MONGOOSE_URL as string)
     await client.connect()
 }

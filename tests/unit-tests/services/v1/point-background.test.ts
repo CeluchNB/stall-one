@@ -12,12 +12,11 @@ import { TeamNumber } from '../../../../src/types/ultmt'
 import { saveRedisAction } from '../../../../src/utils/redis'
 import { ActionType, RedisAction } from '../../../../src/types/action'
 import { getClient } from '../../../../src/utils/redis'
-import { container, registerDependencies } from '../../../../src/di'
+import { container } from '../../../../src/di'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
 beforeAll(async () => {
-    registerDependencies()
     await setUpDatabase()
 })
 
