@@ -14,7 +14,7 @@ export const finishPoint = ({ gameModel, pointModel, actionModel, redisClient }:
         const point = await findByIdOrThrow<IPoint>(pointId, pointModel, Constants.UNABLE_TO_FIND_POINT)
         const game = await findByIdOrThrow<IGame>(gameId, gameModel, Constants.UNABLE_TO_FIND_GAME)
 
-        await handlePointScore(game, team, point)
+        await handleTeamScoreReport(game, team, point)
         completePoint(point, team)
         await point.save()
 
@@ -24,7 +24,7 @@ export const finishPoint = ({ gameModel, pointModel, actionModel, redisClient }:
         return point
     }
 
-    const handlePointScore = async (
+    const handleTeamScoreReport = async (
         game: IGame,
         team: TeamNumber,
         point: Document<unknown, unknown, IPoint> & IPoint,
@@ -32,41 +32,58 @@ export const finishPoint = ({ gameModel, pointModel, actionModel, redisClient }:
         const totalActions = await redisClient.get(
             `${game._id.toHexString()}:${point._id.toHexString()}:${team}:actions`,
         )
+        console.log(
+            'total actions',
+            `${game._id.toHexString()}:${point._id.toHexString()}:${team}:actions`,
+            totalActions,
+        )
         const lastAction = await getRedisAction(redisClient, point._id.toHexString(), Number(totalActions), team)
+        console.log('last action', lastAction)
 
         const teamOneFirstReporting = team === 'one' && point.teamTwoStatus !== PointStatus.COMPLETE
         const teamTwoFirstReporting = team === 'two' && point.teamOneStatus !== PointStatus.COMPLETE
 
         // first team to submit updates point
         if (teamOneFirstReporting || teamTwoFirstReporting) {
-            await updatePointScore(point, lastAction)
+            await updatePointScore(point, lastAction, game)
         } else {
             // check for conflict on second team reporting
-            const liveConflict = await checkConflictingLiveScore(
-                game._id.toHexString(),
-                team,
-                point._id.toHexString(),
-                lastAction,
-            )
-            const savedConflict = await checkConflictingSavedScore(
-                point._id.toHexString(),
-                team === 'one' ? game.teamOne : game.teamTwo,
-                lastAction,
-            )
-            if (liveConflict || savedConflict) {
-                throw new ApiError(Constants.CONFLICTING_SCORE, 400)
-            }
+            await throwIfConflictingScore(game, team, point, lastAction)
         }
         return point
     }
 
-    const updatePointScore = async (point: Document<unknown, unknown, IPoint> & IPoint, lastAction: RedisAction) => {
+    const updatePointScore = async (
+        point: Document<unknown, unknown, IPoint> & IPoint,
+        lastAction: RedisAction,
+        game: IGame,
+    ) => {
+        const prevPoint = await pointModel.findOne({ gameId: point.gameId, pointNumber: point.pointNumber - 1 })
         if (lastAction.actionType === ActionType.TEAM_ONE_SCORE) {
-            await point.updateOne({ $inc: { teamOneScore: 1 } })
+            point.teamOneScore = (prevPoint?.teamOneScore ?? 0) + 1
+            point.scoringTeam = game.teamOne
         } else if (lastAction.actionType === ActionType.TEAM_TWO_SCORE) {
-            await point.updateOne({ $inc: { teamTwoScore: 1 } })
+            point.teamTwoScore = (prevPoint?.teamTwoScore ?? 0) + 1
+            point.scoringTeam = game.teamTwo
         } else {
             throw new ApiError(Constants.SCORE_REQUIRED, 400)
+        }
+    }
+
+    const throwIfConflictingScore = async (game: IGame, team: TeamNumber, point: IPoint, lastAction: RedisAction) => {
+        const liveConflict = await checkConflictingLiveScore(
+            game._id.toHexString(),
+            team,
+            point._id.toHexString(),
+            lastAction,
+        )
+        const savedConflict = await checkConflictingSavedScore(
+            point._id.toHexString(),
+            team === 'one' ? game.teamTwo : game.teamOne,
+            lastAction,
+        )
+        if (liveConflict || savedConflict) {
+            throw new ApiError(Constants.CONFLICTING_SCORE, 400)
         }
     }
 
@@ -81,7 +98,7 @@ export const finishPoint = ({ gameModel, pointModel, actionModel, redisClient }:
         if (!otherTeamTotalActions || Number(otherTeamTotalActions) === 0) return false
 
         const otherTeamLastAction = await getRedisAction(redisClient, pointId, Number(otherTeamTotalActions), otherTeam)
-        if (!otherTeamLastAction) return false
+        if (!otherTeamLastAction.actionType) return false
 
         return otherTeamLastAction.actionType !== myLastAction.actionType
     }
@@ -109,8 +126,9 @@ export const finishPoint = ({ gameModel, pointModel, actionModel, redisClient }:
     return {
         perform,
         helpers: {
-            handlePointScore,
+            handleTeamScoreReport,
             updatePointScore,
+            throwIfConflictingScore,
             checkConflictingLiveScore,
             checkConflictingSavedScore,
             updateGameScore,
