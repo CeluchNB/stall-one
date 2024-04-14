@@ -32,32 +32,28 @@ export default class PointServices {
         this.apiKey = opts.apiKey
     }
 
-    next = async (gameId: string, team: TeamNumber, pointId: string): Promise<IPoint> => {
-        const { perform: finishPoint }: Dependencies['finishPoint'] = container.resolve('finishPoint')
-        const prevPoint = await finishPoint(gameId, team, pointId)
-
-        // finish current point
-        await sendCloudTask(
-            `/api/v1/point/${prevPoint._id}/background-finish`,
-            {
-                finishPointData: {
-                    gameId,
-                    team,
+    next = async (gameId: string, team: TeamNumber, pointNumber: number, pullingTeam: TeamNumber): Promise<IPoint> => {
+        const currentPoint = await this.pointModel.findOne({ gameId, pointNumber })
+        if (currentPoint) {
+            const { perform: finishPoint }: Dependencies['finishPoint'] = container.resolve('finishPoint')
+            await finishPoint(gameId, team, currentPoint._id.toHexString())
+            // finish current point
+            await sendCloudTask(
+                `/api/v1/point/${currentPoint._id}/background-finish`,
+                {
+                    finishPointData: {
+                        gameId,
+                        team,
+                    },
                 },
-            },
-            'PUT',
-        )
+                'PUT',
+            )
+        }
 
-        // const teamFilter =
-        //     team === 'one' ? { teamTwoStatus: PointStatus.ACTIVE } : { teamTwoActive: PointStatus.ACTIVE }
-        // find or create next point
-        // const nextPoint = await this.pointModel.findOneAndUpdate(
-        //     { pointNumber: prevPoint.pointNumber + 1, gameId },
-        //     teamFilter,
-        //     { upsert: true },
-        // )
+        const { perform: startPoint }: Dependencies['startPoint'] = container.resolve('startPoint')
+        const point = await startPoint(gameId, team, pointNumber, pullingTeam)
 
-        return prevPoint
+        return point
     }
 
     // back = async () => {}

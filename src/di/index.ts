@@ -2,7 +2,7 @@ import Action from '../models/action'
 import Game from '../models/game'
 import Point from '../models/point'
 import PointBackgroundServices from '@services/v1/point-background'
-import { finishPoint } from '../domains/point/next/finish'
+import { finishPoint, startPoint } from '../domains/point/next'
 import { client } from '../utils/redis'
 import { asClass, asFunction, asValue, createContainer, Lifetime } from 'awilix'
 import PointServices from '@services/v2/point'
@@ -20,5 +20,6 @@ export const registerDependencies = () => {
         pointBackgroundService: asClass(PointBackgroundServices, { lifetime: Lifetime.SINGLETON }),
         pointServiceV2: asClass(PointServices, { lifetime: Lifetime.SINGLETON }),
         finishPoint: asFunction(finishPoint, { lifetime: Lifetime.SINGLETON }),
+        startPoint: asFunction(startPoint, { lifetime: Lifetime.SINGLETON }),
     })
 }

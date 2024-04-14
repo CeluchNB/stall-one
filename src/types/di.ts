@@ -2,7 +2,7 @@ import { IPointModel } from '../models/point'
 import { IGameModel } from '../models/game'
 import { IActionModel } from '../models/action'
 import { RedisClientType } from './action'
-import { FinishPoint } from '../domains/point/next/finish'
+import { FinishPoint, StartPoint } from '../domains/point/next'
 
 interface Dependencies {
     gameModel: IGameModel
@@ -12,6 +12,7 @@ interface Dependencies {
     ultmtUrl: string
     apiKey: string
     finishPoint: FinishPoint
+    startPoint: StartPoint
 }
 
 export default Dependencies
