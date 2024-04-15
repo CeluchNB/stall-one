@@ -85,12 +85,12 @@ const schema = new Schema<IPoint>({
     teamOneStatus: {
         type: String,
         enum: Object.values(PointStatus),
-        default: PointStatus.ACTIVE,
+        default: PointStatus.FUTURE,
     },
     teamTwoStatus: {
         type: String,
         enum: Object.values(PointStatus),
-        default: PointStatus.GUEST,
+        default: PointStatus.FUTURE,
     },
 })
 

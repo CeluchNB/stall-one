@@ -4,7 +4,6 @@ import IGame from '../../../types/game'
 import { findByIdOrThrow } from '../../../utils/mongoose'
 import IPoint, { PointStatus } from '../../../types/point'
 import { TeamNumber } from '../../../types/ultmt'
-import { ApiError } from '../../../types/errors'
 
 export const startPoint = ({ pointModel, gameModel, redisClient }: Dependencies) => {
     const perform = async (
@@ -39,9 +38,8 @@ export const startPoint = ({ pointModel, gameModel, redisClient }: Dependencies)
                 pullingTeam,
                 receivingTeam,
             },
-            { upsert: true },
+            { upsert: true, new: true },
         )
-        if (!newPoint) throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 400)
 
         return newPoint
     }

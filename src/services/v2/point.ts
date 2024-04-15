@@ -1,3 +1,4 @@
+import * as Constants from '../../utils/constants'
 import { IActionModel } from '../../models/action'
 import { IGameModel } from '../../models/game'
 import IPoint from '../../types/point'
@@ -7,6 +8,7 @@ import { RedisClientType } from '../../types/action'
 import { sendCloudTask } from '../../utils/cloud-tasks'
 import { container } from '../../di'
 import Dependencies from '../../types/di'
+import { ApiError } from '../../types/errors'
 
 export default class PointServices {
     gameModel: IGameModel
@@ -34,7 +36,7 @@ export default class PointServices {
 
     next = async (gameId: string, team: TeamNumber, pointNumber: number, pullingTeam: TeamNumber): Promise<IPoint> => {
         const currentPoint = await this.pointModel.findOne({ gameId, pointNumber })
-        if (currentPoint) {
+        if (pointNumber > 0 && currentPoint) {
             const { perform: finishPoint }: Dependencies['finishPoint'] = container.resolve('finishPoint')
             await finishPoint(gameId, team, currentPoint._id.toHexString())
             // finish current point
@@ -48,6 +50,8 @@ export default class PointServices {
                 },
                 'PUT',
             )
+        } else if (!currentPoint) {
+            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
         }
 
         const { perform: startPoint }: Dependencies['startPoint'] = container.resolve('startPoint')
