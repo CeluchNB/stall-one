@@ -17,9 +17,9 @@ export const registerDependencies = () => {
         redisClient: asValue(client),
         ultmtUrl: asValue(process.env.ULTMT_API_URL),
         apiKey: asValue(process.env.API_KEY),
-        pointBackgroundService: asClass(PointBackgroundServices, { lifetime: Lifetime.SINGLETON }),
-        pointServiceV2: asClass(PointServices, { lifetime: Lifetime.SINGLETON }),
         finishPoint: asFunction(finishPoint, { lifetime: Lifetime.SINGLETON }),
         startPoint: asFunction(startPoint, { lifetime: Lifetime.SINGLETON }),
+        pointBackgroundService: asClass(PointBackgroundServices, { lifetime: Lifetime.SINGLETON }),
+        pointServiceV2: asClass(PointServices, { lifetime: Lifetime.SINGLETON }),
     })
 }

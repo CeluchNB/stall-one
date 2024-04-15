@@ -50,7 +50,7 @@ export default class PointServices {
                 },
                 'PUT',
             )
-        } else if (!currentPoint) {
+        } else if (pointNumber > 0 && !currentPoint) {
             throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
         }
 
