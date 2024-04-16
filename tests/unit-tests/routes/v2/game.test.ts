@@ -47,6 +47,7 @@ describe('Game Routes v2', () => {
 
         const gameId = new Types.ObjectId()
         const pointOneId = new Types.ObjectId()
+        const pointTwoId = new Types.ObjectId()
         beforeEach(async () => {
             const action11 = await Action.create({
                 team: teamOne,
@@ -85,6 +86,7 @@ describe('Game Routes v2', () => {
             })
 
             const point2 = await Point.create({
+                _id: pointTwoId,
                 gameId,
                 pointNumber: 2,
                 teamOneScore: 1,
@@ -136,16 +138,14 @@ describe('Game Routes v2', () => {
             expect(response.body).toBeDefined()
             const { game, team, token, activePoint, actions } = response.body
 
-            const gameRecord = await Game.findOne({})
-            expect(game._id).toEqual(gameRecord!._id.toHexString())
+            expect(game._id).toEqual(gameId.toHexString())
             expect(team).toBe('one')
 
             const payload = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload
             expect(payload.sub).toBe(game._id.toString())
             expect(payload.team).toBe('one')
 
-            const point = await Point.findOne({ pointNumber: 2 })
-            expect(activePoint._id.toString()).toBe(point!._id.toHexString())
+            expect(activePoint._id.toString()).toBe(pointTwoId.toHexString())
 
             expect(actions.length).toBe(1)
         })
