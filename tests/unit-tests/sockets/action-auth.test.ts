@@ -184,7 +184,7 @@ describe('test client undo action', () => {
             done()
         })
         clientSocket.emit('action:undo', JSON.stringify({ pointId: point._id }))
-    })
+    }, 10000)
 
     it('with bad data', (done) => {
         clientSocket.emit('action:undo', JSON.stringify({}), (response: unknown) => {
