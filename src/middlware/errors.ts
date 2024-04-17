@@ -36,6 +36,8 @@ export const userErrorResponse = (error: string): { message: string; code: numbe
         return { message: Constants.REACTIVATE_POINT_ERROR, code: 400 }
     } else if (error.includes(Constants.UNABLE_TO_FIND_ACTION)) {
         return { message: Constants.UNABLE_TO_FIND_ACTION, code: 404 }
+    } else if (error.includes(Constants.CANNOT_GO_BACK_POINT)) {
+        return { message: Constants.CANNOT_GO_BACK_POINT, code: 400 }
     } else {
         return { message: Constants.GENERIC_ERROR, code: 500 }
     }

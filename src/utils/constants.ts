@@ -21,3 +21,4 @@ export const UNABLE_TO_FIND_TOURNAMENT = 'We were not able to find this tourname
 export const REACTIVATE_POINT_ERROR =
     'Only the most recent point can be re-activated. Try deleting the next point first.'
 export const UNABLE_TO_FIND_ACTION = 'We were not able to find this action.'
+export const CANNOT_GO_BACK_POINT = 'You cannot move back from this point.'
