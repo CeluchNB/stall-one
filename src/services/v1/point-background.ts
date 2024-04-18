@@ -2,12 +2,12 @@ import * as Constants from '../../utils/constants'
 import { IActionModel } from '../../models/action'
 import { IGameModel } from '../../models/game'
 import { IPointModel } from '../../models/point'
-import IPoint from '../../types/point'
+import IPoint, { PointStatus } from '../../types/point'
 import { sendCloudTask } from '../../utils/cloud-tasks'
 import { findByIdOrThrow } from '../../utils/mongoose'
 import { deleteRedisAction, getClient, getRedisAction } from '../../utils/redis'
 import { TeamNumber, TeamNumberString } from '../../types/ultmt'
-import IGame from '../../types/game'
+import IGame, { GameStatus } from '../../types/game'
 import { RedisAction } from '../../types/action'
 
 export default class PointBackgroundServices {
@@ -93,9 +93,13 @@ export default class PointBackgroundServices {
     }
 
     submitStats = async (pointId: string, gameId: string) => {
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
         const updatedPoint = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
-        // TODO: this can only be called when both teams are complete
-        if (!updatedPoint.teamOneActive && !updatedPoint.teamTwoActive) {
+        if (
+            updatedPoint.teamOneStatus === PointStatus.COMPLETE &&
+            (updatedPoint.teamTwoStatus === PointStatus.COMPLETE ||
+                (updatedPoint.teamTwoStatus === PointStatus.FUTURE && game.teamTwoStatus === GameStatus.ACTIVE))
+        ) {
             const teamOneActions = await this.actionModel.find().where('_id').in(updatedPoint.teamOneActions)
             const teamTwoActions = await this.actionModel.find().where('_id').in(updatedPoint.teamTwoActions)
             await sendCloudTask(

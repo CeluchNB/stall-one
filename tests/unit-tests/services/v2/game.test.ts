@@ -159,7 +159,7 @@ describe('Game Services v2', () => {
 
             expect(result.team).toBe('one')
 
-            const game = await Game.findOne({})
+            const game = await Game.findById(result.game._id)
             expect(result.game).toMatchObject(game!.toJSON())
             expect(game?.teamOneActive).toBe(true)
 

@@ -61,7 +61,6 @@ describe('test POST first point route', () => {
         expect(point.pullingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
 
         const points = await Point.find({})
-        console.log('points', points)
         expect(points.length).toBe(1)
         expect(points[0].pullingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
         const gameRecord = await Game.findById(game._id)

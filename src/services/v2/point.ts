@@ -52,7 +52,6 @@ export default class PointServices {
     back = async (gameId: string, pointNumber: number, team: TeamNumber) => {
         const { point, actions } = await this.backPoint.perform(gameId, pointNumber, team)
 
-        // TODO: ensure this is called if both teams are not active
         await sendCloudTask(
             `/api/v1/stats/point/${point._id}/delete`,
             {

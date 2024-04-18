@@ -67,7 +67,7 @@ describe('Reconcile guest pieces', () => {
                 [game._id.toHexString()]: [...game.points],
             })
 
-            const gameResult = await Game.findOne()
+            const gameResult = await Game.findById(game._id)
             expect(gameResult?.teamOnePlayers.length).toBe(3)
             expect(gameResult?.teamOnePlayers[2]).toMatchObject(realUser)
         })

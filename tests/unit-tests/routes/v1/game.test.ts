@@ -49,8 +49,8 @@ describe('test /POST game', () => {
             .expect(201)
 
         const { game, token } = response.body
-        const gameRecord = await Game.findOne({})
-        expect(game._id.toString()).toBe(gameRecord?._id.toString())
+        const gameRecord = await Game.findById(game._id)
+        expect(game._id.toString()).toBe(gameRecord?._id.toHexString())
         expect(game.teamTwoDefined).toBe(false)
         expect(game.teamOnePlayers.length).toBe(2)
         expect(game.teamTwoPlayers.length).toBe(0)
