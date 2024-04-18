@@ -32,6 +32,7 @@ export const backPoint = ({ gameModel, pointModel, actionModel, redisClient }: D
 
         await game.save()
         await point.save()
+        await prevPoint.save()
 
         // setup new redis data
         const pullingTeam = getPullingTeam(prevPoint, game)

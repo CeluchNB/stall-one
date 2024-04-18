@@ -94,6 +94,7 @@ export default class PointBackgroundServices {
 
     submitStats = async (pointId: string, gameId: string) => {
         const updatedPoint = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
+        // TODO: this can only be called when both teams are complete
         if (!updatedPoint.teamOneActive && !updatedPoint.teamTwoActive) {
             const teamOneActions = await this.actionModel.find().where('_id').in(updatedPoint.teamOneActions)
             const teamTwoActions = await this.actionModel.find().where('_id').in(updatedPoint.teamTwoActions)
