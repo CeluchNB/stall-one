@@ -116,4 +116,10 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
+    it('with cannot go back point', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.CANNOT_GO_BACK_POINT}`)).toEqual({
+            message: Constants.CANNOT_GO_BACK_POINT,
+            code: 400,
+        })
+    })
 })

@@ -13,6 +13,8 @@ import { saveRedisAction } from '../../../../src/utils/redis'
 import { ActionType, RedisAction } from '../../../../src/types/action'
 import { getClient } from '../../../../src/utils/redis'
 import { container } from '../../../../src/di'
+import { PointStatus } from '../../../../src/types/point'
+import { GameStatus } from '../../../../src/types/game'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
@@ -34,7 +36,11 @@ describe('handles finish point background service', () => {
     it('handles team one score', async () => {
         const services = container.resolve('pointBackgroundService')
         const game = await Game.create(createData)
-        const point = await Point.create({ ...createPointData, teamTwoActive: false, teamOneActive: false })
+        const point = await Point.create({
+            ...createPointData,
+            teamOneStatus: PointStatus.COMPLETE,
+            teamTwoStatus: PointStatus.COMPLETE,
+        })
         game.teamTwoActive = false
         game.teamTwoDefined = false
         game.points.push(point._id)
@@ -84,8 +90,12 @@ describe('handles finish point background service', () => {
 
     it('handles team two score', async () => {
         const services = container.resolve('pointBackgroundService')
-        const game = await Game.create(createData)
-        const point = await Point.create({ ...createPointData, teamTwoActive: false, teamOneActive: false })
+        const game = await Game.create({ ...createData, teamTwoStatus: GameStatus.GUEST })
+        const point = await Point.create({
+            ...createPointData,
+            teamOneStatus: PointStatus.COMPLETE,
+            teamTwoStatus: PointStatus.FUTURE,
+        })
         game.teamTwoActive = true
         game.teamTwoDefined = true
         game.points.push(point._id)

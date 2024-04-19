@@ -19,6 +19,7 @@ import { ActionType, RedisAction } from '../../../../src/types/action'
 import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import Action from '../../../../src/models/action'
 import { Server } from 'http'
+import { PointStatus } from '../../../../src/types/point'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 jest.mock('../../../../src/background/v1/point', () => {
@@ -821,8 +822,8 @@ describe('test PUT finish background point', () => {
         const point = await Point.create({
             ...createPointData,
             gameId: game._id,
-            teamTwoActive: false,
-            teamOneActive: false,
+            teamOneStatus: PointStatus.COMPLETE,
+            teamTwoStatus: PointStatus.COMPLETE,
         })
         game.teamTwoActive = false
         game.teamTwoDefined = false

@@ -49,7 +49,7 @@ export default class PointServices {
         return point
     }
 
-    back = async (gameId: string, pointNumber: number, team: TeamNumber) => {
+    back = async (gameId: string, team: TeamNumber, pointNumber: number) => {
         const { point, actions } = await this.backPoint.perform(gameId, pointNumber, team)
 
         await sendCloudTask(

@@ -23,3 +23,18 @@ pointRouter.post(
         }
     },
 )
+
+pointRouter.put(
+    '/point/back',
+    query('pointNumber').escape(),
+    passport.authenticate('jwt', { session: false }),
+    async (req: Request, res: Response, next) => {
+        try {
+            const { pointNumber } = req.query
+            const { point, actions } = await services.back(req.user?.gameId, req.user?.team, pointNumber)
+            return res.json({ point, actions })
+        } catch (error) {
+            next(error)
+        }
+    },
+)

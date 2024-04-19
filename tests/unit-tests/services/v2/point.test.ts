@@ -6,9 +6,10 @@ import '../../../../src/services/v2/point'
 import Game from '../../../../src/models/game'
 import { TeamNumber } from '../../../../src/types/ultmt'
 import { PointStatus } from '../../../../src/types/point'
-import { client, saveRedisAction } from '../../../../src/utils/redis'
+import { client, getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import { ActionType } from '../../../../src/types/action'
 import { Types } from 'mongoose'
+import Action from '../../../../src/models/action'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
@@ -164,6 +165,84 @@ describe('Point Services V2', () => {
                 teamOneStatus: PointStatus.ACTIVE,
                 teamTwoStatus: PointStatus.ACTIVE,
             })
+        })
+    })
+
+    describe('back', () => {
+        let back: any
+        beforeAll(() => {
+            back = container.resolve('pointServiceV2').back
+        })
+        it('goes back a point', async () => {
+            const game = await Game.create({ ...gameData, teamOneScore: 3, teamTwoScore: 2 })
+            await Point.create({
+                gameId: game._id,
+                pointNumber: 4,
+                pullingTeam: game.teamOne,
+                receivingTeam: game.teamTwo,
+                teamOneStatus: PointStatus.ACTIVE,
+                teamTwoStatus: PointStatus.FUTURE,
+                teamOneScore: 2,
+                teamTwoScore: 2,
+            })
+            const prevPoint = await Point.create({
+                gameId: game._id,
+                pointNumber: 3,
+                pullingTeam: game.teamOne,
+                receivingTeam: game.teamTwo,
+                teamOneStatus: PointStatus.COMPLETE,
+                teamTwoStatus: PointStatus.ACTIVE,
+                teamOneScore: 2,
+                teamTwoScore: 1,
+            })
+
+            await Action.create({
+                pointId: prevPoint._id,
+                actionNumber: 1,
+                team: game.teamOne,
+                actionType: ActionType.PULL,
+            })
+            await Action.create({
+                pointId: prevPoint._id,
+                actionNumber: 2,
+                team: game.teamOne,
+                actionType: ActionType.TEAM_TWO_SCORE,
+            })
+
+            const { point, actions } = await back(game._id.toHexString(), TeamNumber.ONE, 4)
+            expect(point._id.toHexString()).toBe(prevPoint._id.toHexString())
+            expect(point.pointNumber).toBe(3)
+            expect(point.teamOneStatus).toBe(PointStatus.ACTIVE)
+            expect(point.teamTwoStatus).toBe(PointStatus.ACTIVE)
+            expect(actions.length).toBe(2)
+
+            const savedActions = await Action.find({})
+            expect(savedActions.length).toBe(0)
+
+            const redisAction1 = await getRedisAction(client, prevPoint._id.toHexString(), 1, TeamNumber.ONE)
+            expect(redisAction1.actionType).toBe(ActionType.PULL)
+
+            const redisAction2 = await getRedisAction(client, prevPoint._id.toHexString(), 2, TeamNumber.ONE)
+            expect(redisAction2.actionType).toBe(ActionType.TEAM_TWO_SCORE)
+
+            const savedFuturePoint = await Point.findOne({ gameId: game._id, pointNumber: 4 })
+            expect(savedFuturePoint).toMatchObject({
+                teamOneScore: 2,
+                teamTwoScore: 1,
+                teamOneStatus: PointStatus.FUTURE,
+                teamTwoStatus: PointStatus.FUTURE,
+            })
+
+            const savedPreviousPoint = await Point.findOne({ gameId: game._id, pointNumber: 3 })
+            expect(savedPreviousPoint).toMatchObject({
+                teamOneScore: 2,
+                teamTwoScore: 1,
+                teamOneStatus: PointStatus.ACTIVE,
+                teamTwoStatus: PointStatus.ACTIVE,
+            })
+
+            const savedGame = await Game.findOne({})
+            expect(savedGame).toMatchObject({ teamOneScore: 2, teamTwoScore: 1 })
         })
     })
 })
