@@ -8,10 +8,22 @@ import Game from '../../../../src/models/game'
 import Point from '../../../../src/models/point'
 import { ActionType } from '../../../../src/types/action'
 import { saveRedisAction } from '../../../../src/utils/redis'
-import { client, getMock, resetDatabase, setUpDatabase, tearDownDatabase } from '../../../fixtures/setup-db'
+import {
+    client,
+    createPointData,
+    gameData,
+    getMock,
+    resetDatabase,
+    setUpDatabase,
+    tearDownDatabase,
+} from '../../../fixtures/setup-db'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import axios from 'axios'
 import { Server } from 'http'
+import { GameStatus } from '../../../../src/types/game'
+import { PointStatus } from '../../../../src/types/point'
+
+jest.mock('@google-cloud/tasks/build/src/v2')
 
 let app: Server
 beforeAll(async () => {
@@ -158,6 +170,52 @@ describe('Game Routes v2', () => {
                 .expect(404)
 
             expect(response.body.message).toBe(Constants.UNABLE_TO_FETCH_TEAM)
+        })
+    })
+
+    describe('PUT /game/finish', () => {
+        it('succeeds', async () => {
+            const game = await Game.create({ ...gameData, teamOneStatus: GameStatus.ACTIVE })
+            const token = game.getToken('one')
+            const point = await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                pointNumber: 4,
+                teamOneStatus: PointStatus.ACTIVE,
+            })
+            await client.set(`${game._id.toHexString()}:${point._id.toHexString()}:one:actions`, 1)
+            await saveRedisAction(
+                client,
+                {
+                    actionNumber: 1,
+                    actionType: ActionType.TEAM_ONE_SCORE,
+                    teamNumber: 'one',
+                    comments: [],
+                    tags: [],
+                },
+                point._id.toHexString(),
+            )
+
+            const response = await request(app)
+                .put('/api/v2/game/finish')
+                .set('Authorization', `Bearer ${token}`)
+                .send()
+                .expect(200)
+
+            const { game: gameResponse } = response.body
+            expect(gameResponse.teamOneStatus).toBe(GameStatus.COMPLETE)
+        })
+
+        it('fails', async () => {
+            const game = await Game.create({ ...gameData, teamOneStatus: GameStatus.ACTIVE })
+            const token = game.getToken('one')
+
+            const response = await request(app)
+                .put('/api/v2/game/finish')
+                .set('Authorization', `Bearer ${token}`)
+                .send()
+                .expect(404)
+            expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_POINT)
         })
     })
 })

@@ -4,36 +4,36 @@ import IGame from '../../types/game'
 import { IGameModel } from '../../models/game'
 import IPoint from '../../types/point'
 import { IPointModel } from '../../models/point'
-import { TeamNumberString } from '../../types/ultmt'
+import { TeamNumber, TeamNumberString } from '../../types/ultmt'
 import { authenticateManager } from '../../utils/ultmt'
 import { findByIdOrThrow } from '../../utils/mongoose'
 import { getRedisAction } from '../../utils/redis'
 import { RedisAction, RedisClientType } from '../../types/action'
 import { getTeamNumber } from '../../utils/game'
 import PointServices from '../v1/point'
+import Dependencies from '../../types/di'
+import { ApiError } from '../../types/errors'
+import { sendCloudTask } from '../../utils/cloud-tasks'
 
 export default class GameServices {
     gameModel: IGameModel
     pointModel: IPointModel
     actionModel: IActionModel
+    finishPoint: Dependencies['finishPoint']
+    finishGame: Dependencies['finishGame']
     redisClient: RedisClientType
     ultmtUrl: string
     apiKey: string
 
-    constructor(
-        gameModel: IGameModel,
-        pointModel: IPointModel,
-        actionModel: IActionModel,
-        redisClient: RedisClientType,
-        ultmtUrl: string,
-        apiKey: string,
-    ) {
-        this.gameModel = gameModel
-        this.pointModel = pointModel
-        this.actionModel = actionModel
-        this.redisClient = redisClient
-        this.ultmtUrl = ultmtUrl
-        this.apiKey = apiKey
+    constructor(opts: Dependencies) {
+        this.gameModel = opts.gameModel
+        this.pointModel = opts.pointModel
+        this.actionModel = opts.actionModel
+        this.redisClient = opts.redisClient
+        this.ultmtUrl = opts.ultmtUrl
+        this.apiKey = opts.apiKey
+        this.finishPoint = opts.finishPoint
+        this.finishGame = opts.finishGame
     }
     /**
      * Method to reactivate a game that has been finished or delayed
@@ -81,6 +81,29 @@ export default class GameServices {
         )
 
         return { game, team, token, activePoint, actions }
+    }
+
+    finish = async (gameId: string, team: TeamNumber): Promise<IGame> => {
+        const lastPoint = await this.pointModel.findOne({ gameId }).sort('-pointNumber')
+        if (!lastPoint) throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
+
+        await this.finishPoint.perform(gameId, team, lastPoint._id.toHexString())
+        // TODO: game finish must happen at same time as point finish
+        await sendCloudTask(
+            `/api/v1/point/${lastPoint._id}/background-finish`,
+            {
+                finishPointData: {
+                    gameId,
+                    team,
+                },
+            },
+            'PUT',
+        )
+
+        const game = await this.finishGame.perform(gameId, team)
+        await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
+
+        return game
     }
 
     private getLiveActionsForPoint = async (

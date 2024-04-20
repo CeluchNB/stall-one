@@ -1,17 +1,10 @@
-import {
-    setUpDatabase,
-    tearDownDatabase,
-    resetDatabase,
-    client,
-    createData,
-    createPointData,
-} from '../../../fixtures/setup-db'
+import { setUpDatabase, tearDownDatabase, resetDatabase, createData, createPointData } from '../../../fixtures/setup-db'
 import Point from '../../../../src/models/point'
 import Game from '../../../../src/models/game'
 import { TeamNumber } from '../../../../src/types/ultmt'
 import { saveRedisAction } from '../../../../src/utils/redis'
 import { ActionType, RedisAction } from '../../../../src/types/action'
-import { getClient } from '../../../../src/utils/redis'
+import { client } from '../../../../src/utils/redis'
 import { container } from '../../../../src/di'
 import { PointStatus } from '../../../../src/types/point'
 import { GameStatus } from '../../../../src/types/game'
@@ -19,17 +12,17 @@ import { GameStatus } from '../../../../src/types/game'
 jest.mock('@google-cloud/tasks/build/src/v2')
 
 beforeAll(async () => {
+    await client.connect()
     await setUpDatabase()
-})
-
-afterAll(async () => {
-    await tearDownDatabase()
-    const client = await getClient()
-    await client.quit()
 })
 
 afterEach(async () => {
     await resetDatabase()
+})
+
+afterAll(async () => {
+    await tearDownDatabase()
+    client.quit()
 })
 
 describe('handles finish point background service', () => {

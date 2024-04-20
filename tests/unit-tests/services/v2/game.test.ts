@@ -1,18 +1,28 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import * as Constants from '../../../../src/utils/constants'
 import Action from '../../../../src/models/action'
 import Game from '../../../../src/models/game'
 import Point from '../../../../src/models/point'
-import GameServices from '../../../../src/services/v2/game'
 import axios from 'axios'
-import { setUpDatabase, tearDownDatabase, client, getMock, resetDatabase } from '../../../fixtures/setup-db'
+import {
+    setUpDatabase,
+    tearDownDatabase,
+    getMock,
+    resetDatabase,
+    gameData,
+    createPointData,
+} from '../../../fixtures/setup-db'
+import { client } from '../../../../src/utils/redis'
 import { Types } from 'mongoose'
 import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import { ActionType } from '../../../../src/types/action'
+import { container } from '../../../../src/di'
+import { TeamNumber } from '../../../../src/types/ultmt'
+import { PointStatus } from '../../../../src/types/point'
+import { GameStatus } from '../../../../src/types/game'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
-
-const services = new GameServices(Game, Point, Action, client, '', '')
 
 beforeEach(() => {
     jest.spyOn(axios, 'get').mockImplementation(getMock)
@@ -23,19 +33,25 @@ afterEach(() => {
 })
 
 beforeAll(async () => {
+    await client.connect()
     await setUpDatabase()
-})
-
-afterAll(async () => {
-    await tearDownDatabase()
 })
 
 afterEach(async () => {
     await resetDatabase()
 })
 
+afterAll(async () => {
+    await tearDownDatabase()
+    client.quit()
+})
+
 describe('Game Services v2', () => {
     describe('reactivate game', () => {
+        let reactivateGame: any
+        beforeAll(() => {
+            reactivateGame = container.resolve('gameServiceV2').reactivateGame
+        })
         const teamOne = {
             _id: new Types.ObjectId(),
             name: 'Team One',
@@ -155,7 +171,7 @@ describe('Game Services v2', () => {
         })
 
         it('reactivates for team one', async () => {
-            const result = await services.reactivateGame(gameId.toHexString(), 'jwt', teamOne._id.toHexString())
+            const result = await reactivateGame(gameId.toHexString(), 'jwt', teamOne._id.toHexString())
 
             expect(result.team).toBe('one')
 
@@ -176,7 +192,7 @@ describe('Game Services v2', () => {
         })
 
         it('reactivates for team two', async () => {
-            const result = await services.reactivateGame(gameId.toHexString(), 'jwt', teamTwo._id.toHexString())
+            const result = await reactivateGame(gameId.toHexString(), 'jwt', teamTwo._id.toHexString())
 
             expect(result.team).toBe('two')
 
@@ -218,7 +234,7 @@ describe('Game Services v2', () => {
                 points: [point1!._id],
             })
 
-            const result = await services.reactivateGame(game._id.toHexString(), 'jwt', teamOne._id.toHexString())
+            const result = await reactivateGame(game._id.toHexString(), 'jwt', teamOne._id.toHexString())
 
             expect(result.team).toBe('one')
 
@@ -259,7 +275,7 @@ describe('Game Services v2', () => {
                 points: [point1!._id],
             })
 
-            const result = await services.reactivateGame(game._id.toHexString(), 'jwt', teamTwo._id.toHexString())
+            const result = await reactivateGame(game._id.toHexString(), 'jwt', teamTwo._id.toHexString())
 
             expect(result.team).toBe('two')
 
@@ -298,7 +314,7 @@ describe('Game Services v2', () => {
                 points: [],
             })
 
-            const result = await services.reactivateGame(game._id.toHexString(), 'jwt', teamOne._id.toHexString())
+            const result = await reactivateGame(game._id.toHexString(), 'jwt', teamOne._id.toHexString())
 
             expect(result.game).toMatchObject({ ...game.toJSON(), teamOneActive: true })
             expect(result.team).toBe('one')
@@ -308,6 +324,47 @@ describe('Game Services v2', () => {
             const payload = jwt.verify(result.token, process.env.JWT_SECRET as string) as JwtPayload
             expect(payload.sub).toBe(game._id.toString())
             expect(payload.team).toBe('one')
+        })
+    })
+
+    describe('finish', () => {
+        let finish: any
+        beforeAll(() => {
+            finish = container.resolve('gameServiceV2').finish
+        })
+
+        it('finishes point and game', async () => {
+            const game = await Game.create({ ...gameData, teamOneStatus: GameStatus.ACTIVE })
+            const point = await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                pointNumber: 4,
+                teamOneStatus: PointStatus.ACTIVE,
+            })
+            await client.set(`${game._id.toHexString()}:${point._id.toHexString()}:one:actions`, 1)
+            await saveRedisAction(
+                client,
+                {
+                    actionNumber: 1,
+                    actionType: ActionType.TEAM_ONE_SCORE,
+                    teamNumber: 'one',
+                    comments: [],
+                    tags: [],
+                },
+                point._id.toHexString(),
+            )
+
+            const result = await finish(game._id.toHexString(), TeamNumber.ONE)
+            expect(result.teamOneStatus).toBe(GameStatus.COMPLETE)
+
+            const pointRecord = await Point.findById(point._id)
+            expect(pointRecord?.teamOneStatus).toBe(PointStatus.COMPLETE)
+        })
+
+        it('errors with unfound point', async () => {
+            const game = await Game.create({ ...gameData, teamOneStatus: GameStatus.ACTIVE })
+
+            await expect(finish(game._id.toHexString(), TeamNumber.ONE)).rejects.toThrow(Constants.UNABLE_TO_FIND_POINT)
         })
     })
 })

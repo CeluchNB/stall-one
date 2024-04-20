@@ -12,12 +12,7 @@ export default class PointServices {
     startPoint: Dependencies['startPoint']
     backPoint: Dependencies['backPoint']
 
-    constructor(opts: {
-        pointModel: IPointModel
-        finishPoint: Dependencies['finishPoint']
-        startPoint: Dependencies['startPoint']
-        backPoint: Dependencies['backPoint']
-    }) {
+    constructor(opts: Dependencies) {
         this.pointModel = opts.pointModel
         this.finishPoint = opts.finishPoint
         this.startPoint = opts.startPoint
@@ -27,7 +22,6 @@ export default class PointServices {
     next = async (gameId: string, team: TeamNumber, pointNumber: number, pullingTeam: TeamNumber): Promise<IPoint> => {
         const currentPoint = await this.pointModel.findOne({ gameId, pointNumber })
         if (pointNumber > 0 && currentPoint) {
-            // const { perform: finishPoint }: Dependencies['finishPoint'] = container.resolve('finishPoint')
             await this.finishPoint.perform(gameId, team, currentPoint._id.toHexString())
             // finish current point
             await sendCloudTask(

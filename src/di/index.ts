@@ -7,6 +7,8 @@ import { backPoint } from '../domains/point/back'
 import { client } from '../utils/redis'
 import { asClass, asFunction, asValue, createContainer, Lifetime } from 'awilix'
 import PointServices from '@services/v2/point'
+import { finishGame } from '../domains/game/finish'
+import GameServices from '@services/v2/game'
 
 export const container = createContainer({ strict: true })
 
@@ -21,7 +23,9 @@ export const registerDependencies = () => {
         finishPoint: asFunction(finishPoint, { lifetime: Lifetime.SINGLETON }),
         startPoint: asFunction(startPoint, { lifetime: Lifetime.SINGLETON }),
         backPoint: asFunction(backPoint, { lifetime: Lifetime.SINGLETON }),
+        finishGame: asFunction(finishGame, { lifetime: Lifetime.SINGLETON }),
         pointBackgroundService: asClass(PointBackgroundServices, { lifetime: Lifetime.SINGLETON }),
         pointServiceV2: asClass(PointServices, { lifetime: Lifetime.SINGLETON }),
+        gameServiceV2: asClass(GameServices, { lifetime: Lifetime.SINGLETON }),
     })
 }
