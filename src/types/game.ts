@@ -1,6 +1,6 @@
 import { Types } from 'mongoose'
 import ITournament from './tournament'
-import { Player, Team } from './ultmt'
+import { FullGameUser, Player, Team } from './ultmt'
 import { ClientPoint } from './point'
 
 export interface UpdateGame {
@@ -74,7 +74,7 @@ interface IGame extends CreateGame {
 export interface CreateFullGame extends CreateGame {
     teamOneScore: number
     teamTwoScore: number
-    teamOnePlayers: Player[]
+    teamOnePlayers: FullGameUser[]
     points: ClientPoint[]
 }
 

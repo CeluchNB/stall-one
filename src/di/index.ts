@@ -9,6 +9,7 @@ import { asClass, asFunction, asValue, createContainer, Lifetime } from 'awilix'
 import PointServices from '@services/v2/point'
 import { finishGame } from '../domains/game/finish'
 import GameServices from '@services/v2/game'
+import Tournament from '../models/tournament'
 
 export const container = createContainer({ strict: true })
 
@@ -17,6 +18,7 @@ export const registerDependencies = () => {
         gameModel: asValue(Game),
         pointModel: asValue(Point),
         actionModel: asValue(Action),
+        tournamentModel: asValue(Tournament),
         redisClient: asValue(client),
         ultmtUrl: asValue(process.env.ULTMT_API_URL),
         apiKey: asValue(process.env.API_KEY),
