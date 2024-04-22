@@ -30,7 +30,6 @@ gameRouter.put(
             const game = await services.finish(req.user?.gameId, req.user?.team)
             return res.json({ game })
         } catch (e) {
-            console.log('error', e)
             next(e)
         }
     },

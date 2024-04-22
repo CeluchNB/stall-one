@@ -10,6 +10,7 @@ import PointServices from '@services/v2/point'
 import { finishGame } from '../domains/game/finish'
 import GameServices from '@services/v2/game'
 import Tournament from '../models/tournament'
+import { fullGame } from '../domains/game/full'
 
 export const container = createContainer({ strict: true })
 
@@ -26,6 +27,7 @@ export const registerDependencies = () => {
         startPoint: asFunction(startPoint, { lifetime: Lifetime.SINGLETON }),
         backPoint: asFunction(backPoint, { lifetime: Lifetime.SINGLETON }),
         finishGame: asFunction(finishGame, { lifetime: Lifetime.SINGLETON }),
+        fullGame: asFunction(fullGame, { lifetime: Lifetime.SINGLETON }),
         pointBackgroundService: asClass(PointBackgroundServices, { lifetime: Lifetime.SINGLETON }),
         pointServiceV2: asClass(PointServices, { lifetime: Lifetime.SINGLETON }),
         gameServiceV2: asClass(GameServices, { lifetime: Lifetime.SINGLETON }),

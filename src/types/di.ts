@@ -6,6 +6,7 @@ import { FinishPoint, StartPoint } from '../domains/point/next'
 import { BackPoint } from '../domains/point/back'
 import { FinishGame } from '../domains/game/finish'
 import { ITournamentModel } from '../models/tournament'
+import { FullGame } from '../domains/game/full'
 
 interface Dependencies {
     gameModel: IGameModel
@@ -19,6 +20,7 @@ interface Dependencies {
     startPoint: StartPoint
     backPoint: BackPoint
     finishGame: FinishGame
+    fullGame: FullGame
 }
 
 export default Dependencies
