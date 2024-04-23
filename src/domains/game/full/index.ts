@@ -160,7 +160,7 @@ export const fullGame = ({ gameModel, pointModel, actionModel, tournamentModel, 
         })
     }
 
-    const createActions = async (point: ClientPoint, team: Team, pointId: Types.ObjectId) => {
+    const createActions = async (point: ClientPoint, team: Team, pointId: Types.ObjectId): Promise<IAction[]> => {
         const actions = []
         for (const [i, a] of point.actions.entries()) {
             const action = await actionModel.create({

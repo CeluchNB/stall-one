@@ -1,3 +1,4 @@
+import * as Constants from '../../../../../src/utils/constants'
 import * as UltmtUtils from '../../../../../src/utils/ultmt'
 import { container } from '../../../../../src/di'
 import Dependencies from '../../../../../src/types/di'
@@ -7,7 +8,12 @@ import { CreateFullGame, GameStatus } from '../../../../../src/types/game'
 import { Types } from 'mongoose'
 import Tournament from '../../../../../src/models/tournament'
 import { Player } from '../../../../../src/types/ultmt'
-import { ActionType } from '../../../../../src/types/action'
+import { ActionType, ClientAction } from '../../../../../src/types/action'
+import { ClientPoint, PointStatus } from '../../../../../src/types/point'
+import Point from '../../../../../src/models/point'
+import Action from '../../../../../src/models/action'
+
+jest.mock('@google-cloud/tasks/build/src/v2')
 
 beforeAll(async () => {
     client.connect()
@@ -16,6 +22,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await resetDatabase()
+    jest.resetAllMocks()
 })
 
 afterAll(async () => {
@@ -28,9 +35,159 @@ describe('Create Full Game', () => {
     beforeAll(() => {
         fullGame = container.resolve('fullGame')
     })
+
+    const guestId = new Types.ObjectId()
+    const guest: Player = {
+        _id: guestId,
+        firstName: 'Logan',
+        lastName: 'Call',
+        username: 'logan',
+    }
+    const anil: Player = {
+        _id: new Types.ObjectId(),
+        firstName: 'Anil',
+        lastName: 'Driehuys',
+        username: 'anil',
+    }
+    const team = {
+        _id: new Types.ObjectId(),
+        place: 'PGH',
+        name: 'Tbirds',
+        teamname: 'birds',
+        seasonStart: new Date(),
+        seasonEnd: new Date(),
+    }
+    const user1: Player = {
+        _id: new Types.ObjectId(),
+        firstName: 'Kenny',
+        lastName: 'Furdella',
+        username: 'kenny',
+    }
+    const user2: Player = {
+        _id: new Types.ObjectId(),
+        firstName: 'Tyler',
+        lastName: 'McCarthy',
+        username: 'tyler',
+    }
+    const action1: ClientAction = {
+        playerOne: user1,
+        actionType: ActionType.PULL,
+        tags: ['long'],
+    }
+    const action2: ClientAction = {
+        playerOne: user2,
+        actionType: ActionType.BLOCK,
+        tags: [],
+    }
+    const action3: ClientAction = {
+        playerOne: guest,
+        playerTwo: user1,
+        actionType: ActionType.TEAM_ONE_SCORE,
+        tags: [],
+    }
+    const pointOne: ClientPoint = {
+        pointNumber: 1,
+        teamOnePlayers: [],
+        teamOneScore: 1,
+        teamTwoScore: 0,
+        pullingTeam: {
+            name: 'Pulling',
+        },
+        receivingTeam: {
+            name: 'Receiving',
+        },
+        scoringTeam: { name: 'Receiving' },
+        actions: [action1, action2, action3],
+    }
+    const pointTwo: ClientPoint = {
+        pointNumber: 2,
+        teamOnePlayers: [],
+        teamOneScore: 2,
+        teamTwoScore: 0,
+        pullingTeam: {
+            name: 'Pulling',
+        },
+        receivingTeam: {
+            name: 'Receiving',
+        },
+        scoringTeam: { name: 'Pulling' },
+        actions: [action1, action2, action3],
+    }
     describe('perform', () => {
-        it('works', () => {
-            expect(1 + 1).toBe(2)
+        it('creates correct data', async () => {
+            const managerSpy = jest.spyOn(UltmtUtils, 'authenticateManager').mockReturnValueOnce(Promise.resolve(user1))
+            const guestSpy = jest.spyOn(UltmtUtils, 'createGuest').mockReturnValueOnce(
+                Promise.resolve({
+                    _id: new Types.ObjectId(),
+                    place: 'Place',
+                    name: 'Name',
+                    teamname: 'placename',
+                    seasonStart: new Date(),
+                    seasonEnd: new Date(),
+                    players: [anil],
+                }),
+            )
+            const gameData: CreateFullGame = {
+                teamOne: team,
+                teamOnePlayers: [
+                    { ...user1, localGuest: false },
+                    { ...user2, localGuest: false },
+                    { ...guest, localGuest: true },
+                ],
+                points: [pointOne, pointTwo],
+                teamOneScore: 2,
+                teamTwoScore: 0,
+                teamTwo: { name: 'Wind Chill' },
+                teamTwoDefined: false,
+                creator: user1,
+                scoreLimit: 15,
+                halfScore: 7,
+                timeoutPerHalf: 1,
+                floaterTimeout: false,
+                startTime: new Date(),
+                softcapMins: 30,
+                hardcapMins: 45,
+                playersPerPoint: 7,
+            }
+
+            const result = await fullGame.perform(gameData, 'jwt')
+            expect(result.get(guestId.toHexString())).toMatchObject(anil)
+
+            expect(managerSpy).toHaveBeenCalled()
+            expect(guestSpy).toHaveBeenCalled()
+
+            const points = await Point.find({})
+            expect(points.length).toBeGreaterThanOrEqual(2)
+
+            const actions = await Action.find({})
+            expect(actions.length).toBeGreaterThanOrEqual(6)
+        })
+
+        it('throws error with missing team', async () => {
+            const gameData: CreateFullGame = {
+                teamOne: { name: 'Tbirds' },
+                teamOnePlayers: [
+                    { ...user1, localGuest: false },
+                    { ...user2, localGuest: false },
+                    { ...guest, localGuest: true },
+                ],
+                points: [pointOne, pointTwo],
+                teamOneScore: 2,
+                teamTwoScore: 0,
+                teamTwo: { name: 'Wind Chill' },
+                teamTwoDefined: false,
+                creator: user1,
+                scoreLimit: 15,
+                halfScore: 7,
+                timeoutPerHalf: 1,
+                floaterTimeout: false,
+                startTime: new Date(),
+                softcapMins: 30,
+                hardcapMins: 45,
+                playersPerPoint: 7,
+            }
+
+            await expect(fullGame.perform(gameData, 'jwt')).rejects.toThrow(Constants.UNABLE_TO_FETCH_TEAM)
         })
     })
 
@@ -510,6 +667,203 @@ describe('Create Full Game', () => {
                 expect(game.points[0].actions[0].playerTwo).toMatchObject(reid)
                 expect(game.points[0].actions[0].playerOne).not.toMatchObject(reid)
                 expect(game.points[1].actions[1].playerTwo).toMatchObject(reid)
+            })
+        })
+
+        describe('uploadPoints', () => {
+            let uploadPoints: Dependencies['fullGame']['helpers']['uploadPoints']
+            beforeAll(() => {
+                uploadPoints = fullGame.helpers.uploadPoints
+            })
+
+            const team = {
+                _id: new Types.ObjectId(),
+                place: 'PGH',
+                name: 'Tbirds',
+                teamname: 'birds',
+                seasonStart: new Date(),
+                seasonEnd: new Date(),
+            }
+            const user1: Player = {
+                _id: new Types.ObjectId(),
+                firstName: 'Kenny',
+                lastName: 'Furdella',
+                username: 'kenny',
+            }
+            const user2: Player = {
+                _id: new Types.ObjectId(),
+                firstName: 'Tyler',
+                lastName: 'McCarthy',
+                username: 'tyler',
+            }
+            const action1: ClientAction = {
+                playerOne: user1,
+                actionType: ActionType.PULL,
+                tags: ['long'],
+            }
+            const action2: ClientAction = {
+                playerOne: user2,
+                actionType: ActionType.BLOCK,
+                tags: [],
+            }
+            const action3: ClientAction = {
+                playerOne: user2,
+                playerTwo: user1,
+                actionType: ActionType.TEAM_ONE_SCORE,
+                tags: [],
+            }
+            const pointOne: ClientPoint = {
+                pointNumber: 1,
+                teamOnePlayers: [],
+                teamOneScore: 1,
+                teamTwoScore: 0,
+                pullingTeam: {
+                    name: 'Pulling',
+                },
+                receivingTeam: {
+                    name: 'Receiving',
+                },
+                scoringTeam: { name: 'Receiving' },
+                actions: [action1, action2, action3],
+            }
+            const pointTwo: ClientPoint = {
+                pointNumber: 2,
+                teamOnePlayers: [],
+                teamOneScore: 2,
+                teamTwoScore: 0,
+                pullingTeam: {
+                    name: 'Pulling',
+                },
+                receivingTeam: {
+                    name: 'Receiving',
+                },
+                scoringTeam: { name: 'Pulling' },
+                actions: [action1, action2, action3],
+            }
+
+            it('creates points and actions', async () => {
+                const gameId = new Types.ObjectId()
+                await uploadPoints({ points: [pointOne, pointTwo], teamOne: team } as CreateFullGame, gameId)
+                const points = await Point.find({ gameId })
+                expect(points.length).toBe(2)
+
+                const pointOneActions = await Action.find({ pointId: points[0]._id })
+                expect(pointOneActions.length).toBe(3)
+
+                const pointTwoActions = await Action.find({ pointId: points[1]._id })
+                expect(pointTwoActions.length).toBe(3)
+            })
+        })
+
+        describe('createPoint', () => {
+            let createPoint: Dependencies['fullGame']['helpers']['createPoint']
+            beforeAll(() => {
+                createPoint = fullGame.helpers.createPoint
+            })
+
+            it('creates point', async () => {
+                const point: ClientPoint = {
+                    pointNumber: 1,
+                    teamOnePlayers: [],
+                    teamOneScore: 1,
+                    teamTwoScore: 0,
+                    pullingTeam: {
+                        name: 'Pulling',
+                    },
+                    receivingTeam: {
+                        name: 'Receiving',
+                    },
+                    scoringTeam: { name: 'Receiving' },
+                    actions: [],
+                }
+                const gameId = new Types.ObjectId()
+
+                const result = await createPoint(point, gameId)
+                expect(result.pointNumber).toBe(1)
+                expect(result.teamOneScore).toBe(1)
+                expect(result.teamTwoScore).toBe(0)
+                expect(result.pullingTeam).toMatchObject({ name: 'Pulling' })
+                expect(result.receivingTeam).toMatchObject({ name: 'Receiving' })
+                expect(result.scoringTeam).toMatchObject({ name: 'Receiving' })
+                expect(result.teamOneStatus).toBe(PointStatus.COMPLETE)
+                expect(result.teamTwoStatus).toBe(PointStatus.FUTURE)
+                expect(result.gameId.toHexString()).toBe(gameId.toHexString())
+
+                const pointRecord = await Point.findById(result._id)
+                expect(pointRecord).toMatchObject({ gameId, pointNumber: 1 })
+            })
+        })
+
+        describe('createActions', () => {
+            let createActions: Dependencies['fullGame']['helpers']['createActions']
+            beforeAll(() => {
+                createActions = fullGame.helpers.createActions
+            })
+
+            it('creates multiple actions', async () => {
+                const pointId = new Types.ObjectId()
+                const team = {
+                    _id: new Types.ObjectId(),
+                    place: 'PGH',
+                    name: 'Tbirds',
+                    teamname: 'birds',
+                    seasonStart: new Date(),
+                    seasonEnd: new Date(),
+                }
+                const user1: Player = {
+                    _id: new Types.ObjectId(),
+                    firstName: 'Kenny',
+                    lastName: 'Furdella',
+                    username: 'kenny',
+                }
+                const user2: Player = {
+                    _id: new Types.ObjectId(),
+                    firstName: 'Tyler',
+                    lastName: 'McCarthy',
+                    username: 'tyler',
+                }
+                const action1: ClientAction = {
+                    playerOne: user1,
+                    actionType: ActionType.PULL,
+                    tags: ['long'],
+                }
+                const action2: ClientAction = {
+                    playerOne: user2,
+                    actionType: ActionType.BLOCK,
+                    tags: [],
+                }
+                const action3: ClientAction = {
+                    playerOne: user2,
+                    playerTwo: user1,
+                    actionType: ActionType.TEAM_ONE_SCORE,
+                    tags: [],
+                }
+                const point: ClientPoint = {
+                    pointNumber: 1,
+                    teamOnePlayers: [],
+                    teamOneScore: 1,
+                    teamTwoScore: 0,
+                    pullingTeam: {
+                        name: 'Pulling',
+                    },
+                    receivingTeam: {
+                        name: 'Receiving',
+                    },
+                    scoringTeam: { name: 'Receiving' },
+                    actions: [action1, action2, action3],
+                }
+
+                const result = await createActions(point, team, pointId)
+                expect(result.length).toBe(3)
+                expect(result[0].actionNumber).toBe(1)
+                expect(result[0].actionType).toBe(ActionType.PULL)
+                expect(result[1].actionNumber).toBe(2)
+                expect(result[1].actionType).toBe(ActionType.BLOCK)
+                expect(result[2].actionNumber).toBe(3)
+                expect(result[2].actionType).toBe(ActionType.TEAM_ONE_SCORE)
+
+                const actionRecords = await Action.find()
+                expect(actionRecords.length).toBeGreaterThanOrEqual(3)
             })
         })
     })
