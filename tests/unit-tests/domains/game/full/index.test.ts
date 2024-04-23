@@ -3,9 +3,11 @@ import { container } from '../../../../../src/di'
 import Dependencies from '../../../../../src/types/di'
 import { setUpDatabase, tearDownDatabase, resetDatabase, gameData } from '../../../../fixtures/setup-db'
 import { client } from '../../../../../src/utils/redis'
-import { GameStatus } from '../../../../../src/types/game'
+import { CreateFullGame, GameStatus } from '../../../../../src/types/game'
 import { Types } from 'mongoose'
 import Tournament from '../../../../../src/models/tournament'
+import { Player } from '../../../../../src/types/ultmt'
+import { ActionType } from '../../../../../src/types/action'
 
 beforeAll(async () => {
     client.connect()
@@ -190,6 +192,324 @@ describe('Create Full Game', () => {
                 const result = await createGuests(data, 'jwt', 'team')
                 expect(spy).toHaveBeenCalled()
                 expect(result.get(initialGuestId.toHexString())).toMatchObject(generatedGuest)
+            })
+        })
+
+        describe('reconcileGuests', () => {
+            let reconcileGuests: Dependencies['fullGame']['helpers']['reconcileGuests']
+            beforeAll(() => {
+                reconcileGuests = fullGame.helpers.reconcileGuests
+            })
+
+            it('reconciles guest in all places', () => {
+                const guestId = new Types.ObjectId()
+                const map = new Map<string, Player>()
+                const reid: Player = {
+                    _id: new Types.ObjectId(),
+                    firstName: 'Reid',
+                    lastName: 'Duncan',
+                    username: 'reid',
+                }
+                const guest: Player = {
+                    _id: guestId,
+                    firstName: 'Max',
+                    lastName: 'Sheppard',
+                    username: 'max',
+                }
+                map.set(guestId.toHexString(), reid)
+
+                const game = {
+                    teamOnePlayers: [
+                        guest,
+                        {
+                            _id: new Types.ObjectId(),
+                            firstName: 'Jon',
+                            lastName: 'Mast',
+                            username: 'jon',
+                        },
+                    ],
+                    points: [
+                        {
+                            teamOnePlayers: [
+                                guest,
+                                {
+                                    _id: new Types.ObjectId(),
+                                    firstName: 'Anson',
+                                    lastName: 'Reppermund',
+                                    username: 'anson',
+                                },
+                            ],
+                            actions: [
+                                {
+                                    playerOne: guest,
+                                    actionType: ActionType.PULL,
+                                    tags: [],
+                                },
+                            ],
+                        },
+                    ],
+                } as unknown as CreateFullGame
+
+                reconcileGuests(map, game)
+
+                expect(game.teamOnePlayers[0]).toMatchObject(reid)
+                expect(game.points[0].teamOnePlayers[0]).toMatchObject(reid)
+                expect(game.points[0].actions[0].playerOne).toMatchObject(reid)
+            })
+        })
+
+        describe('reconcileGuestsOnGame', () => {
+            let reconcileGuestsOnGame: Dependencies['fullGame']['helpers']['reconcileGuestsOnGame']
+            beforeAll(() => {
+                reconcileGuestsOnGame = fullGame.helpers.reconcileGuestsOnGame
+            })
+
+            it('replaces players', () => {
+                const guestId = new Types.ObjectId()
+                const map = new Map<string, Player>()
+                const reid: Player = {
+                    _id: new Types.ObjectId(),
+                    firstName: 'Reid',
+                    lastName: 'Duncan',
+                    username: 'reid',
+                }
+                map.set(guestId.toHexString(), reid)
+
+                const game = {
+                    teamOnePlayers: [
+                        {
+                            _id: guestId,
+                            firstName: 'Max',
+                            lastName: 'Sheppard',
+                            username: 'max',
+                        },
+                        {
+                            _id: new Types.ObjectId(),
+                            firstName: 'Jon',
+                            lastName: 'Mast',
+                            username: 'jon',
+                        },
+                    ],
+                }
+                reconcileGuestsOnGame(map, game as CreateFullGame)
+                expect(game.teamOnePlayers.length).toBe(2)
+                expect(game.teamOnePlayers[0].username).toBe(reid.username)
+                expect(game.teamOnePlayers[1].username).toBe('jon')
+            })
+        })
+
+        describe('reconcileGuestsOnPoints', () => {
+            let reconcileGuestsOnPoint: Dependencies['fullGame']['helpers']['reconcileGuestsOnPoints']
+            beforeAll(() => {
+                reconcileGuestsOnPoint = fullGame.helpers.reconcileGuestsOnPoints
+            })
+
+            it('replaces player on multiple points', () => {
+                const guestId = new Types.ObjectId()
+                const map = new Map<string, Player>()
+                const jojah: Player = {
+                    _id: new Types.ObjectId(),
+                    firstName: 'Jojah',
+                    lastName: 'McMonigal',
+                    username: 'jojah',
+                }
+                map.set(guestId.toHexString(), jojah)
+
+                const guest: Player = {
+                    _id: guestId,
+                    firstName: 'Noah',
+                    lastName: 'Celuch',
+                    username: 'noah',
+                }
+
+                const game: CreateFullGame = {
+                    points: [
+                        {
+                            teamOnePlayers: [
+                                guest,
+                                {
+                                    _id: new Types.ObjectId(),
+                                    firstName: 'Anson',
+                                    lastName: 'Reppermund',
+                                    username: 'anson',
+                                },
+                            ],
+                        },
+                        {
+                            teamOnePlayers: [
+                                {
+                                    _id: new Types.ObjectId(),
+                                    firstName: 'Thomas',
+                                    lastName: 'Hansen',
+                                    username: 'thomas',
+                                },
+                                {
+                                    _id: new Types.ObjectId(),
+                                    firstName: 'Andrew',
+                                    lastName: 'Thompson',
+                                    username: 'drew',
+                                },
+                            ],
+                        },
+                        {
+                            teamOnePlayers: [
+                                {
+                                    _id: new Types.ObjectId(),
+                                    firstName: 'Joe',
+                                    lastName: 'Molder',
+                                    username: 'joe',
+                                },
+                                guest,
+                            ],
+                        },
+                    ],
+                } as CreateFullGame
+
+                reconcileGuestsOnPoint(map, game)
+                expect(game.points.length).toBe(3)
+                expect(game.points[0].teamOnePlayers.length).toBe(2)
+                expect(game.points[0].teamOnePlayers[0]).toMatchObject(jojah)
+                expect(game.points[1].teamOnePlayers.length).toBe(2)
+                expect(game.points[1].teamOnePlayers[0]).not.toMatchObject(jojah)
+                expect(game.points[1].teamOnePlayers[1]).not.toMatchObject(jojah)
+                expect(game.points[2].teamOnePlayers.length).toBe(2)
+                expect(game.points[2].teamOnePlayers[1]).toMatchObject(jojah)
+            })
+        })
+
+        describe('reconcileGuestOnActions', () => {
+            let reconcileGuestOnActions: Dependencies['fullGame']['helpers']['reconcileGuestsOnActions']
+            beforeAll(() => {
+                reconcileGuestOnActions = fullGame.helpers.reconcileGuestsOnActions
+            })
+
+            it('reconciles player one on action', () => {
+                const guestId = new Types.ObjectId()
+                const map = new Map<string, Player>()
+                const reid: Player = {
+                    _id: new Types.ObjectId(),
+                    firstName: 'Reid',
+                    lastName: 'Duncan',
+                    username: 'reid',
+                }
+                const guest: Player = {
+                    _id: guestId,
+                    firstName: 'Robin',
+                    lastName: 'Maillard',
+                    username: 'robin',
+                }
+                map.set(guestId.toHexString(), reid)
+
+                const game: CreateFullGame = {
+                    points: [
+                        {
+                            actions: [
+                                {
+                                    playerOne: guest,
+                                    actionType: ActionType.PULL,
+                                    tags: [],
+                                },
+                                { actionType: ActionType.TEAM_TWO_SCORE, tags: [] },
+                            ],
+                        },
+                        {
+                            actions: [
+                                {
+                                    playerOne: {
+                                        _id: new Types.ObjectId(),
+                                        firstName: 'Zac',
+                                        lastName: 'Byrnes',
+                                        username: 'zac',
+                                    },
+                                    playerTwo: {
+                                        _id: new Types.ObjectId(),
+                                        firstName: 'Charlie',
+                                        lastName: 'Vukovic',
+                                        username: 'charlie',
+                                    },
+                                    actionType: ActionType.CATCH,
+                                    tags: [],
+                                },
+                                {
+                                    playerOne: guest,
+                                    actionType: ActionType.BLOCK,
+                                    tags: [],
+                                },
+                            ],
+                        },
+                    ],
+                } as unknown as CreateFullGame
+                reconcileGuestOnActions(map, game)
+                expect(game.points[0].actions[0].playerOne).toMatchObject(reid)
+                expect(game.points[1].actions[1].playerOne).toMatchObject(reid)
+            })
+
+            it('reconciles player two on action', () => {
+                const guestId = new Types.ObjectId()
+                const map = new Map<string, Player>()
+                const reid: Player = {
+                    _id: new Types.ObjectId(),
+                    firstName: 'Reid',
+                    lastName: 'Duncan',
+                    username: 'reid',
+                }
+                const guest: Player = {
+                    _id: guestId,
+                    firstName: 'Robin',
+                    lastName: 'Maillard',
+                    username: 'robin',
+                }
+                map.set(guestId.toHexString(), reid)
+
+                const game: CreateFullGame = {
+                    points: [
+                        {
+                            actions: [
+                                {
+                                    playerOne: {
+                                        _id: new Types.ObjectId(),
+                                        firstName: 'Zac',
+                                        lastName: 'Byrnes',
+                                        username: 'zac',
+                                    },
+                                    playerTwo: guest,
+                                    actionType: ActionType.PULL,
+                                    tags: [],
+                                },
+                                { actionType: ActionType.TEAM_TWO_SCORE, tags: [] },
+                            ],
+                        },
+                        {
+                            actions: [
+                                {
+                                    playerOne: {
+                                        _id: new Types.ObjectId(),
+                                        firstName: 'Zac',
+                                        lastName: 'Byrnes',
+                                        username: 'zac',
+                                    },
+                                    playerTwo: {
+                                        _id: new Types.ObjectId(),
+                                        firstName: 'Charlie',
+                                        lastName: 'Vukovic',
+                                        username: 'charlie',
+                                    },
+                                    actionType: ActionType.CATCH,
+                                    tags: [],
+                                },
+                                {
+                                    playerTwo: guest,
+                                    actionType: ActionType.BLOCK,
+                                    tags: [],
+                                },
+                            ],
+                        },
+                    ],
+                } as unknown as CreateFullGame
+                reconcileGuestOnActions(map, game)
+                expect(game.points[0].actions[0].playerTwo).toMatchObject(reid)
+                expect(game.points[0].actions[0].playerOne).not.toMatchObject(reid)
+                expect(game.points[1].actions[1].playerTwo).toMatchObject(reid)
             })
         })
     })
