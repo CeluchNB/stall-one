@@ -4,7 +4,7 @@ import { IActionModel } from '../models/action'
 import { RedisClientType } from './action'
 import { FinishPoint, StartPoint } from '../domains/point/next'
 import { BackPoint } from '../domains/point/back'
-import { FinishGame } from '../domains/game/finish'
+import { FinishGame } from '../domains/game/full'
 import { ITournamentModel } from '../models/tournament'
 import { FullGame } from '../domains/game/full'
 

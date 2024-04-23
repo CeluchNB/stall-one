@@ -1,10 +1,10 @@
-import { container } from '../../../../../src/di'
-import Game from '../../../../../src/models/game'
-import Dependencies from '../../../../../src/types/di'
-import { setUpDatabase, tearDownDatabase, resetDatabase, gameData } from '../../../../fixtures/setup-db'
-import { client } from '../../../../../src/utils/redis'
-import { TeamNumber } from '../../../../../src/types/ultmt'
-import { GameStatus } from '../../../../../src/types/game'
+import { container } from '../../../../src/di'
+import Game from '../../../../src/models/game'
+import Dependencies from '../../../../src/types/di'
+import { setUpDatabase, tearDownDatabase, resetDatabase, gameData } from '../../../fixtures/setup-db'
+import { client } from '../../../../src/utils/redis'
+import { TeamNumber } from '../../../../src/types/ultmt'
+import { GameStatus } from '../../../../src/types/game'
 
 beforeAll(async () => {
     client.connect()

@@ -1,8 +1,8 @@
-import * as Constants from '../../../utils/constants'
-import Dependencies from '../../../types/di'
-import { findByIdOrThrow } from '../../../utils/mongoose'
-import IGame, { GameStatus } from '../../../types/game'
-import { TeamNumber } from '../../../types/ultmt'
+import * as Constants from '../../utils/constants'
+import Dependencies from '../../types/di'
+import { findByIdOrThrow } from '../../utils/mongoose'
+import IGame, { GameStatus } from '../../types/game'
+import { TeamNumber } from '../../types/ultmt'
 
 export const finishGame = ({ gameModel }: Dependencies) => {
     const perform = async (gameId: string, team: TeamNumber) => {
