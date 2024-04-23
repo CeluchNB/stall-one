@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as Constants from '../../../../src/utils/constants'
+import * as UltmtUtils from '../../../../src/utils/ultmt'
 import Action from '../../../../src/models/action'
 import Game from '../../../../src/models/game'
 import Point from '../../../../src/models/point'
@@ -16,11 +17,11 @@ import { client } from '../../../../src/utils/redis'
 import { Types } from 'mongoose'
 import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import jwt, { JwtPayload } from 'jsonwebtoken'
-import { ActionType } from '../../../../src/types/action'
+import { ActionType, ClientAction } from '../../../../src/types/action'
 import { container } from '../../../../src/di'
-import { TeamNumber } from '../../../../src/types/ultmt'
-import { PointStatus } from '../../../../src/types/point'
-import { GameStatus } from '../../../../src/types/game'
+import { Player, TeamNumber } from '../../../../src/types/ultmt'
+import { ClientPoint, PointStatus } from '../../../../src/types/point'
+import { CreateFullGame, GameStatus } from '../../../../src/types/game'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
@@ -48,6 +49,7 @@ afterAll(async () => {
 
 describe('Game Services v2', () => {
     describe('reactivate game', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let reactivateGame: any
         beforeAll(() => {
             reactivateGame = container.resolve('gameServiceV2').reactivateGame
@@ -328,6 +330,7 @@ describe('Game Services v2', () => {
     })
 
     describe('finish', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let finish: any
         beforeAll(() => {
             finish = container.resolve('gameServiceV2').finish
@@ -365,6 +368,99 @@ describe('Game Services v2', () => {
             const game = await Game.create({ ...gameData, teamOneStatus: GameStatus.ACTIVE })
 
             await expect(finish(game._id.toHexString(), TeamNumber.ONE)).rejects.toThrow(Constants.UNABLE_TO_FIND_POINT)
+        })
+    })
+
+    describe('full', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let full: any
+        beforeAll(() => {
+            full = container.resolve('gameServiceV2').full
+        })
+
+        const guestId = new Types.ObjectId()
+        const guest: Player = {
+            _id: guestId,
+            firstName: 'Logan',
+            lastName: 'Call',
+            username: 'logan',
+        }
+        const anil: Player = {
+            _id: new Types.ObjectId(),
+            firstName: 'Anil',
+            lastName: 'Driehuys',
+            username: 'anil',
+        }
+        const team = {
+            _id: new Types.ObjectId(),
+            place: 'PGH',
+            name: 'Tbirds',
+            teamname: 'birds',
+            seasonStart: new Date(),
+            seasonEnd: new Date(),
+        }
+        const user1: Player = {
+            _id: new Types.ObjectId(),
+            firstName: 'Kenny',
+            lastName: 'Furdella',
+            username: 'kenny',
+        }
+        const action1: ClientAction = {
+            playerOne: user1,
+            actionType: ActionType.PULL,
+            tags: ['long'],
+        }
+        const pointOne: ClientPoint = {
+            pointNumber: 1,
+            teamOnePlayers: [],
+            teamOneScore: 1,
+            teamTwoScore: 0,
+            pullingTeam: {
+                name: 'Pulling',
+            },
+            receivingTeam: {
+                name: 'Receiving',
+            },
+            scoringTeam: { name: 'Receiving' },
+            actions: [action1],
+        }
+
+        it('completes successfully', async () => {
+            jest.spyOn(UltmtUtils, 'authenticateManager').mockReturnValueOnce(Promise.resolve(user1))
+            jest.spyOn(UltmtUtils, 'createGuest').mockReturnValueOnce(
+                Promise.resolve({
+                    _id: new Types.ObjectId(),
+                    place: 'Place',
+                    name: 'Name',
+                    teamname: 'placename',
+                    seasonStart: new Date(),
+                    seasonEnd: new Date(),
+                    players: [anil],
+                }),
+            )
+            const gameData: CreateFullGame = {
+                teamOne: team,
+                teamOnePlayers: [
+                    { ...user1, localGuest: false },
+                    { ...guest, localGuest: true },
+                ],
+                points: [pointOne],
+                teamOneScore: 2,
+                teamTwoScore: 0,
+                teamTwo: { name: 'Wind Chill' },
+                teamTwoDefined: false,
+                creator: user1,
+                scoreLimit: 15,
+                halfScore: 7,
+                timeoutPerHalf: 1,
+                floaterTimeout: false,
+                startTime: new Date(),
+                softcapMins: 30,
+                hardcapMins: 45,
+                playersPerPoint: 7,
+            }
+            const result = await full(gameData, 'jwt')
+            expect(result.get(guestId.toHexString())).toMatchObject(anil)
         })
     })
 })

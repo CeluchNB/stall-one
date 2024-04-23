@@ -197,7 +197,7 @@ describe('Create Full Game', () => {
             beforeAll(() => {
                 parseGame = fullGame.helpers.parseGame
             })
-            it('returns expected data', () => {
+            it('returns expected data with team two undefined', () => {
                 const user = {
                     _id: new Types.ObjectId(),
                     firstName: 'First',
@@ -244,6 +244,76 @@ describe('Create Full Game', () => {
                     teamOneStatus: GameStatus.COMPLETE,
                     teamTwoStatus: GameStatus.GUEST,
                 })
+            })
+
+            it('returns expected data with team two defined', () => {
+                const user = {
+                    _id: new Types.ObjectId(),
+                    firstName: 'First',
+                    lastName: 'Last',
+                    username: 'firstlast',
+                }
+                const data = {
+                    teamOne: gameData.teamOne,
+                    teamTwo: { ...gameData.teamTwo, _id: new Types.ObjectId() },
+                    teamTwoDefined: gameData.teamTwoDefined,
+                    scoreLimit: gameData.scoreLimit,
+                    halfScore: gameData.halfScore,
+                    startTime: new Date(gameData.startTime),
+                    softcapMins: gameData.softcapMins,
+                    hardcapMins: gameData.hardcapMins,
+                    playersPerPoint: gameData.playersPerPoint,
+                    timeoutPerHalf: gameData.timeoutPerHalf,
+                    floaterTimeout: gameData.floaterTimeout,
+                    tournament: gameData.tournament,
+                    teamOneScore: gameData.teamOneScore,
+                    teamTwoScore: gameData.teamTwoScore,
+                    teamOnePlayers: gameData.teamOnePlayers.map((p) => ({ ...p, localGuest: false })),
+                    points: [],
+                    creator: gameData.creator,
+                }
+                const result = parseGame(user, data)
+                expect(result).toMatchObject({
+                    creator: user,
+                    teamOne: gameData.teamOne,
+                    teamTwo: gameData.teamTwo,
+                    teamTwoDefined: gameData.teamTwoDefined,
+                    scoreLimit: gameData.scoreLimit,
+                    halfScore: gameData.halfScore,
+                    startTime: new Date(gameData.startTime),
+                    softcapMins: gameData.softcapMins,
+                    hardcapMins: gameData.hardcapMins,
+                    playersPerPoint: gameData.playersPerPoint,
+                    timeoutPerHalf: gameData.timeoutPerHalf,
+                    floaterTimeout: gameData.floaterTimeout,
+                    tournament: gameData.tournament,
+                    teamOneScore: gameData.teamOneScore,
+                    teamTwoScore: gameData.teamTwoScore,
+                    teamOnePlayers: gameData.teamOnePlayers,
+                    teamOneStatus: GameStatus.COMPLETE,
+                    teamTwoStatus: GameStatus.DEFINED,
+                })
+            })
+        })
+
+        describe('isTeamTwoDefined', () => {
+            let isTeamTwoDefined: Dependencies['fullGame']['helpers']['isTeamTwoDefined']
+            beforeAll(() => {
+                isTeamTwoDefined = fullGame.helpers.isTeamTwoDefined
+            })
+
+            it('with defined team', () => {
+                const result = isTeamTwoDefined({
+                    teamTwo: { _id: new Types.ObjectId(), name: 'Name' },
+                } as CreateFullGame)
+                expect(result).toBe(true)
+            })
+
+            it('with undefined team', () => {
+                const result = isTeamTwoDefined({
+                    teamTwo: { name: 'Name' },
+                } as CreateFullGame)
+                expect(result).toBe(false)
             })
         })
 

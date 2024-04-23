@@ -34,3 +34,13 @@ gameRouter.put(
         }
     },
 )
+
+gameRouter.post('/game/full', async (req: Request, res: Response, next) => {
+    try {
+        const jwt = req.headers.authorization?.replace('Bearer ', '') as string
+        const guests = await services.full(req.body.gameData, jwt)
+        return res.status(201).json({ guests: Object.fromEntries(guests) })
+    } catch (e) {
+        next(e)
+    }
+})

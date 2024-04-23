@@ -55,8 +55,12 @@ export const fullGame = ({ gameModel, pointModel, actionModel, tournamentModel, 
             teamTwoScore: gameData.teamTwoScore,
             teamOnePlayers: gameData.teamOnePlayers,
             teamOneStatus: GameStatus.COMPLETE,
-            teamTwoStatus: GameStatus.GUEST, // TODO: DETERMINE IF GUEST OR DEFINED
+            teamTwoStatus: isTeamTwoDefined(gameData) ? GameStatus.DEFINED : GameStatus.GUEST,
         }
+    }
+
+    const isTeamTwoDefined = (gameData: CreateFullGame): boolean => {
+        return !!gameData.teamTwo._id
     }
 
     const findOrCreateTournament = async (data: CreateGame, user: UserResponse) => {
@@ -217,6 +221,7 @@ export const fullGame = ({ gameModel, pointModel, actionModel, tournamentModel, 
         perform,
         helpers: {
             parseGame,
+            isTeamTwoDefined,
             findOrCreateTournament,
             createGuests,
             reconcileGuests,

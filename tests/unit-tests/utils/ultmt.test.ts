@@ -1,6 +1,6 @@
 import * as Constants from '../../../src/utils/constants'
 import axios from 'axios'
-import { getTeam, getUser, authenticateManager } from '../../../src/utils/ultmt'
+import { getTeam, getUser, authenticateManager, createGuest } from '../../../src/utils/ultmt'
 import { Types } from 'mongoose'
 import { ApiError } from '../../../src/types/errors'
 
@@ -107,5 +107,32 @@ describe('test get team', () => {
 
     it('with missing teamid', async () => {
         await expect(getTeam('', '', undefined)).rejects.toThrowError(new ApiError(Constants.UNABLE_TO_FETCH_TEAM, 404))
+    })
+})
+
+describe('test create guest', () => {
+    it('with resolved successful response', async () => {
+        jest.spyOn(axios, 'post').mockReturnValueOnce(Promise.resolve({ data: { team: teamData }, status: 200 }))
+        const result = await createGuest('url', 'apikey', 'jwt', 'team', {
+            _id: new Types.ObjectId(),
+            firstName: 'First',
+            lastName: 'Last',
+            username: 'firstlast',
+            localGuest: true,
+        })
+        expect(result).toMatchObject(teamData)
+    })
+
+    it('with rejected unsuccessful response', async () => {
+        jest.spyOn(axios, 'post').mockReturnValueOnce(Promise.reject({ data: {}, status: 400 }))
+        await expect(
+            createGuest('url', 'apikey', 'jwt', 'team', {
+                _id: new Types.ObjectId(),
+                firstName: 'First',
+                lastName: 'Last',
+                username: 'firstlast',
+                localGuest: true,
+            }),
+        ).rejects.toThrow(Constants.UNABLE_TO_CREATE_GUEST)
     })
 })

@@ -1,10 +1,10 @@
 import * as Constants from '../../utils/constants'
 import { IActionModel } from '../../models/action'
-import IGame from '../../types/game'
+import IGame, { CreateFullGame } from '../../types/game'
 import { IGameModel } from '../../models/game'
 import IPoint from '../../types/point'
 import { IPointModel } from '../../models/point'
-import { TeamNumber, TeamNumberString } from '../../types/ultmt'
+import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
 import { authenticateManager } from '../../utils/ultmt'
 import { findByIdOrThrow } from '../../utils/mongoose'
 import { getRedisAction } from '../../utils/redis'
@@ -21,6 +21,7 @@ export default class GameServices {
     actionModel: IActionModel
     finishPoint: Dependencies['finishPoint']
     finishGame: Dependencies['finishGame']
+    fullGame: Dependencies['fullGame']
     redisClient: RedisClientType
     ultmtUrl: string
     apiKey: string
@@ -34,6 +35,7 @@ export default class GameServices {
         this.apiKey = opts.apiKey
         this.finishPoint = opts.finishPoint
         this.finishGame = opts.finishGame
+        this.fullGame = opts.fullGame
     }
     /**
      * Method to reactivate a game that has been finished or delayed
@@ -104,6 +106,10 @@ export default class GameServices {
         await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
 
         return game
+    }
+
+    full = async (gameData: CreateFullGame, jwt: string): Promise<Map<string, Player>> => {
+        return await this.fullGame.perform(gameData, jwt)
     }
 
     private getLiveActionsForPoint = async (
