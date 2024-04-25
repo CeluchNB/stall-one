@@ -162,22 +162,5 @@ describe('Start Point', () => {
                 expect(value4).toBe('two')
             })
         })
-
-        describe('isTeamOne', () => {
-            let isTeamOne: Dependencies['startPoint']['helpers']['isTeamOne']
-            beforeAll(() => {
-                isTeamOne = startPoint.helpers.isTeamOne
-            })
-
-            it('returns team one case', () => {
-                const result = isTeamOne(TeamNumber.ONE, { teamOne: 'one' }, { teamTwo: 'two' })
-                expect(result).toMatchObject({ teamOne: 'one' })
-            })
-
-            it('returns team two case', () => {
-                const result = isTeamOne(TeamNumber.TWO, { teamOne: 'one' }, { teamTwo: 'two' })
-                expect(result).toMatchObject({ teamTwo: 'two' })
-            })
-        })
     })
 })
