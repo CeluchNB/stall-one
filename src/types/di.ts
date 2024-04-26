@@ -4,9 +4,10 @@ import { IActionModel } from '../models/action'
 import { RedisClientType } from './action'
 import { FinishPoint, StartPoint } from '../domains/point/next'
 import { BackPoint } from '../domains/point/back'
-import { FinishGame } from '../domains/game/full'
+import { FinishGame } from '../domains/game/finish'
 import { ITournamentModel } from '../models/tournament'
 import { FullGame } from '../domains/game/full'
+import { ReenterGame } from '../domains/game/reenter'
 
 interface Dependencies {
     gameModel: IGameModel
@@ -21,6 +22,7 @@ interface Dependencies {
     backPoint: BackPoint
     finishGame: FinishGame
     fullGame: FullGame
+    reenterGame: ReenterGame
 }
 
 export default Dependencies
