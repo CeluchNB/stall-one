@@ -1,13 +1,15 @@
+import * as UltmtUtils from '../../../../src/utils/ultmt'
 import { Types } from 'mongoose'
 import { container } from '../../../../src/di'
 import Point from '../../../../src/models/point'
 import Dependencies from '../../../../src/types/di'
 import { PointStatus } from '../../../../src/types/point'
-import { TeamNumber } from '../../../../src/types/ultmt'
-import { client, saveRedisAction } from '../../../../src/utils/redis'
+import { Player, TeamNumber } from '../../../../src/types/ultmt'
+import { client, getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import { setUpDatabase, tearDownDatabase, resetDatabase, createPointData, gameData } from '../../../fixtures/setup-db'
 import Game from '../../../../src/models/game'
 import { ActionType } from '../../../../src/types/action'
+import Action from '../../../../src/models/action'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
@@ -30,11 +32,105 @@ describe('Reenter Game', () => {
     let reenterGame: Dependencies['reenterGame']
     beforeAll(() => {
         reenterGame = container.resolve('reenterGame')
+        const user1: Player = {
+            _id: new Types.ObjectId(),
+            firstName: 'Kenny',
+            lastName: 'Furdella',
+            username: 'kenny',
+        }
+        jest.spyOn(UltmtUtils, 'authenticateManager').mockReturnValue(Promise.resolve(user1))
     })
 
     describe('perform', () => {
-        it('works', () => {
-            expect(1 + 1).toBe(2)
+        it('reenters a game on an active point', async () => {
+            const game = await Game.create(gameData)
+            const point = await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                teamOneScore: 1,
+                teamTwoScore: 1,
+                pointNumber: 3,
+                teamOneStatus: PointStatus.ACTIVE,
+                teamTwoStatus: PointStatus.FUTURE,
+            })
+            await Point.create({
+                ...createPointData,
+                _id: new Types.ObjectId(),
+                gameId: game._id,
+                teamOneScore: 0,
+                teamTwoScore: 0,
+                pointNumber: 2,
+                teamOneStatus: PointStatus.COMPLETE,
+            })
+
+            await client.set(`${game._id.toHexString()}:${point._id.toHexString()}:one:actions`, 1)
+            await saveRedisAction(
+                client,
+                {
+                    actionNumber: 1,
+                    actionType: ActionType.PULL,
+                    comments: [],
+                    tags: [],
+                    teamNumber: TeamNumber.ONE,
+                },
+                point._id.toHexString(),
+            )
+
+            const result = await reenterGame.perform(game._id.toHexString(), 'userjwt', game.teamOne._id!.toHexString())
+            expect(result.actions?.length).toBe(1)
+            expect(result.actions?.[0].actionType).toBe(ActionType.PULL)
+            expect(result.token.length).toBeGreaterThan(25)
+            expect(result.game._id.toHexString()).toBe(game._id.toHexString())
+            expect(result.point?._id.toHexString()).toBe(point._id.toHexString())
+            expect(result.point?.teamOneStatus).toBe(PointStatus.ACTIVE)
+        })
+
+        it('reenters a game on a complete point', async () => {
+            const game = await Game.create({ ...gameData, teamTwo: { _id: new Types.ObjectId(), name: 'Name' } })
+            const point = await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                teamOneScore: 1,
+                teamTwoScore: 1,
+                pointNumber: 3,
+                teamOneStatus: PointStatus.COMPLETE,
+                teamTwoStatus: PointStatus.COMPLETE,
+            })
+            await Point.create({
+                ...createPointData,
+                _id: new Types.ObjectId(),
+                gameId: game._id,
+                teamOneScore: 0,
+                teamTwoScore: 0,
+                pointNumber: 2,
+                teamOneStatus: PointStatus.COMPLETE,
+                teamTwoStatus: PointStatus.COMPLETE,
+            })
+            await Action.create({
+                actionNumber: 1,
+                actionType: ActionType.PULL,
+                team: game.teamTwo,
+                pointId: point._id,
+            })
+
+            const result = await reenterGame.perform(game._id.toHexString(), 'userjwt', game.teamTwo._id!.toHexString())
+            expect(result.actions?.length).toBe(1)
+            expect(result.actions?.[0].actionType).toBe(ActionType.PULL)
+            expect(result.token.length).toBeGreaterThan(25)
+            expect(result.game._id.toHexString()).toBe(game._id.toHexString())
+            expect(result.point?._id.toHexString()).toBe(point._id.toHexString())
+            expect(result.point?.teamTwoStatus).toBe(PointStatus.ACTIVE)
+            expect(result.point?.teamOneScore).toBe(0)
+            expect(result.point?.teamTwoScore).toBe(0)
+        })
+
+        it('returns game data with unfound point', async () => {
+            const game = await Game.create(gameData)
+            const result = await reenterGame.perform(game._id.toHexString(), 'userjwt', game.teamOne._id!.toHexString())
+            expect(result.actions).toBeUndefined()
+            expect(result.token.length).toBeGreaterThan(25)
+            expect(result.game._id.toHexString()).toBe(game._id.toHexString())
+            expect(result.point).toBeUndefined()
         })
     })
 
@@ -197,16 +293,134 @@ describe('Reenter Game', () => {
             })
         })
 
-        // describe('reactivateCompletePoint', () => {
-        //     let reactivateCompletePoint: Dependencies['reenterGame']['helpers']['reactivateCompletePoint']
-        //     beforeAll(() => {
-        //         reactivateCompletePoint = reenterGame.helpers.reactivateCompletePoint
-        //     })
+        describe('reactivateCompletePoint', () => {
+            let reactivateCompletePoint: Dependencies['reenterGame']['helpers']['reactivateCompletePoint']
+            beforeAll(() => {
+                reactivateCompletePoint = reenterGame.helpers.reactivateCompletePoint
+            })
 
-        //     it('successfully reactivates point', async () => {
+            it('successfully reactivates point for team one', async () => {
+                const game = await Game.create(gameData)
+                const point = await Point.create({
+                    ...createPointData,
+                    gameId: game._id,
+                    teamOneScore: 1,
+                    teamTwoScore: 1,
+                    pointNumber: 3,
+                    teamOneStatus: PointStatus.COMPLETE,
+                    teamTwoStatus: PointStatus.FUTURE,
+                })
+                await Point.create({
+                    ...createPointData,
+                    _id: new Types.ObjectId(),
+                    gameId: game._id,
+                    teamOneScore: 0,
+                    teamTwoScore: 0,
+                    pointNumber: 2,
+                })
+                await Action.create({
+                    actionNumber: 1,
+                    actionType: ActionType.PULL,
+                    team: game.teamOne,
+                    pointId: point._id,
+                })
 
-        //     })
-        // })
+                await reactivateCompletePoint(game, point, TeamNumber.ONE)
+
+                expect(point).toMatchObject({
+                    teamOneStatus: PointStatus.ACTIVE,
+                    teamTwoStatus: PointStatus.FUTURE,
+                    teamOneScore: 0,
+                    teamTwoScore: 0,
+                })
+                const keys = await client.keys('*')
+                expect(keys.length).toBeGreaterThan(3)
+
+                const action = await getRedisAction(client, point._id.toHexString(), 1, TeamNumber.ONE)
+                expect(action.actionType).toBe(ActionType.PULL)
+            })
+
+            it('reactivates point for team two', async () => {
+                const game = await Game.create({ ...gameData, teamTwo: { _id: new Types.ObjectId(), name: 'Name' } })
+                const point = await Point.create({
+                    ...createPointData,
+                    gameId: game._id,
+                    teamOneScore: 1,
+                    teamTwoScore: 1,
+                    pointNumber: 3,
+                    teamOneStatus: PointStatus.COMPLETE,
+                    teamTwoStatus: PointStatus.COMPLETE,
+                })
+                await Point.create({
+                    ...createPointData,
+                    _id: new Types.ObjectId(),
+                    gameId: game._id,
+                    teamOneScore: 0,
+                    teamTwoScore: 0,
+                    pointNumber: 2,
+                })
+                await Action.create({
+                    actionNumber: 1,
+                    actionType: ActionType.PULL,
+                    team: game.teamTwo,
+                    pointId: point._id,
+                })
+
+                await reactivateCompletePoint(game, point, TeamNumber.TWO)
+
+                expect(point).toMatchObject({
+                    teamOneStatus: PointStatus.COMPLETE,
+                    teamTwoStatus: PointStatus.ACTIVE,
+                    teamOneScore: 0,
+                    teamTwoScore: 0,
+                })
+                const keys = await client.keys('*')
+                expect(keys.length).toBeGreaterThan(3)
+
+                const action = await getRedisAction(client, point._id.toHexString(), 1, TeamNumber.TWO)
+                expect(action.actionType).toBe(ActionType.PULL)
+            })
+        })
+
+        describe('updateScore', () => {
+            let updateScore: Dependencies['reenterGame']['helpers']['updateScore']
+            beforeAll(() => {
+                updateScore = helpers.updateScore
+            })
+
+            it('updates score of point with previous point', async () => {
+                const point = await Point.create({
+                    ...createPointData,
+                    pointNumber: 2,
+                    teamOneScore: 7,
+                    teamTwoScore: 7,
+                })
+                await Point.create({
+                    ...createPointData,
+                    _id: new Types.ObjectId(),
+                    pointNumber: 1,
+                    teamOneScore: 0,
+                    teamTwoScore: 0,
+                })
+
+                await updateScore(point.gameId, point)
+                expect(point.teamOneScore).toBe(0)
+                expect(point.teamTwoScore).toBe(0)
+            })
+
+            it('makes no update if previous point does not exist', async () => {
+                const point = await Point.create({
+                    ...createPointData,
+                    pointNumber: 2,
+                    teamOneScore: 7,
+                    teamTwoScore: 7,
+                })
+
+                await updateScore(point.gameId, point)
+                expect(point.teamOneScore).toBe(7)
+                expect(point.teamTwoScore).toBe(7)
+            })
+        })
 
         describe('initializeRedisData', () => {
             let initializeRedisData: Dependencies['reenterGame']['helpers']['initializeRedisData']

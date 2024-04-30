@@ -8,11 +8,19 @@ import IPoint, { PointStatus } from '../../types/point'
 import { Types } from 'mongoose'
 import { getRedisAction, saveRedisAction } from '../../utils/redis'
 import { sendCloudTask } from '../../utils/cloud-tasks'
+import { RedisAction } from '../../types/action'
+import { authenticateManager } from '../../utils/ultmt'
 
-export const reenterGame = ({ gameModel, pointModel, actionModel, redisClient }: Dependencies) => {
-    const perform = async (gameId: string, team: TeamNumber) => {
+export const reenterGame = ({ gameModel, pointModel, actionModel, redisClient, ultmtUrl, apiKey }: Dependencies) => {
+    const perform = async (
+        gameId: string,
+        userJwt: string,
+        teamId: string,
+    ): Promise<{ actions?: RedisAction[]; game: IGame; token: string; point?: IPoint }> => {
+        await authenticateManager(ultmtUrl, apiKey, userJwt, teamId)
         // get game
         const game = await findByIdOrThrow<IGame>(gameId, gameModel, Constants.UNABLE_TO_FIND_GAME)
+        const team = idsAreEqual(game.teamOne._id, teamId) ? TeamNumber.ONE : TeamNumber.TWO
 
         // get active point by team
         const point = await getReentryPoint(game._id, team)
@@ -85,7 +93,9 @@ export const reenterGame = ({ gameModel, pointModel, actionModel, redisClient }:
         // reload actions into redis
         const savePromises = []
         for (const action of savedActions) {
-            savePromises.push(saveRedisAction(redisClient, { ...action, teamNumber: team }, point._id.toHexString()))
+            savePromises.push(
+                saveRedisAction(redisClient, { ...action.toJSON(), teamNumber: team }, point._id.toHexString()),
+            )
         }
         await Promise.all(savePromises)
         // delete actions from db
@@ -93,8 +103,17 @@ export const reenterGame = ({ gameModel, pointModel, actionModel, redisClient }:
         // update team status
         point[teamStatus] = PointStatus.ACTIVE
 
-        // TODO: update score?
+        await updateScore(game._id, point)
     }
+
+    const updateScore = async (gameId: Types.ObjectId, point: IPoint) => {
+        const prevPoint = await pointModel.findOne({ gameId, pointNumber: point.pointNumber - 1 })
+        if (prevPoint) {
+            point.teamOneScore = prevPoint.teamOneScore
+            point.teamTwoScore = prevPoint.teamTwoScore
+        }
+    }
+
     const initializeRedisData = async (game: IGame, point: IPoint, team: TeamNumber, actionCount: number) => {
         const gameId = game._id.toHexString()
         const pointId = point._id.toHexString()
@@ -121,6 +140,7 @@ export const reenterGame = ({ gameModel, pointModel, actionModel, redisClient }:
             getActivePoint,
             getLastCompletePoint,
             reactivateCompletePoint,
+            updateScore,
             initializeRedisData,
             getRedisActionsForPoint,
         },

@@ -349,4 +349,60 @@ describe('Game Routes v2', () => {
             expect(response.body.message).toBe(Constants.UNABLE_TO_FETCH_TEAM)
         })
     })
+
+    describe('PUT /game/:id/reenter', () => {
+        const user1: Player = {
+            _id: new Types.ObjectId(),
+            firstName: 'Kenny',
+            lastName: 'Furdella',
+            username: 'kenny',
+        }
+        beforeAll(() => {
+            jest.spyOn(UltmtUtils, 'authenticateManager').mockReturnValueOnce(Promise.resolve(user1))
+        })
+
+        it('handles success', async () => {
+            const game = await Game.create(gameData)
+            const point = await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                teamOneScore: 1,
+                teamTwoScore: 1,
+                pointNumber: 3,
+                teamOneStatus: PointStatus.ACTIVE,
+                teamTwoStatus: PointStatus.FUTURE,
+            })
+            await Point.create({
+                ...createPointData,
+                _id: new Types.ObjectId(),
+                gameId: game._id,
+                teamOneScore: 0,
+                teamTwoScore: 0,
+                pointNumber: 2,
+                teamOneStatus: PointStatus.COMPLETE,
+            })
+
+            const response = await request(app)
+                .put(`/api/v2/game/${game._id.toHexString()}/reenter`)
+                .set('Authorization', `Bearer userjwt`)
+                .send({ teamId: game.teamOne._id })
+                .expect(200)
+
+            const { game: responseGame, token, point: responsePoint, actions } = response.body
+            expect(responseGame._id).toBe(game._id.toHexString())
+            expect(token.length).toBeGreaterThan(25)
+            expect(responsePoint._id).toBe(point._id.toHexString())
+            expect(actions.length).toBe(0)
+        })
+
+        it('handles errors', async () => {
+            const response = await request(app)
+                .put(`/api/v2/game/${new Types.ObjectId().toHexString()}/reenter`)
+                .set('Authorization', `Bearer userjwt`)
+                .send({ teamId: new Types.ObjectId() })
+                .expect(404)
+
+            expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_GAME)
+        })
+    })
 })

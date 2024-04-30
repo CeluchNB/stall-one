@@ -48,6 +48,12 @@ afterAll(async () => {
 })
 
 describe('Game Services v2', () => {
+    const user1: Player = {
+        _id: new Types.ObjectId(),
+        firstName: 'Kenny',
+        lastName: 'Furdella',
+        username: 'kenny',
+    }
     describe('reactivate game', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let reactivateGame: any
@@ -399,12 +405,7 @@ describe('Game Services v2', () => {
             seasonStart: new Date(),
             seasonEnd: new Date(),
         }
-        const user1: Player = {
-            _id: new Types.ObjectId(),
-            firstName: 'Kenny',
-            lastName: 'Furdella',
-            username: 'kenny',
-        }
+
         const action1: ClientAction = {
             playerOne: user1,
             actionType: ActionType.PULL,
@@ -461,6 +462,23 @@ describe('Game Services v2', () => {
             }
             const result = await full(gameData, 'jwt')
             expect(result.get(guestId.toHexString())).toMatchObject(anil)
+        })
+    })
+
+    describe('reenter', () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let reenter: any
+        beforeAll(() => {
+            reenter = container.resolve('gameServiceV2').reenter
+            jest.spyOn(UltmtUtils, 'authenticateManager').mockReturnValueOnce(Promise.resolve(user1))
+        })
+        it('completes successfully', async () => {
+            const game = await Game.create(gameData)
+            const result = await reenter(game._id.toHexString(), 'userjwt', game.teamOne._id!.toHexString())
+            expect(result.actions).toBeUndefined()
+            expect(result.token.length).toBeGreaterThan(25)
+            expect(result.game._id.toHexString()).toBe(game._id.toHexString())
+            expect(result.point).toBeUndefined()
         })
     })
 })

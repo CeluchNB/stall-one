@@ -56,7 +56,7 @@ const team = {
 
 describe('PUT /reconcile-guest', () => {
     it('handles success', async () => {
-        await Game.create({
+        const game = await Game.create({
             ...createData,
             teamOne: team,
             teamOnePlayers: [user1, guest, user2],
@@ -72,7 +72,7 @@ describe('PUT /reconcile-guest', () => {
             })
             .expect(200)
 
-        const gameResult = await Game.findOne()
+        const gameResult = await Game.findById(game._id)
         expect(gameResult?.teamOnePlayers.length).toBe(3)
         expect(gameResult?.teamOnePlayers).toEqual(expect.arrayContaining([expect.objectContaining(realUser)]))
     })

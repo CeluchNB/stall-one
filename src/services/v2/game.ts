@@ -22,6 +22,7 @@ export default class GameServices {
     finishPoint: Dependencies['finishPoint']
     finishGame: Dependencies['finishGame']
     fullGame: Dependencies['fullGame']
+    reenterGame: Dependencies['reenterGame']
     redisClient: RedisClientType
     ultmtUrl: string
     apiKey: string
@@ -36,6 +37,7 @@ export default class GameServices {
         this.finishPoint = opts.finishPoint
         this.finishGame = opts.finishGame
         this.fullGame = opts.fullGame
+        this.reenterGame = opts.reenterGame
     }
     /**
      * Method to reactivate a game that has been finished or delayed
@@ -110,6 +112,10 @@ export default class GameServices {
 
     full = async (gameData: CreateFullGame, jwt: string): Promise<Map<string, Player>> => {
         return await this.fullGame.perform(gameData, jwt)
+    }
+
+    reenter = async (gameId: string, userJwt: string, teamId: string) => {
+        return await this.reenterGame.perform(gameId, userJwt, teamId)
     }
 
     private getLiveActionsForPoint = async (

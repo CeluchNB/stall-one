@@ -44,3 +44,13 @@ gameRouter.post('/game/full', async (req: Request, res: Response, next) => {
         next(e)
     }
 })
+
+gameRouter.put('/game/:id/reenter', async (req: Request, res: Response, next) => {
+    try {
+        const jwt = req.headers?.authorization?.replace('Bearer ', '') as string
+        const result = await services.reenter(req.params.id, jwt, req.body.teamId as string)
+        return res.json(result)
+    } catch (e) {
+        next(e)
+    }
+})
