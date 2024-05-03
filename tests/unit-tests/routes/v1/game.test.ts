@@ -11,7 +11,7 @@ import { ApiError } from '../../../../src/types/errors'
 import { Team, TeamResponse } from '../../../../src/types/ultmt'
 import Action from '../../../../src/models/action'
 import Point from '../../../../src/models/point'
-import { CreateFullGame } from '../../../../src/types/game'
+import { CreateFullGame, GameStatus } from '../../../../src/types/game'
 import { ActionType } from '../../../../src/types/action'
 import { Server } from 'http'
 
@@ -577,7 +577,7 @@ describe('test /GET game points', () => {
     })
 })
 
-describe('test GET search games', () => {
+describe('test /GET search games', () => {
     const gameOneData = {
         creator: {
             _id: new Types.ObjectId(),
@@ -597,6 +597,7 @@ describe('test GET search games', () => {
         },
         startTime: new Date('2020-01-01'),
         teamOneActive: true,
+        teamOneStatus: GameStatus.ACTIVE,
         tournament: {
             name: 'Mid-Atlantic Regionals 2020',
             eventId: 'mareg20',
@@ -621,6 +622,7 @@ describe('test GET search games', () => {
         },
         startTime: new Date('2021-06-01'),
         teamOneActive: true,
+        teamOneStatus: GameStatus.ACTIVE,
         tournament: {
             name: 'US Open 2021',
             eventId: 'usopen21',
@@ -644,6 +646,7 @@ describe('test GET search games', () => {
             teamname: 'tsgh',
         },
         teamOneActive: false,
+        teamOneStatus: GameStatus.COMPLETE,
         startTime: new Date('2022-03-01'),
         tournament: {
             name: 'Philly Open',

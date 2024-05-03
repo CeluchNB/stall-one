@@ -7,6 +7,10 @@ export const gameRouter = Router()
 
 const services = container.resolve('gameServiceV2')
 
+/**
+ * @deprecated
+ * This endpoint has been deprecated in favor of the /reenter endpoint
+ */
 gameRouter.put(
     '/game/:id/reactivate',
     param('id').escape().isString(),

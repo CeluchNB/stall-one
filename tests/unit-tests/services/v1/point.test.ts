@@ -19,8 +19,8 @@ import Action from '../../../../src/models/action'
 import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import { ActionType, RedisAction } from '../../../../src/types/action'
 import { getActionBaseKey } from '../../../../src/utils/utils'
-import IGame from '../../../../src/types/game'
-import IPoint from '../../../../src/types/point'
+import IGame, { GameStatus } from '../../../../src/types/game'
+import IPoint, { PointStatus } from '../../../../src/types/point'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 jest.mock('../../../../src/background/v1/point', () => {
@@ -584,6 +584,7 @@ describe('test finish point', () => {
         const point = await Point.create(createPointData)
         game.teamTwoActive = true
         game.teamTwoDefined = true
+        game.teamTwoStatus = GameStatus.ACTIVE
         game.points.push(point._id)
         await game.save()
 
@@ -676,8 +677,10 @@ describe('test finish point', () => {
         const point = await Point.create(createPointData)
         game.points.push(point._id)
         game.teamTwoActive = false
+        game.teamTwoStatus = GameStatus.COMPLETE
         await game.save()
         point.teamTwoActive = false
+        point.teamTwoStatus = PointStatus.COMPLETE
         await point.save()
 
         const firstAction: RedisAction = {
@@ -734,6 +737,7 @@ describe('test finish point', () => {
         })
         point.teamOneActions.push(action._id)
         point.teamOneActive = false
+        point.teamOneStatus = PointStatus.COMPLETE
         await point.save()
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:two:actions`, 2)
@@ -968,6 +972,7 @@ describe('test delete point', () => {
         const point = await Point.create(createPointData)
         game.points.push(point._id)
         game.teamTwoActive = true
+        game.teamTwoStatus = GameStatus.ACTIVE
         await game.save()
 
         await expect(

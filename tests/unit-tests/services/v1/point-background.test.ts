@@ -36,6 +36,7 @@ describe('handles finish point background service', () => {
         })
         game.teamTwoActive = false
         game.teamTwoDefined = false
+        game.teamTwoStatus = GameStatus.GUEST
         game.points.push(point._id)
         await game.save()
 

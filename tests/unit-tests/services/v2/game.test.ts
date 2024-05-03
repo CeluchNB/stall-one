@@ -119,6 +119,8 @@ describe('Game Services v2', () => {
                 scoringTeam: teamOne,
                 teamOneActive: false,
                 teamTwoActive: false,
+                teamOneStatus: PointStatus.COMPLETE,
+                teamTwoStatus: PointStatus.COMPLETE,
                 teamOneActions: [action11._id, action12._id, action13._id],
                 teamTwoActions: [action21._id, action22._id],
             })
@@ -133,6 +135,8 @@ describe('Game Services v2', () => {
                 scoringTeam: undefined,
                 teamOneActive: true,
                 teamTwoActive: true,
+                teamOneStatus: PointStatus.ACTIVE,
+                teamTwoStatus: PointStatus.ACTIVE,
                 teamOneActions: [],
                 teamTwoActions: [],
             })
@@ -166,6 +170,8 @@ describe('Game Services v2', () => {
                 teamTwoDefined: true,
                 teamTwoActive: false,
                 teamOneActive: false,
+                teamOneStatus: GameStatus.COMPLETE,
+                teamTwoStatus: GameStatus.COMPLETE,
                 scoreLimit: 15,
                 halfScore: 8,
                 startTime: new Date(),
@@ -186,6 +192,9 @@ describe('Game Services v2', () => {
             const game = await Game.findById(result.game._id)
             expect(result.game).toMatchObject(game!.toJSON())
             expect(game?.teamOneActive).toBe(true)
+            expect(game?.teamOneStatus).toBe(GameStatus.ACTIVE)
+            expect(game?.teamTwoActive).toBe(false)
+            expect(game?.teamTwoStatus).toBe(GameStatus.COMPLETE)
 
             const payload = jwt.verify(result.token, process.env.JWT_SECRET as string) as JwtPayload
             expect(payload.sub).toBe(game!._id.toString())
@@ -204,9 +213,12 @@ describe('Game Services v2', () => {
 
             expect(result.team).toBe('two')
 
-            const game = await Game.findOne({})
+            const game = await Game.findById(result.game._id)
             expect(result.game).toMatchObject(game!.toJSON())
+            expect(game?.teamOneActive).toBe(false)
+            expect(game?.teamOneStatus).toBe(GameStatus.COMPLETE)
             expect(game?.teamTwoActive).toBe(true)
+            expect(game?.teamTwoStatus).toBe(GameStatus.ACTIVE)
 
             const payload = jwt.verify(result.token, process.env.JWT_SECRET as string) as JwtPayload
             expect(payload.sub).toBe(game!._id.toString())
@@ -231,6 +243,8 @@ describe('Game Services v2', () => {
                 teamTwoDefined: true,
                 teamTwoActive: false,
                 teamOneActive: false,
+                teamOneStatus: GameStatus.COMPLETE,
+                teamTwoStatus: GameStatus.COMPLETE,
                 scoreLimit: 15,
                 halfScore: 8,
                 startTime: new Date(),
@@ -246,7 +260,11 @@ describe('Game Services v2', () => {
 
             expect(result.team).toBe('one')
 
-            expect(result.game).toMatchObject({ ...game.toJSON(), teamOneActive: true })
+            expect(result.game).toMatchObject({
+                ...game.toJSON(),
+                teamOneActive: true,
+                teamOneStatus: GameStatus.ACTIVE,
+            })
 
             const payload = jwt.verify(result.token, process.env.JWT_SECRET as string) as JwtPayload
             expect(payload.sub).toBe(game._id.toString())
@@ -272,6 +290,8 @@ describe('Game Services v2', () => {
                 teamTwoDefined: true,
                 teamTwoActive: false,
                 teamOneActive: false,
+                teamOneStatus: GameStatus.COMPLETE,
+                teamTwoStatus: GameStatus.COMPLETE,
                 scoreLimit: 15,
                 halfScore: 8,
                 startTime: new Date(),
@@ -287,7 +307,11 @@ describe('Game Services v2', () => {
 
             expect(result.team).toBe('two')
 
-            expect(result.game).toMatchObject({ ...game.toJSON(), teamTwoActive: true })
+            expect(result.game).toMatchObject({
+                ...game.toJSON(),
+                teamTwoActive: true,
+                teamTwoStatus: GameStatus.ACTIVE,
+            })
 
             const payload = jwt.verify(result.token, process.env.JWT_SECRET as string) as JwtPayload
             expect(payload.sub).toBe(game!._id.toString())
@@ -311,6 +335,8 @@ describe('Game Services v2', () => {
                 teamTwoDefined: true,
                 teamTwoActive: false,
                 teamOneActive: false,
+                teamOneStatus: GameStatus.COMPLETE,
+                teamTwoStatus: GameStatus.COMPLETE,
                 scoreLimit: 15,
                 halfScore: 8,
                 startTime: new Date(),
@@ -324,7 +350,11 @@ describe('Game Services v2', () => {
 
             const result = await reactivateGame(game._id.toHexString(), 'jwt', teamOne._id.toHexString())
 
-            expect(result.game).toMatchObject({ ...game.toJSON(), teamOneActive: true })
+            expect(result.game).toMatchObject({
+                ...game.toJSON(),
+                teamOneActive: true,
+                teamOneStatus: GameStatus.ACTIVE,
+            })
             expect(result.team).toBe('one')
             expect(result.activePoint).toBeUndefined()
             expect(result.actions).toMatchObject([])

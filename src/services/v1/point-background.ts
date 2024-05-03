@@ -7,7 +7,7 @@ import { sendCloudTask } from '../../utils/cloud-tasks'
 import { findByIdOrThrow } from '../../utils/mongoose'
 import { deleteRedisAction, getClient, getRedisAction } from '../../utils/redis'
 import { TeamNumber, TeamNumberString } from '../../types/ultmt'
-import IGame from '../../types/game'
+import IGame, { GameStatus } from '../../types/game'
 import { RedisAction } from '../../types/action'
 import { pointIsComplete } from '../../utils/point'
 
@@ -74,7 +74,7 @@ export default class PointBackgroundServices {
         const pointId = point._id.toHexString()
 
         await redisClient.del(`${gameId}:${pointId}:${team}:actions`)
-        if (!game.teamTwoActive) {
+        if (game.teamTwoStatus !== GameStatus.ACTIVE) {
             await redisClient.del(`${gameId}:${pointId}:two:actions`)
         }
 

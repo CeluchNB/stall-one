@@ -1,8 +1,8 @@
 import * as Constants from '../../utils/constants'
 import { IActionModel } from '../../models/action'
-import IGame, { CreateFullGame } from '../../types/game'
+import IGame, { CreateFullGame, GameStatus } from '../../types/game'
 import { IGameModel } from '../../models/game'
-import IPoint from '../../types/point'
+import IPoint, { PointStatus } from '../../types/point'
 import { IPointModel } from '../../models/point'
 import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
 import { authenticateManager } from '../../utils/ultmt'
@@ -44,6 +44,9 @@ export default class GameServices {
      * @param gameId id of game to reactivate
      * @param userJwt user to validate as team manager
      * @param teamId team that is in game
+     *
+     * @deprecated
+     * This endpoint has been deprecated in favor of the /reenter endpoint
      */
     reactivateGame = async (gameId: string, userJwt: string, teamId: string) => {
         await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, teamId)
@@ -54,8 +57,10 @@ export default class GameServices {
 
         if (team === 'one') {
             game.teamOneActive = true
+            game.teamOneStatus = GameStatus.ACTIVE
         } else if (team === 'two') {
             game.teamTwoActive = true
+            game.teamTwoStatus = GameStatus.ACTIVE
         }
         await game.save()
 
@@ -69,7 +74,10 @@ export default class GameServices {
         }
 
         const actions = []
-        if ((team === 'one' && !activePoint.teamOneActive) || (team === 'two' && !activePoint.teamTwoActive)) {
+        if (
+            (team === 'one' && activePoint.teamOneStatus !== PointStatus.ACTIVE) ||
+            (team === 'two' && activePoint.teamTwoStatus !== PointStatus.ACTIVE)
+        ) {
             // reactivate point if it was previously inactive
             const pointService = new PointServices(this.pointModel, this.gameModel, this.actionModel, this.redisClient)
             activePoint = await pointService.reactivatePoint(
@@ -92,7 +100,6 @@ export default class GameServices {
         if (!lastPoint) throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
 
         await this.finishPoint.perform(gameId, team, lastPoint._id.toHexString())
-        // TODO: game finish must happen at same time as point finish
         await sendCloudTask(
             `/api/v1/point/${lastPoint._id}/background-finish`,
             {
@@ -105,7 +112,7 @@ export default class GameServices {
         )
 
         const game = await this.finishGame.perform(gameId, team)
-        await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
+        await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, { pointTotal: lastPoint.pointNumber }, 'PUT')
 
         return game
     }

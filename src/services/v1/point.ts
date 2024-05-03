@@ -3,12 +3,12 @@ import { IPointModel } from '../../models/point'
 import { IGameModel } from '../../models/game'
 import { Player, TeamNumber, TeamNumberString } from '../../types/ultmt'
 import { ApiError } from '../../types/errors'
-import IPoint from '../../types/point'
+import IPoint, { PointStatus } from '../../types/point'
 import IAction, { ActionType, RedisAction, RedisClientType } from '../../types/action'
 import { IActionModel } from '../../models/action'
 import { getRedisAction, saveRedisAction } from '../../utils/redis'
 import { findByIdOrThrow, idsAreEqual } from '../../utils/mongoose'
-import IGame from '../../types/game'
+import IGame, { GameStatus } from '../../types/game'
 import { sendCloudTask } from '../../utils/cloud-tasks'
 // import { finishPointQueue } from '../../background/v1'
 
@@ -78,7 +78,9 @@ export default class PointServices {
             teamTwoActivePlayers: [],
             teamOneScore: game.teamOneScore,
             teamTwoScore: game.teamTwoScore,
+            teamOneStatus: PointStatus.ACTIVE,
             teamTwoActive: game.teamTwoActive,
+            teamTwoStatus: game.teamTwoStatus === GameStatus.ACTIVE ? PointStatus.ACTIVE : PointStatus.FUTURE,
             pullingTeam: pullingTeam === TeamNumber.ONE ? game.teamOne : game.teamTwo,
             receivingTeam: pullingTeam === TeamNumber.ONE ? game.teamTwo : game.teamOne,
             gameId: game._id,
@@ -205,7 +207,10 @@ export default class PointServices {
             throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
-        if ((!point.teamOneActive && team === TeamNumber.ONE) || (!point.teamTwoActive && team === TeamNumber.TWO)) {
+        if (
+            (point.teamOneStatus === PointStatus.COMPLETE && team === TeamNumber.ONE) ||
+            (point.teamTwoStatus === PointStatus.COMPLETE && team === TeamNumber.TWO)
+        ) {
             return point
         }
 
@@ -249,8 +254,10 @@ export default class PointServices {
 
         if (team === TeamNumber.ONE) {
             point.teamOneActive = false
+            point.teamOneStatus = PointStatus.COMPLETE
         } else {
             point.teamTwoActive = false
+            point.teamTwoStatus = PointStatus.COMPLETE
         }
 
         const updatedPoint = await point.save()
@@ -286,7 +293,10 @@ export default class PointServices {
         }
 
         // cannot delete if other team could be editing point
-        if ((team === TeamNumber.ONE && game.teamTwoActive) || (team === TeamNumber.TWO && game.teamOneActive)) {
+        if (
+            (team === TeamNumber.ONE && game.teamTwoStatus === GameStatus.ACTIVE) ||
+            (team === TeamNumber.TWO && game.teamOneStatus === GameStatus.ACTIVE)
+        ) {
             throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400)
         }
 
@@ -333,7 +343,9 @@ export default class PointServices {
 
         if (team === TeamNumber.ONE) {
             game.teamOneActive = true
+            game.teamOneStatus = GameStatus.ACTIVE
             point.teamOneActive = true
+            point.teamOneStatus = PointStatus.ACTIVE
             // load actions back into redis
             const actions = await this.actionModel.where({ _id: { $in: point.teamOneActions } })
             await this.saveActions(actions, gameId, pointId, team)
@@ -344,7 +356,9 @@ export default class PointServices {
             point.teamOneActions = []
         } else {
             game.teamTwoActive = true
+            game.teamTwoStatus = GameStatus.ACTIVE
             point.teamTwoActive = true
+            point.teamTwoStatus = PointStatus.ACTIVE
             // load actions back into redis
             const actions = await this.actionModel.where({ _id: { $in: point.teamTwoActions } })
             await this.saveActions(actions, gameId, pointId, team)

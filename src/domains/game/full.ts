@@ -32,7 +32,7 @@ export const fullGame = ({ gameModel, pointModel, actionModel, tournamentModel, 
         await uploadPoints(gameData, game._id)
 
         await game.save()
-        await sendCloudTask(`/api/v1/stats/game/finish/${game._id}`, {}, 'PUT')
+        await sendCloudTask(`/api/v1/stats/game/finish/${game._id}`, { pointTotal: gameData.points.length }, 'PUT')
         return guestMap
     }
 

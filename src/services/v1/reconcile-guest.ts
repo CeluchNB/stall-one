@@ -6,6 +6,7 @@ import IGame from '../../types/game'
 import { Player } from '../../types/ultmt'
 import { idsAreEqual } from '../../utils/mongoose'
 import { getClient, getRedisAction, saveRedisAction } from '../../utils/redis'
+import { PointStatus } from '../../types/point'
 
 export const reconcileGuest = async (teamIds: string[], guestId: string, user: Player) => {
     const teamOneGames = await Game.find({ 'teamOne._id': teamIds })
@@ -60,7 +61,7 @@ export const reconcilePoints = async (
     const playerList = team === 'one' ? 'teamOnePlayers' : 'teamTwoPlayers'
     const activePlayerList = team === 'one' ? 'teamOneActivePlayers' : 'teamTwoActivePlayers'
     const actionList = team === 'one' ? 'teamOneActions' : 'teamTwoActions'
-    const activeBool = team === 'one' ? 'teamOneActive' : 'teamTwoActive'
+    const statusBool = team === 'one' ? 'teamOneStatus' : 'teamTwoStatus'
 
     const savedActionIds = []
 
@@ -72,7 +73,7 @@ export const reconcilePoints = async (
             replacePlayerInList(point[playerList], guestId, user)
             replacePlayerInList(point[activePlayerList], guestId, user)
 
-            if (!point[activeBool]) {
+            if (point[statusBool] !== PointStatus.ACTIVE) {
                 savedActionIds.push(...point[actionList])
             } else {
                 livePointMap[gameId].push(point._id)

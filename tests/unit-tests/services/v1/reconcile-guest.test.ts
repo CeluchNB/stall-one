@@ -14,6 +14,7 @@ import Point from '../../../../src/models/point'
 import Action from '../../../../src/models/action'
 import { getRedisAction, saveRedisAction, saveRedisComment } from '../../../../src/utils/redis'
 import { ActionType } from '../../../../src/types/action'
+import { PointStatus } from '../../../../src/types/point'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -148,6 +149,7 @@ describe('Reconcile guest pieces', () => {
                 teamOneScore: 0,
                 teamTwoScore: 1,
                 teamOneActive: true,
+                teamOneStatus: PointStatus.ACTIVE,
                 teamOneActions: [new Types.ObjectId(), new Types.ObjectId()],
                 teamOnePlayers: [user1, guest, user2],
                 teamOneActivePlayers: [user1, guest, user2],
@@ -466,6 +468,8 @@ describe('reconcileGuest', () => {
             teamOneScore: 0,
             teamTwoScore: 1,
             teamOneActive: false,
+            teamOneStatus: PointStatus.COMPLETE,
+            teamTwoStatus: PointStatus.COMPLETE,
             teamOneActions: [action1._id, action2._id, action3._id],
             teamOnePlayers: [guest, user1, user2],
             teamOneActivePlayers: [user1, guest, user2],
@@ -478,6 +482,8 @@ describe('reconcileGuest', () => {
             teamOneScore: 0,
             teamTwoScore: 1,
             teamOneActive: true,
+            teamOneStatus: PointStatus.ACTIVE,
+            teamTwoStatus: PointStatus.COMPLETE,
             teamOneActions: [],
             teamOnePlayers: [user1, guest, user2],
             teamOneActivePlayers: [guest, user1, user2],
@@ -491,6 +497,8 @@ describe('reconcileGuest', () => {
             teamOneScore: 0,
             teamTwoScore: 1,
             teamTwoActive: false,
+            teamOneStatus: PointStatus.FUTURE,
+            teamTwoStatus: PointStatus.COMPLETE,
             teamTwoActions: [action4._id, action5._id, action6._id],
             teamTwoPlayers: [user1, guest, user2],
             teamTwoActivePlayers: [guest, user1, user2],
@@ -503,6 +511,8 @@ describe('reconcileGuest', () => {
             teamOneScore: 0,
             teamTwoScore: 1,
             teamTwoActive: true,
+            teamOneStatus: PointStatus.FUTURE,
+            teamTwoStatus: PointStatus.ACTIVE,
             teamTwoActions: [],
             teamTwoPlayers: [user1, guest, user2],
             teamTwoActivePlayers: [guest, user1, user2],

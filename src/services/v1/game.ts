@@ -1,6 +1,6 @@
 import * as Constants from '../../utils/constants'
 import Game, { IGameModel } from '../../models/game'
-import IGame, { CreateFullGame, CreateGame, UpdateGame, updateGameKeys } from '../../types/game'
+import IGame, { CreateFullGame, CreateGame, GameStatus, UpdateGame, updateGameKeys } from '../../types/game'
 import { ApiError } from '../../types/errors'
 import randomstring from 'randomstring'
 import { Player, TeamNumber, TeamNumberString, UserResponse } from '../../types/ultmt'
@@ -9,7 +9,7 @@ import { authenticateManager, getTeam, parseUser } from '../../utils/ultmt'
 import { IPointModel } from '../../models/point'
 import { IActionModel } from '../../models/action'
 import { FilterQuery, Types } from 'mongoose'
-import IPoint from '../../types/point'
+import IPoint, { PointStatus } from '../../types/point'
 import { sendCloudTask } from '../../utils/cloud-tasks'
 import IAction from '../../types/action'
 import { ITournamentModel } from '../../models/tournament'
@@ -155,6 +155,7 @@ export default class GameServices {
 
         const token = game.getToken('two')
         game.teamTwoActive = true
+        game.teamTwoStatus = GameStatus.ACTIVE
         game.teamTwoJoined = true
         await game.save()
 
@@ -179,7 +180,7 @@ export default class GameServices {
         }
         if (team === TeamNumber.ONE) {
             game.teamOnePlayers.push(playerData)
-        } else if (game.teamTwoActive) {
+        } else if (game.teamTwoStatus === GameStatus.ACTIVE) {
             game.teamTwoPlayers.push(playerData)
         } else {
             throw new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400)
@@ -201,12 +202,15 @@ export default class GameServices {
 
         if (team === TeamNumber.ONE) {
             game.teamOneActive = false
+            game.teamOneStatus = GameStatus.COMPLETE
         } else if (team === TeamNumber.TWO) {
             game.teamTwoActive = false
+            game.teamTwoStatus = GameStatus.COMPLETE
         }
 
         await game.save()
-        await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
+        // TODO: query for points total in new way?
+        await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, { pointTotal: game.points.length }, 'PUT')
 
         return game
     }
@@ -239,8 +243,10 @@ export default class GameServices {
         const token = game.getToken(team)
         if (team === 'one') {
             game.teamOneActive = true
+            game.teamOneStatus = GameStatus.ACTIVE
         } else {
             game.teamTwoActive = true
+            game.teamTwoStatus = GameStatus.ACTIVE
         }
         await game.save()
 
@@ -392,9 +398,12 @@ export default class GameServices {
         }
         if (live !== undefined && live !== null) {
             if (live) {
-                filter['$and'] = [{ $or: [{ teamOneActive: true }, { teamTwoActive: true }] }]
+                filter['$and'] = [{ $or: [{ teamOneStatus: GameStatus.ACTIVE }, { teamTwoStatus: GameStatus.ACTIVE }] }]
             } else {
-                filter['$and'] = [{ teamOneActive: false }, { teamTwoActive: false }]
+                filter['$and'] = [
+                    { teamOneStatus: GameStatus.COMPLETE },
+                    { teamTwoStatus: { $not: { $eq: GameStatus.ACTIVE } } },
+                ]
             }
         }
         if (after) {
@@ -450,6 +459,8 @@ export default class GameServices {
             teamOnePlayers: gameData.teamOnePlayers,
             teamOneActive: false,
             teamTwoActive: false,
+            teamOneStatus: GameStatus.COMPLETE,
+            teamTwoStatus: gameData.teamTwo._id ? GameStatus.DEFINED : GameStatus.GUEST,
         }
 
         await this.findOrCreateTournament(safeData, user)
@@ -463,8 +474,8 @@ export default class GameServices {
                 ...p,
                 teamOneActive: false,
                 teamTwoActive: false,
-                teamOneStatus: 'complete',
-                teamTwoStatus: 'future',
+                teamOneStatus: PointStatus.COMPLETE,
+                teamTwoStatus: PointStatus.FUTURE,
                 gameId: game._id,
             })
             const actions = []
@@ -484,7 +495,7 @@ export default class GameServices {
         }
 
         await game.save()
-        await sendCloudTask(`/api/v1/stats/game/finish/${game._id}`, {}, 'PUT')
+        await sendCloudTask(`/api/v1/stats/game/finish/${game._id}`, { pointTotal: points.length }, 'PUT')
         return game
     }
 
@@ -517,10 +528,12 @@ export default class GameServices {
 
         await createStatsGame(game)
 
+        // TODO: query points with new method
         for (const pointId of game.points) {
             const point = await this.pointModel.findById(pointId)
 
-            if (!point || point.teamOneActive || point.teamTwoActive) continue
+            if (!point || point.teamOneStatus === PointStatus.ACTIVE || point.teamTwoStatus === PointStatus.ACTIVE)
+                continue
 
             const actionIds = game.teamOne._id?.equals(teamId) ? point?.teamOneActions : point?.teamTwoActions
             const actions = await this.actionModel.find({ _id: { $in: actionIds } })
@@ -528,8 +541,8 @@ export default class GameServices {
             await createStatsPoint(point, gameId, actions)
         }
 
-        if (!game.teamOneActive && !game.teamTwoActive) {
-            await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, {}, 'PUT')
+        if (game.teamOneStatus !== GameStatus.ACTIVE && game.teamTwoStatus !== GameStatus.ACTIVE) {
+            await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, { pointTotal: game.points.length }, 'PUT')
         }
     }
 
@@ -548,7 +561,7 @@ export default class GameServices {
 
         if (teamNumber === TeamNumber.ONE) {
             game.teamOnePlayers = team.players
-        } else if (game.teamTwoActive) {
+        } else if (game.teamTwoStatus === GameStatus.ACTIVE) {
             game.teamTwoPlayers = team.players
         } else {
             throw new ApiError(Constants.UNABLE_TO_ADD_PLAYER, 400)

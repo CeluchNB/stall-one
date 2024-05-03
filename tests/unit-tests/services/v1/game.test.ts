@@ -12,7 +12,7 @@ import {
 import GameServices from '../../../../src/services/v1/game'
 import Game from '../../../../src/models/game'
 import { ApiError } from '../../../../src/types/errors'
-import { CreateFullGame, CreateGame } from '../../../../src/types/game'
+import { CreateFullGame, CreateGame, GameStatus } from '../../../../src/types/game'
 import { Team, TeamNumber, TeamResponse } from '../../../../src/types/ultmt'
 import { Types } from 'mongoose'
 import jwt, { JwtPayload } from 'jsonwebtoken'
@@ -489,6 +489,7 @@ describe('test add guest player to team', () => {
         const game = await Game.create(gameData)
         game.teamTwoActive = true
         game.teamTwoDefined = true
+        game.teamTwoStatus = GameStatus.ACTIVE
         await game.save()
 
         const gameResult = await services.addGuestPlayer(game._id.toString(), TeamNumber.TWO, {
@@ -1098,6 +1099,7 @@ describe('test search', () => {
         },
         startTime: new Date('2020-01-01'),
         teamOneActive: true,
+        teamOneStatus: GameStatus.ACTIVE,
         tournament: {
             name: 'Mid-Atlantic Regionals 2020',
             eventId: 'mareg20',
@@ -1122,6 +1124,7 @@ describe('test search', () => {
         },
         startTime: new Date('2021-06-01'),
         teamOneActive: false,
+        teamOneStatus: GameStatus.COMPLETE,
         tournament: {
             name: 'US Open 2021',
             eventId: 'usopen21',
@@ -1144,6 +1147,7 @@ describe('test search', () => {
             name: 'Truck Stop',
             teamname: 'tsgh',
         },
+        teamTwoStatus: GameStatus.ACTIVE,
         startTime: new Date('2022-03-01'),
         tournament: {
             name: 'Philly Open',
@@ -1822,12 +1826,14 @@ describe('test rebuild full stats for game', () => {
         const game = await Game.create({ ...createData, _id: gameId })
         game.points = [point1._id, point2._id, point3._id]
         game.teamOneActive = false
+        game.teamOneStatus = GameStatus.COMPLETE
         game.teamTwoActive = false
+        game.teamTwoStatus = GameStatus.GUEST
         await game.save()
 
         await services.rebuildStatsForGame(game._id.toHexString(), game.teamOne._id?.toHexString() as string)
 
-        expect(cloudTaskSpy).toBeCalledTimes(4)
+        expect(cloudTaskSpy).toBeCalledTimes(5)
     })
 
     it('handles unfound game', async () => {
@@ -1877,7 +1883,7 @@ describe('test rebuild full stats for game', () => {
     })
 })
 
-describe('test add guest player to team', () => {
+describe('test update game players for team', () => {
     it('with valid data for team one', async () => {
         const game = await Game.create(gameData)
 
@@ -1910,6 +1916,7 @@ describe('test add guest player to team', () => {
         const game = await Game.create(gameData)
         game.teamTwoActive = true
         game.teamTwoDefined = true
+        game.teamTwoStatus = GameStatus.ACTIVE
         await game.save()
 
         const id = new Types.ObjectId()

@@ -20,6 +20,7 @@ import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import Action from '../../../../src/models/action'
 import { Server } from 'http'
 import { PointStatus } from '../../../../src/types/point'
+import { GameStatus } from '../../../../src/types/game'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 jest.mock('../../../../src/background/v1/point', () => {
@@ -61,9 +62,8 @@ describe('test POST first point route', () => {
         const { point } = response.body
         expect(point.pullingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
 
-        const points = await Point.find({})
-        expect(points.length).toBe(1)
-        expect(points[0].pullingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
+        const pointRecord = await Point.findById(point._id)
+        expect(pointRecord?.pullingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
         const gameRecord = await Game.findById(game._id)
         expect(gameRecord?.points.length).toBe(1)
         expect(gameRecord?.points[0].toString()).toBe(point._id.toString())
@@ -827,6 +827,7 @@ describe('test PUT finish background point', () => {
         })
         game.teamTwoActive = false
         game.teamTwoDefined = false
+        game.teamTwoStatus = GameStatus.GUEST
         game.points.push(point._id)
         await game.save()
 
