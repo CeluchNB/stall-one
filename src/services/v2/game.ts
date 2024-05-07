@@ -65,9 +65,7 @@ export default class GameServices {
         await game.save()
 
         // get most recent point in game
-        let activePoint: IPoint | null = await this.pointModel
-            .findOne({ _id: { $in: game.points } })
-            .sort('-pointNumber')
+        let activePoint: IPoint | null = await this.pointModel.findOne({ gameId }).sort('-pointNumber')
 
         if (!activePoint) {
             return { game, team, token, activePoint: undefined, actions: [] }

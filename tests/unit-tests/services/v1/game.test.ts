@@ -23,6 +23,7 @@ import { CreateTournament } from '../../../../src/types/tournament'
 import Point from '../../../../src/models/point'
 import Action from '../../../../src/models/action'
 import { ActionType } from '../../../../src/types/action'
+import { PointStatus } from '../../../../src/types/point'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
@@ -692,19 +693,19 @@ describe('test delete game', () => {
     })
 
     beforeEach(async () => {
-        const action1 = await Action.create({
+        await Action.create({
             team,
             actionNumber: 1,
             actionType: 'TeamOneScore',
             pointId: pointOneId,
         })
-        const action2 = await Action.create({
+        await Action.create({
             team,
             actionNumber: 1,
             actionType: 'Pull',
             pointId: pointTwoId,
         })
-        const action3 = await Action.create({
+        await Action.create({
             team,
             actionNumber: 2,
             actionType: 'TeamOneScore',
@@ -712,6 +713,7 @@ describe('test delete game', () => {
         })
 
         await Point.create({
+            _id: pointOneId,
             gameId,
             pointNumber: 1,
             teamOneScore: 1,
@@ -721,9 +723,9 @@ describe('test delete game', () => {
             scoringTeam: team,
             teamOneActive: false,
             teamTwoActive: false,
-            teamOneActions: [action1._id],
         })
         await Point.create({
+            _id: pointTwoId,
             gameId,
             pointNumber: 2,
             teamOneScore: 2,
@@ -733,16 +735,14 @@ describe('test delete game', () => {
             scoringTeam: team,
             teamOneActive: false,
             teamTwoActive: false,
-            teamOneActions: [action2._id, action3._id],
         })
     })
 
     it('with team one and team two not joined', async () => {
-        const [point1, point2] = await Point.find({})
         const game = await Game.create({
             _id: gameId,
             teamOne: team,
-            teamTwo: { name: 'Name 2' },
+            teamTwo: team2,
             teamTwoDefined: false,
             scoreLimit: 15,
             halfScore: 8,
@@ -759,10 +759,9 @@ describe('test delete game', () => {
                 lastName: 'Last1',
                 username: 'first1last1',
             },
-            points: [point1._id, point2._id],
         })
         await services.deleteGame(game._id.toString(), 'jwt', team._id?.toString() || '')
-        const actions = await Action.find({})
+        const actions = await Action.find({ gameId: game._id })
         expect(actions.length).toBe(0)
 
         const points = await Point.find({})
@@ -790,7 +789,6 @@ describe('test delete game', () => {
         point1.pullingTeam = team2
         await point1.save()
 
-        point2.teamTwoActions = [action4._id, action5._id]
         point2.receivingTeam = team2
         await point2.save()
 
@@ -814,7 +812,6 @@ describe('test delete game', () => {
                 lastName: 'Last1',
                 username: 'first1last1',
             },
-            points: [point1._id, point2._id],
         })
 
         await services.deleteGame(game._id.toString(), 'jwt', team._id?.toString() || '')
@@ -827,7 +824,6 @@ describe('test delete game', () => {
 
         const points = await Point.find({})
         expect(points.length).toBe(2)
-        expect(points[0].teamOneActions.length).toBe(0)
         expect(points[0].receivingTeam._id).toBeUndefined()
         expect(points[0].receivingTeam.teamname).toBeUndefined()
         expect(points[0].receivingTeam.name).toBe(team.name)
@@ -836,8 +832,6 @@ describe('test delete game', () => {
         expect(points[0].scoringTeam?.name).toBe(team.name)
         expect(points[0].pullingTeam.teamname).toBe(team2.teamname)
 
-        expect(points[1].teamOneActions.length).toBe(0)
-        expect(points[1].teamTwoActions.length).toBe(2)
         expect(points[1].pullingTeam._id).toBeUndefined()
         expect(points[1].pullingTeam.teamname).toBeUndefined()
         expect(points[1].pullingTeam.name).toBe(team.name)
@@ -857,13 +851,13 @@ describe('test delete game', () => {
 
     it('with team two and team one not deleted', async () => {
         const [action1, action2, action3] = await Action.find({})
-        const action4 = await Action.create({
+        await Action.create({
             team: team2,
             actionNumber: 1,
             actionType: 'Drop',
             pointId: pointTwoId,
         })
-        const action5 = await Action.create({
+        await Action.create({
             team: team2,
             actionNumber: 1,
             actionType: 'TeamOneScore',
@@ -872,7 +866,6 @@ describe('test delete game', () => {
         const [point1, point2] = await Point.find({})
         point1.pullingTeam = team2
         await point1.save()
-        point2.teamTwoActions = [action4._id, action5._id]
         point2.receivingTeam = team2
         await point2.save()
         const game = await Game.create({
@@ -894,11 +887,10 @@ describe('test delete game', () => {
                 lastName: 'Last1',
                 username: 'first1last1',
             },
-            points: [point1._id, point2._id],
         })
 
         await services.deleteGame(game._id.toString(), 'jwt', team2._id?.toString() || '')
-        const actions = await Action.find({})
+        const actions = await Action.find({ pointId: { $in: [point1._id, point2._id] } })
         expect(actions.length).toBe(3)
         expect(actions[0].team.teamname).toBe(action1.team.teamname)
         expect(actions[0].actionType).toBe(action1.actionType)
@@ -909,7 +901,6 @@ describe('test delete game', () => {
 
         const points = await Point.find({})
         expect(points.length).toBe(2)
-        expect(points[0].teamOneActions.length).toBe(1)
         expect(points[0].pullingTeam._id).toBeUndefined()
         expect(points[0].pullingTeam.teamname).toBeUndefined()
         expect(points[0].pullingTeam.name).toBe(team2.name)
@@ -918,8 +909,6 @@ describe('test delete game', () => {
         expect(points[0].scoringTeam?.name).toBe(team.name)
         expect(points[0].receivingTeam.teamname).toBe(team.teamname)
 
-        expect(points[1].teamOneActions.length).toBe(2)
-        expect(points[1].teamTwoActions.length).toBe(0)
         expect(points[1].receivingTeam._id).toBeUndefined()
         expect(points[1].receivingTeam.teamname).toBeUndefined()
         expect(points[1].receivingTeam.name).toBe(team2.name)
@@ -1048,13 +1037,10 @@ describe('test get points', () => {
     })
 
     it('with multiple found points', async () => {
-        const [point1, point2] = await Point.find({})
         const game = await Game.create({ ...createData, _id: gameId })
-        game.points = [point1._id, point2._id]
-        await game.save()
 
         const points = await services.getPointsByGame(game._id.toString())
-        expect(points.length).toBe(2)
+        expect(points.length).toBe(3)
         expect(points[0].pointNumber).toBe(1)
         expect(points[0].teamOneScore).toBe(0)
         expect(points[0].teamTwoScore).toBe(1)
@@ -1062,18 +1048,14 @@ describe('test get points', () => {
         expect(points[1].pointNumber).toBe(2)
         expect(points[1].teamOneScore).toBe(1)
         expect(points[1].teamTwoScore).toBe(1)
+
+        expect(points[2].pointNumber).toBe(3)
+        expect(points[2].teamOneScore).toBe(1)
+        expect(points[2].teamTwoScore).toBe(2)
     })
 
     it('with no found points', async () => {
-        const game = await Game.create({ ...createData, _id: gameId })
-        const points = await services.getPointsByGame(game._id.toString())
-        expect(points.length).toBe(0)
-    })
-
-    it('with unfound values in array', async () => {
-        const game = await Game.create({ ...createData, _id: gameId })
-        game.points = [new Types.ObjectId(), new Types.ObjectId()]
-        await game.save()
+        const game = await Game.create({ ...createData })
         const points = await services.getPointsByGame(game._id.toString())
         expect(points.length).toBe(0)
     })
@@ -1587,24 +1569,15 @@ describe('test create full game', () => {
         expect(gameResponse.teamTwoPlayers.length).toBe(0)
         expect(gameResponse.teamOneScore).toBe(2)
         expect(gameResponse.teamTwoScore).toBe(1)
-        expect(gameResponse.points.length).toBe(3)
 
-        const game = await Game.findOne({})
-        expect(game?.points.length).toBe(3)
         const [point1, point2, point3] = await Point.find({})
-        expect(gameResponse.points[0].toString()).toBe(point1._id.toString())
-        expect(point1.teamOneActions.length).toBe(3)
-        expect(point1.teamTwoActions.length).toBe(0)
+
         expect(point1.teamOneScore).toBe(1)
         expect(point1.teamTwoScore).toBe(0)
-        expect(gameResponse.points[1].toString()).toBe(point2._id.toString())
-        expect(point2.teamOneActions.length).toBe(2)
-        expect(point2.teamTwoActions.length).toBe(0)
+
         expect(point2.teamOneScore).toBe(1)
         expect(point2.teamTwoScore).toBe(1)
-        expect(gameResponse.points[2].toString()).toBe(point3._id.toString())
-        expect(point3.teamOneActions.length).toBe(2)
-        expect(point3.teamTwoActions.length).toBe(0)
+
         expect(point3.teamOneScore).toBe(2)
         expect(point3.teamTwoScore).toBe(1)
         const actions = await Action.find({})
@@ -1815,6 +1788,7 @@ describe('test rebuild full stats for game', () => {
             teamOneActions: [action3._id],
             teamOneActive: true,
             teamTwoActive: true,
+            teamOneStatus: PointStatus.ACTIVE,
         })
     })
 
@@ -1822,9 +1796,7 @@ describe('test rebuild full stats for game', () => {
         const cloudTaskSpy = jest
             .spyOn(CloudTaskServices, 'sendCloudTask')
             .mockReturnValue(Promise.resolve([] as never))
-        const [point1, point2, point3] = await Point.find()
         const game = await Game.create({ ...createData, _id: gameId })
-        game.points = [point1._id, point2._id, point3._id]
         game.teamOneActive = false
         game.teamOneStatus = GameStatus.COMPLETE
         game.teamTwoActive = false
@@ -1833,7 +1805,7 @@ describe('test rebuild full stats for game', () => {
 
         await services.rebuildStatsForGame(game._id.toHexString(), game.teamOne._id?.toHexString() as string)
 
-        expect(cloudTaskSpy).toBeCalledTimes(5)
+        expect(cloudTaskSpy).toBeCalledTimes(4)
     })
 
     it('handles unfound game', async () => {
@@ -1868,13 +1840,11 @@ describe('test rebuild full stats for game', () => {
 
         const teamTwoId = new Types.ObjectId()
 
-        const [point1, point3] = await Point.find()
         const game = await Game.create({
             ...createData,
             _id: gameId,
             teamTwo: { _id: teamTwoId, place: 'Test', name: 'Test' },
         })
-        game.points = [point1._id, new Types.ObjectId(), point3._id]
         await game.save()
 
         await services.rebuildStatsForGame(game._id.toHexString(), game.teamTwo._id?.toHexString() as string)

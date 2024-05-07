@@ -236,7 +236,6 @@ describe('Game Services v2', () => {
         })
 
         it('reactivates game with last point inactive for team one', async () => {
-            const point1 = await Point.findOne({ pointNumber: 1 })
             const game = await Game.create({
                 teamOne,
                 teamTwo,
@@ -253,8 +252,9 @@ describe('Game Services v2', () => {
                 playersPerPoint: 7,
                 timeoutPerHalf: 1,
                 floaterTimeout: true,
-                points: [point1!._id],
+                points: [],
             })
+            await Point.findOneAndUpdate({ pointNumber: 1 }, { gameId: game._id })
 
             const result = await reactivateGame(game._id.toHexString(), 'jwt', teamOne._id.toHexString())
 
@@ -283,7 +283,6 @@ describe('Game Services v2', () => {
         })
 
         it('reactivates game with last point inactive for team two', async () => {
-            const point1 = await Point.findOne({ pointNumber: 1 })
             const game = await Game.create({
                 teamOne,
                 teamTwo,
@@ -300,8 +299,9 @@ describe('Game Services v2', () => {
                 playersPerPoint: 7,
                 timeoutPerHalf: 1,
                 floaterTimeout: true,
-                points: [point1!._id],
+                points: [],
             })
+            await Point.findOneAndUpdate({ pointNumber: 1 }, { gameId: game._id })
 
             const result = await reactivateGame(game._id.toHexString(), 'jwt', teamTwo._id.toHexString())
 

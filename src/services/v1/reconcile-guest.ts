@@ -46,7 +46,8 @@ export const reconcileGames = async (
     for (const game of games) {
         replacePlayerInList(game[playerList], guestId, user)
 
-        pointMap[game._id.toHexString()] = game.points
+        const points = await Point.find({ gameId: game._id })
+        pointMap[game._id.toHexString()] = points.map((p) => p._id)
         await game.save()
     }
     return pointMap

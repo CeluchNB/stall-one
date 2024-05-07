@@ -10,6 +10,7 @@ import { getRedisAction, saveRedisAction } from '../../utils/redis'
 import { findByIdOrThrow, idsAreEqual } from '../../utils/mongoose'
 import IGame, { GameStatus } from '../../types/game'
 import { sendCloudTask } from '../../utils/cloud-tasks'
+import { isTeamOne } from '../../utils/team'
 // import { finishPointQueue } from '../../background/v1'
 
 export default class PointServices {
@@ -39,12 +40,10 @@ export default class PointServices {
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
         if (pointNumber > 1) {
-            const prevPoint = await this.pointModel
-                .findOne({
-                    pointNumber: pointNumber - 1,
-                })
-                .where('_id')
-                .in(game.points)
+            const prevPoint = await this.pointModel.findOne({
+                pointNumber: pointNumber - 1,
+                gameId,
+            })
 
             if (!prevPoint) {
                 throw new ApiError(Constants.INVALID_DATA, 400)
@@ -52,7 +51,8 @@ export default class PointServices {
         }
 
         // check if this point has already been created
-        const pointRecord = await this.pointModel.where('_id').in(game.points).findOne({
+        const pointRecord = await this.pointModel.findOne({
+            gameId,
             pointNumber,
         })
 
@@ -81,13 +81,11 @@ export default class PointServices {
             teamOneStatus: PointStatus.ACTIVE,
             teamTwoActive: game.teamTwoActive,
             teamTwoStatus: game.teamTwoStatus === GameStatus.ACTIVE ? PointStatus.ACTIVE : PointStatus.FUTURE,
-            pullingTeam: pullingTeam === TeamNumber.ONE ? game.teamOne : game.teamTwo,
-            receivingTeam: pullingTeam === TeamNumber.ONE ? game.teamTwo : game.teamOne,
+            pullingTeam: isTeamOne(pullingTeam, game.teamOne, game.teamTwo),
+            receivingTeam: isTeamOne(pullingTeam, game.teamTwo, game.teamOne),
             gameId: game._id,
         })
 
-        // TODO: REMOVE
-        game.points.push(point._id)
         await game.save()
 
         // set actions to 0 when creating point
@@ -119,7 +117,7 @@ export default class PointServices {
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
         const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
 
-        if (!game.points.includes(point._id)) {
+        if (!idsAreEqual(point.gameId, gameId)) {
             throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
@@ -131,7 +129,8 @@ export default class PointServices {
             return point
         }
 
-        if (point.teamOneActions.length > 0 || point.teamTwoActions.length > 0) {
+        const actions = await this.actionModel.find({ pointId })
+        if (actions.length > 0) {
             throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 404)
         }
 
@@ -172,7 +171,7 @@ export default class PointServices {
 
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
-        if (!game.points.includes(point._id)) {
+        if (!idsAreEqual(point.gameId, gameId)) {
             throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
@@ -200,10 +199,9 @@ export default class PointServices {
      */
     finishPoint = async (gameId: string, pointId: string, team: TeamNumber): Promise<IPoint> => {
         const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
-
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
 
-        if (!game.points.includes(point._id)) {
+        if (!idsAreEqual(point.gameId, gameId)) {
             throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
@@ -218,23 +216,21 @@ export default class PointServices {
         const totalActions = await this.redisClient.get(`${gameId}:${pointId}:${team}:actions`)
         const lastAction = await getRedisAction(this.redisClient, pointId, Number(totalActions), team)
 
-        if (team === TeamNumber.ONE && point.teamTwoActions.length > 0) {
+        const lastTeamOneAction = await this.actionModel
+            .findOne({ pointId: point._id, 'team._id': game.teamOne._id })
+            .sort('-actionNumber')
+        const lastTeamTwoAction = await this.actionModel
+            .findOne({ pointId: point._id, 'team._id': game.teamTwo._id })
+            .sort('-actionNumber')
+
+        if (team === TeamNumber.ONE && lastTeamTwoAction) {
             // verify same score
-            const reportedScore = await this.actionModel
-                .findOne({ actionNumber: point.teamTwoActions.length })
-                .where('_id')
-                .in(point.teamTwoActions)
-            if (reportedScore?.actionType !== lastAction.actionType) {
+            if (lastTeamTwoAction?.actionType !== lastAction.actionType) {
                 throw new ApiError(Constants.CONFLICTING_SCORE, 400)
             }
-        } else if (team === TeamNumber.TWO && point.teamOneActions.length > 0) {
+        } else if (team === TeamNumber.TWO && lastTeamOneAction) {
             // verify same score
-            const reportedScore = await this.actionModel
-                .findOne({ actionNumber: point.teamOneActions.length })
-                .where('_id')
-                .in(point.teamOneActions)
-
-            if (reportedScore?.actionType !== lastAction.actionType) {
+            if (lastTeamOneAction?.actionType !== lastAction.actionType) {
                 throw new ApiError(Constants.CONFLICTING_SCORE, 400)
             }
         } else {
@@ -288,7 +284,7 @@ export default class PointServices {
         const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
         const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
 
-        if (!game.points.includes(point._id)) {
+        if (!idsAreEqual(point.gameId, gameId)) {
             throw new ApiError(Constants.INVALID_DATA, 400)
         }
 
@@ -300,8 +296,9 @@ export default class PointServices {
             throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400)
         }
 
+        const actions = await this.actionModel.find({ pointId })
         // cannot delete if any saved actions
-        if (point.teamOneActions.length > 0 || point.teamTwoActions.length > 0) {
+        if (actions.length > 0) {
             throw new ApiError(Constants.MODIFY_LIVE_POINT_ERROR, 400)
         }
 
@@ -320,7 +317,6 @@ export default class PointServices {
         // delete actions count and point
         await this.redisClient.del(`${gameId}:${pointId}:one:actions`)
         await this.redisClient.del(`${gameId}:${pointId}:two:actions`)
-        game.points = game.points.filter((id) => !id.equals(point._id))
         await game.save()
         await point.deleteOne()
     }
@@ -337,7 +333,8 @@ export default class PointServices {
         const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
 
         // can only reactivate the last point
-        if (point.pointNumber !== game.points.length) {
+        const points = await this.pointModel.find({ gameId })
+        if (point.pointNumber < points.length) {
             throw new ApiError(Constants.REACTIVATE_POINT_ERROR, 400)
         }
 
@@ -347,41 +344,35 @@ export default class PointServices {
             point.teamOneActive = true
             point.teamOneStatus = PointStatus.ACTIVE
             // load actions back into redis
-            const actions = await this.actionModel.where({ _id: { $in: point.teamOneActions } })
+            const actions = await this.actionModel.find({ pointId, 'team._id': game.teamOne._id })
             await this.saveActions(actions, gameId, pointId, team)
 
-            await this.actionModel.deleteMany({ _id: { $in: point.teamOneActions } })
-
-            // delete actions from model
-            point.teamOneActions = []
+            await this.actionModel.deleteMany({ pointId, 'team._id': game.teamOne._id })
         } else {
             game.teamTwoActive = true
             game.teamTwoStatus = GameStatus.ACTIVE
             point.teamTwoActive = true
             point.teamTwoStatus = PointStatus.ACTIVE
             // load actions back into redis
-            const actions = await this.actionModel.where({ _id: { $in: point.teamTwoActions } })
+            const actions = await this.actionModel.find({ pointId, 'team._id': game.teamTwo._id })
             await this.saveActions(actions, gameId, pointId, team)
 
-            await this.actionModel.deleteMany({ _id: { $in: point.teamTwoActions } })
-            // delete actions from model
-            point.teamTwoActions = []
+            await this.actionModel.deleteMany({ pointId, 'team._id': game.teamTwo._id })
         }
         const pullingTeam = idsAreEqual(point.pullingTeam._id, game.teamOne._id) ? 'one' : 'two'
         const receivingTeam = pullingTeam === 'one' ? 'two' : 'one'
         await this.redisClient.set(`${gameId}:${pointId}:pulling`, pullingTeam)
         await this.redisClient.set(`${gameId}:${pointId}:receiving`, receivingTeam)
 
+        const teamOneActions = await this.actionModel.find({ pointId, 'team._id': game.teamOne._id })
+        const teamTwoActions = await this.actionModel.find({ pointId, 'team._id': game.teamTwo._id })
         // only reduce score if the other team has no actions
         // because finishPoint only updates score on first team reporting
         if (
-            (team === TeamNumber.ONE && point.teamTwoActions.length === 0) ||
-            (team === TeamNumber.TWO && point.teamOneActions.length === 0)
+            (team === TeamNumber.ONE && teamTwoActions.length === 0) ||
+            (team === TeamNumber.TWO && teamOneActions.length === 0)
         ) {
-            const prevPoint = await this.pointModel
-                .findOne({ pointNumber: point.pointNumber - 1 })
-                .where('_id')
-                .in(game.points)
+            const prevPoint = await this.pointModel.findOne({ pointNumber: point.pointNumber - 1, gameId })
 
             if (prevPoint) {
                 point.teamOneScore = prevPoint?.teamOneScore
@@ -417,8 +408,10 @@ export default class PointServices {
      */
     getActionsByPoint = async (pointId: string, team: TeamNumberString): Promise<IAction[]> => {
         const point = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
-        const ids = team === 'one' ? point.teamOneActions : point.teamTwoActions
-        const actions = await this.actionModel.find().where('_id').in(ids)
+        const game = await findByIdOrThrow<IGame>(point.gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
+
+        const teamId = team === TeamNumber.ONE ? game.teamOne._id : game.teamTwo._id
+        const actions = await this.actionModel.find({ pointId, 'team._id': teamId })
         return actions
     }
 

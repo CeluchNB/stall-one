@@ -8,6 +8,7 @@ import { client } from '../../../../src/utils/redis'
 import { container } from '../../../../src/di'
 import { PointStatus } from '../../../../src/types/point'
 import { GameStatus } from '../../../../src/types/game'
+import Action from '../../../../src/models/action'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
@@ -64,10 +65,11 @@ describe('handles finish point background service', () => {
         await saveRedisAction(client, secondAction, point._id.toString())
         await services.finishPoint(point._id.toHexString(), game._id.toHexString(), 'one')
 
-        const pointRecord = await Point.findById(point._id)
+        const teamOneActions = await Action.find({ pointId: point._id, 'team._id': game.teamOne._id })
+        expect(teamOneActions.length).toBe(2)
 
-        expect(pointRecord?.teamOneActions.length).toBe(2)
-        expect(pointRecord?.teamTwoActions.length).toBe(0)
+        const teamTwoActions = await Action.find({ pointId: point._id, 'team._id': game.teamTwo._id })
+        expect(teamTwoActions.length).toBe(0)
 
         const pullingKey = await client.get(`${game._id.toString()}:${point._id.toString()}:pulling`)
         expect(pullingKey).toBeNull()
@@ -119,10 +121,11 @@ describe('handles finish point background service', () => {
         await saveRedisAction(client, secondAction, point._id.toString())
         await services.finishPoint(point._id.toHexString(), game._id.toHexString(), 'two')
 
-        const pointRecord = await Point.findById(point._id)
+        const teamOneActions = await Action.find({ pointId: point._id, 'team._id': game.teamOne._id })
+        expect(teamOneActions.length).toBe(0)
 
-        expect(pointRecord?.teamOneActions.length).toBe(0)
-        expect(pointRecord?.teamTwoActions.length).toBe(2)
+        const teamTwoActions = await Action.find({ pointId: point._id, 'team._id': game.teamTwo._id })
+        expect(teamTwoActions.length).toBe(2)
 
         const pullingKey = await client.get(`${game._id.toString()}:${point._id.toString()}:pulling`)
         expect(pullingKey).toBeNull()

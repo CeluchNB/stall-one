@@ -1,6 +1,6 @@
 import IGame, { GameStatus } from '../../../src/types/game'
 import IPoint, { PointStatus } from '../../../src/types/point'
-import { pointIsComplete } from '../../../src/utils/point'
+import { pointIsActive, pointIsComplete } from '../../../src/utils/point'
 
 describe('Point Utils', () => {
     describe('pointIsComplete', () => {
@@ -31,6 +31,31 @@ describe('Point Utils', () => {
                 { teamTwoStatus: GameStatus.GUEST } as IGame,
             )
             expect(result).toBe(true)
+        })
+    })
+
+    describe('pointIsActive', () => {
+        it('returns true if team one is active', () => {
+            const result = pointIsActive({
+                teamOneStatus: PointStatus.ACTIVE,
+                teamTwoStatus: PointStatus.FUTURE,
+            } as IPoint)
+            expect(result).toBe(true)
+        })
+
+        it('returns true if team two is active', () => {
+            const result = pointIsActive({
+                teamOneStatus: PointStatus.COMPLETE,
+                teamTwoStatus: PointStatus.ACTIVE,
+            } as IPoint)
+            expect(result).toBe(true)
+        })
+        it('returns false if both teams are inactive', () => {
+            const result = pointIsActive({
+                teamOneStatus: PointStatus.COMPLETE,
+                teamTwoStatus: PointStatus.FUTURE,
+            } as IPoint)
+            expect(result).toBe(false)
         })
     })
 })

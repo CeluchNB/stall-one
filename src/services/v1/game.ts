@@ -13,6 +13,8 @@ import IPoint, { PointStatus } from '../../types/point'
 import { sendCloudTask } from '../../utils/cloud-tasks'
 import IAction from '../../types/action'
 import { ITournamentModel } from '../../models/tournament'
+import { getTeamTwoStatus } from '../../utils/game'
+import { pointIsActive } from '../../utils/point'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -209,8 +211,8 @@ export default class GameServices {
         }
 
         await game.save()
-        // TODO: query for points total in new way?
-        await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, { pointTotal: game.points.length }, 'PUT')
+        const points = await this.pointModel.find({ gameId })
+        await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, { pointTotal: points.length }, 'PUT')
 
         return game
     }
@@ -265,7 +267,7 @@ export default class GameServices {
         await authenticateManager(this.ultmtUrl, this.apiKey, userJwt, teamId)
 
         // get all points for this game
-        const points = await this.pointModel.find().where('_id').in(game.points)
+        const points = await this.pointModel.find({ gameId })
         // dereference all points for this team
         for (const point of points) {
             if (point.receivingTeam._id?.equals(teamId)) {
@@ -282,20 +284,11 @@ export default class GameServices {
             await point.save()
         }
 
+        const pointIds = points.map((p) => p._id)
         // if team one calling delete
         if (game.teamOne._id?.equals(teamId)) {
             // delete all team one actions
-            const actionIds = points.reduce(
-                (prev: Types.ObjectId[], current) => prev.concat(current.teamOneActions),
-                [],
-            )
-            await this.actionModel.deleteMany().where('_id').in(actionIds)
-
-            // remove team one action ids from point
-            for (const point of points) {
-                point.teamOneActions = []
-                await point.save()
-            }
+            await this.actionModel.deleteMany({ pointId: { $in: pointIds }, 'team._id': teamId })
 
             // 'dereference' team if the other team is joined
             if (game.teamTwoJoined) {
@@ -304,31 +297,22 @@ export default class GameServices {
                 await game.save()
             } else {
                 // fully delete game if team two is not defined
-                await this.pointModel.deleteMany().where('_id').in(game.points)
+                await this.pointModel.deleteMany({ gameId })
                 await game.deleteOne()
             }
         } else if (game.teamTwo._id?.equals(teamId)) {
             // delete actions
-            const actionIds = points.reduce(
-                (prev: Types.ObjectId[], current) => prev.concat(current.teamTwoActions),
-                [],
-            )
-            await this.actionModel.deleteMany().where('_id').in(actionIds)
+            await this.actionModel.deleteMany({ pointId: { $in: pointIds }, 'team._id': teamId })
 
             // undefined team one _id means team one has already deleted
             if (!game.teamOne._id) {
-                await this.pointModel.deleteMany().where('_id').in(game.points)
+                await this.pointModel.deleteMany({ gameId })
                 await game.deleteOne()
             } else {
                 game.teamTwo._id = undefined
                 game.teamTwo.teamname = undefined
                 game.teamTwoJoined = false
                 await game.save()
-
-                for (const point of points) {
-                    point.teamTwoActions = []
-                    await point.save()
-                }
             }
         }
         await sendCloudTask(`/api/v1/stats/game/delete/${gameId}?team=${teamId}`, {}, 'PUT')
@@ -350,8 +334,7 @@ export default class GameServices {
      * @returns array of points
      */
     getPointsByGame = async (gameId: string): Promise<IPoint[]> => {
-        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
-        const points = await this.pointModel.find().where('_id').in(game.points)
+        const points = await this.pointModel.find({ gameId })
         return points
     }
 
@@ -460,7 +443,7 @@ export default class GameServices {
             teamOneActive: false,
             teamTwoActive: false,
             teamOneStatus: GameStatus.COMPLETE,
-            teamTwoStatus: gameData.teamTwo._id ? GameStatus.DEFINED : GameStatus.GUEST,
+            teamTwoStatus: getTeamTwoStatus(gameData),
         }
 
         await this.findOrCreateTournament(safeData, user)
@@ -487,9 +470,7 @@ export default class GameServices {
                     team: gameData.teamOne,
                 })
                 actions.push(action)
-                point.teamOneActions.push(action._id)
             }
-            game.points.push(point._id)
             await point.save()
             await createStatsPoint(point, game._id.toHexString(), actions)
         }
@@ -528,21 +509,16 @@ export default class GameServices {
 
         await createStatsGame(game)
 
-        // TODO: query points with new method
-        for (const pointId of game.points) {
-            const point = await this.pointModel.findById(pointId)
+        const points = await this.pointModel.find({ gameId })
+        for (const point of points) {
+            if (pointIsActive(point)) continue
 
-            if (!point || point.teamOneStatus === PointStatus.ACTIVE || point.teamTwoStatus === PointStatus.ACTIVE)
-                continue
-
-            const actionIds = game.teamOne._id?.equals(teamId) ? point?.teamOneActions : point?.teamTwoActions
-            const actions = await this.actionModel.find({ _id: { $in: actionIds } })
-
+            const actions = await this.actionModel.find({ pointId: point._id, 'team._id': teamId })
             await createStatsPoint(point, gameId, actions)
         }
 
         if (game.teamOneStatus !== GameStatus.ACTIVE && game.teamTwoStatus !== GameStatus.ACTIVE) {
-            await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, { pointTotal: game.points.length }, 'PUT')
+            await sendCloudTask(`/api/v1/stats/game/finish/${gameId}`, { pointTotal: points.length }, 'PUT')
         }
     }
 

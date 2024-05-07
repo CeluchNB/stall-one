@@ -385,19 +385,19 @@ describe('test /DELETE game', () => {
         const pointOneId = new Types.ObjectId()
         const pointTwoId = new Types.ObjectId()
 
-        const action1 = await Action.create({
+        await Action.create({
             team,
             actionNumber: 1,
             actionType: 'TeamOneScore',
             pointId: pointOneId,
         })
-        const action2 = await Action.create({
+        await Action.create({
             team,
             actionNumber: 1,
             actionType: 'Pull',
             pointId: pointTwoId,
         })
-        const action3 = await Action.create({
+        await Action.create({
             team,
             actionNumber: 2,
             actionType: 'TeamOneScore',
@@ -414,7 +414,6 @@ describe('test /DELETE game', () => {
             scoringTeam: team,
             teamOneActive: false,
             teamTwoActive: false,
-            teamOneActions: [action1._id],
         })
         await Point.create({
             _id: pointTwoId,
@@ -427,10 +426,9 @@ describe('test /DELETE game', () => {
             scoringTeam: team,
             teamOneActive: false,
             teamTwoActive: false,
-            teamOneActions: [action2._id, action3._id],
         })
-        const [point1, point2] = await Point.find({})
         await Game.create({
+            _id: gameId,
             teamOne: team,
             teamTwo: { name: 'Name 2' },
             teamTwoDefined: false,
@@ -448,7 +446,6 @@ describe('test /DELETE game', () => {
                 lastName: 'Last1',
                 username: 'first1last1',
             },
-            points: [point1._id, point2._id],
         })
     })
 
@@ -519,7 +516,7 @@ describe('test /GET game', () => {
 describe('test /GET game points', () => {
     it('with found points', async () => {
         const gameId = new Types.ObjectId()
-        const point1 = await Point.create({
+        await Point.create({
             gameId,
             pointNumber: 1,
             pullingTeam: { name: 'Team 1' },
@@ -527,7 +524,7 @@ describe('test /GET game points', () => {
             teamOneScore: 0,
             teamTwoScore: 1,
         })
-        const point2 = await Point.create({
+        await Point.create({
             gameId,
             pointNumber: 2,
             pullingTeam: { name: 'Team 2' },
@@ -536,7 +533,7 @@ describe('test /GET game points', () => {
             teamTwoScore: 1,
         })
         await Point.create({
-            gameId,
+            gameId: new Types.ObjectId(),
             pointNumber: 3,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
@@ -544,9 +541,6 @@ describe('test /GET game points', () => {
             teamTwoScore: 2,
         })
         const game = await Game.create({ ...createData, _id: gameId })
-
-        game.points = [point1._id, point2._id]
-        await game.save()
 
         const response = await request(app).get(`/api/v1/game/${game._id.toString()}/points`).send().expect(200)
 
@@ -572,8 +566,10 @@ describe('test /GET game points', () => {
     })
 
     it('with service error', async () => {
-        const response = await request(app).get(`/api/v1/game/${new Types.ObjectId()}/points`).send().expect(404)
-        expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_GAME)
+        const response = await request(app).get(`/api/v1/game/${new Types.ObjectId()}/points`).send().expect(200)
+        const { points } = response.body
+
+        expect(points.length).toBe(0)
     })
 })
 
@@ -900,7 +896,9 @@ describe('test POST full game', () => {
         expect(game.teamTwoPlayers.length).toBe(0)
         expect(game.teamOneScore).toBe(1)
         expect(game.teamTwoScore).toBe(0)
-        expect(game.points.length).toBe(1)
+
+        const points = await Point.find({ gameId: game._id })
+        expect(points.length).toBe(1)
     })
 
     it('with invalid data', async () => {

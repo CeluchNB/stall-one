@@ -1,7 +1,14 @@
 import { Types } from 'mongoose'
 import Game from '../../../../src/models/game'
 import { close } from '../../../../src/app'
-import { setUpDatabase, resetDatabase, tearDownDatabase, createData, client } from '../../../fixtures/setup-db'
+import {
+    setUpDatabase,
+    resetDatabase,
+    tearDownDatabase,
+    createData,
+    client,
+    createPointData,
+} from '../../../fixtures/setup-db'
 import {
     reconcileGames,
     reconcileGuest,
@@ -61,11 +68,24 @@ describe('Reconcile guest pieces', () => {
             const game = await Game.create({
                 ...createData,
                 teamOnePlayers: [user1, guest, user2],
-                points: [new Types.ObjectId(), new Types.ObjectId()],
+            })
+            const point1Id = new Types.ObjectId()
+            const point2Id = new Types.ObjectId()
+            await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                pointNumber: 1,
+                _id: point1Id,
+            })
+            await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                pointNumber: 2,
+                _id: point2Id,
             })
             const result = await reconcileGames([game], guestId.toHexString(), realUser, 'one')
             expect(result).toMatchObject({
-                [game._id.toHexString()]: [...game.points],
+                [game._id.toHexString()]: [point1Id, point2Id],
             })
 
             const gameResult = await Game.findById(game._id)
@@ -77,11 +97,25 @@ describe('Reconcile guest pieces', () => {
             const game = await Game.create({
                 ...createData,
                 teamTwoPlayers: [user1, guest, user2],
-                points: [new Types.ObjectId(), new Types.ObjectId()],
             })
+            const point1Id = new Types.ObjectId()
+            const point2Id = new Types.ObjectId()
+            await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                pointNumber: 1,
+                _id: point1Id,
+            })
+            await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                pointNumber: 2,
+                _id: point2Id,
+            })
+
             const result = await reconcileGames([game], guestId.toHexString(), realUser, 'two')
             expect(result).toMatchObject({
-                [game._id.toHexString()]: [...game.points],
+                [game._id.toHexString()]: [point1Id, point2Id],
             })
 
             const gameResult = await Game.findOne()
