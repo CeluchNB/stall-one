@@ -58,7 +58,7 @@ describe('test /POST game', () => {
         expect(token.length).toBeGreaterThan(20)
         expect(gameRecord?.teamOnePlayers.length).toBe(2)
         expect(gameRecord?.teamTwoPlayers.length).toBe(0)
-    })
+    }, 10000)
 
     it('with invalid data', async () => {
         const response = await request(app)

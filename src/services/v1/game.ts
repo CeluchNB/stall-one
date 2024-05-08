@@ -80,6 +80,8 @@ export default class GameServices {
             teamOnePlayers: teamOne.players,
             teamTwoPlayers: safeData.teamTwoDefined ? teamTwo?.players : [],
             resolveCode: randomstring.generate({ length: 6, charset: 'numeric' }),
+            teamOneStatus: GameStatus.ACTIVE,
+            teamTwoStatus: safeData.teamTwoDefined ? GameStatus.DEFINED : GameStatus.GUEST,
         })
 
         const token = game.getToken('one')
@@ -362,7 +364,7 @@ export default class GameServices {
                     return new RegExp(`^${t}`, 'i')
                 }
             })
-            const tests = []
+            const tests: { [x: string]: { $regex: RegExp } }[] = []
             for (const r of regexes) {
                 if (r) {
                     tests.push({ 'teamOne.place': { $regex: r } })
@@ -461,7 +463,7 @@ export default class GameServices {
                 teamTwoStatus: PointStatus.FUTURE,
                 gameId: game._id,
             })
-            const actions = []
+            const actions: IAction[] = []
             for (const [i, a] of p.actions.entries()) {
                 const action = await this.actionModel.create({
                     ...a,
