@@ -1,6 +1,6 @@
 import * as Constants from './constants'
 import axios from 'axios'
-import { Player, TeamResponse, UserResponse } from '../types/ultmt'
+import { FullGameUser, Player, TeamResponse, UserResponse } from '../types/ultmt'
 import { ApiError } from '../types/errors'
 
 export const getUser = async (ultmtUrl: string, apiKey: string, jwt: string): Promise<UserResponse> => {
@@ -39,6 +39,34 @@ export const authenticateManager = async (
         return user
     } catch (error) {
         throw new ApiError(Constants.UNAUTHENTICATED_USER, 401)
+    }
+}
+
+export const createGuest = async (
+    ultmtUrl: string,
+    apiKey: string,
+    jwt: string,
+    teamId: string,
+    guest: FullGameUser,
+): Promise<TeamResponse> => {
+    try {
+        const response = await axios.post(
+            `${ultmtUrl}/team/${teamId}/guest`,
+            {
+                guest,
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${jwt}`,
+                    'X-API-Key': apiKey,
+                },
+            },
+        )
+
+        const { team } = response.data
+        return team
+    } catch (e) {
+        throw new ApiError(Constants.UNABLE_TO_CREATE_GUEST, 400)
     }
 }
 

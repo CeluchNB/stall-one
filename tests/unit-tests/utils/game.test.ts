@@ -1,9 +1,9 @@
-import IGame from '../../../src/types/game'
+import IGame, { CreateFullGame, GameStatus } from '../../../src/types/game'
 import { Types } from 'mongoose'
-import { getTeamNumber } from '../../../src/utils/game'
+import { getTeamNumber, getTeamTwoStatus } from '../../../src/utils/game'
 
 describe('Game Utils', () => {
-    describe('get team number', () => {
+    describe('getTeamNumber', () => {
         it('with team one', () => {
             const teamOneId = new Types.ObjectId()
             const result = getTeamNumber({ teamOne: { _id: teamOneId } } as IGame, teamOneId.toHexString())
@@ -24,6 +24,18 @@ describe('Game Utils', () => {
                     new Types.ObjectId().toHexString(),
                 ),
             ).toThrow()
+        })
+    })
+
+    describe('getTeamTwoStatus', () => {
+        it('returns defined', () => {
+            expect(getTeamTwoStatus({ teamTwo: { _id: 'test' } } as unknown as CreateFullGame)).toBe(GameStatus.DEFINED)
+        })
+
+        it('returns guest', () => {
+            expect(getTeamTwoStatus({ teamTwo: { _id: undefined } } as unknown as CreateFullGame)).toBe(
+                GameStatus.GUEST,
+            )
         })
     })
 })

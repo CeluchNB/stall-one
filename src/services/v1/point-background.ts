@@ -7,18 +7,19 @@ import { sendCloudTask } from '../../utils/cloud-tasks'
 import { findByIdOrThrow } from '../../utils/mongoose'
 import { deleteRedisAction, getClient, getRedisAction } from '../../utils/redis'
 import { TeamNumber, TeamNumberString } from '../../types/ultmt'
-import IGame from '../../types/game'
+import IGame, { GameStatus } from '../../types/game'
 import { RedisAction } from '../../types/action'
+import { pointIsComplete } from '../../utils/point'
 
 export default class PointBackgroundServices {
     pointModel: IPointModel
     gameModel: IGameModel
     actionModel: IActionModel
 
-    constructor(pointModel: IPointModel, gameModel: IGameModel, actionModel: IActionModel) {
-        this.pointModel = pointModel
-        this.gameModel = gameModel
-        this.actionModel = actionModel
+    constructor(opts: { pointModel: IPointModel; gameModel: IGameModel; actionModel: IActionModel }) {
+        this.pointModel = opts.pointModel
+        this.gameModel = opts.gameModel
+        this.actionModel = opts.actionModel
     }
 
     finishPoint = async (pointId: string, gameId: string, team: TeamNumberString) => {
@@ -49,17 +50,12 @@ export default class PointBackgroundServices {
 
     moveActionsToDataStore = async (
         redisActions: RedisAction[],
-        team: TeamNumberString,
+        teamNumber: TeamNumberString,
         game: IGame,
         point: IPoint,
     ) => {
-        if (team === TeamNumber.ONE) {
-            const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamOne })))
-            point.teamOneActions = actions.map((a) => a._id)
-        } else {
-            const actions = await this.actionModel.create(redisActions.map((a) => ({ ...a, team: game.teamTwo })))
-            point.teamTwoActions = actions.map((a) => a._id)
-        }
+        const team = teamNumber === TeamNumber.ONE ? game.teamOne : game.teamTwo
+        await this.actionModel.create(redisActions.map((a) => ({ ...a, team: team, pointId: point._id })))
     }
 
     deleteRedisKeys = async (game: IGame, point: IPoint, team: TeamNumberString) => {
@@ -69,11 +65,11 @@ export default class PointBackgroundServices {
         const pointId = point._id.toHexString()
 
         await redisClient.del(`${gameId}:${pointId}:${team}:actions`)
-        if (!game.teamTwoActive) {
+        if (game.teamTwoStatus !== GameStatus.ACTIVE) {
             await redisClient.del(`${gameId}:${pointId}:two:actions`)
         }
 
-        if (!point.teamOneActive && !point.teamTwoActive) {
+        if (pointIsComplete(point, game)) {
             await redisClient.del(`${gameId}:${pointId}:pulling`)
             await redisClient.del(`${gameId}:${pointId}:receiving`)
         }
@@ -89,10 +85,11 @@ export default class PointBackgroundServices {
     }
 
     submitStats = async (pointId: string, gameId: string) => {
+        const game = await findByIdOrThrow<IGame>(gameId, this.gameModel, Constants.UNABLE_TO_FIND_GAME)
         const updatedPoint = await findByIdOrThrow<IPoint>(pointId, this.pointModel, Constants.UNABLE_TO_FIND_POINT)
-        if (!updatedPoint.teamOneActive && !updatedPoint.teamTwoActive) {
-            const teamOneActions = await this.actionModel.find().where('_id').in(updatedPoint.teamOneActions)
-            const teamTwoActions = await this.actionModel.find().where('_id').in(updatedPoint.teamTwoActions)
+        if (pointIsComplete(updatedPoint, game)) {
+            const teamOneActions = await this.actionModel.find({ pointId, 'team._id': game.teamOne._id })
+            const teamTwoActions = await this.actionModel.find({ pointId, 'team._id': game.teamTwo._id })
             await sendCloudTask(
                 '/api/v1/stats/point',
                 {
