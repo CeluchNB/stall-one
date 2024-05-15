@@ -16,7 +16,7 @@ pointRouter.post(
         try {
             const { pointNumber, pullingTeam } = req.query
 
-            const point = await services.next(req.user?.gameId, req.user?.team, pointNumber, pullingTeam)
+            const point = await services.next(req.user?.gameId, req.user?.team, Number(pointNumber), pullingTeam)
             return res.status(201).json({ point })
         } catch (error) {
             next(error)
