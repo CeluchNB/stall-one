@@ -31,7 +31,7 @@ pointRouter.put(
     async (req: Request, res: Response, next) => {
         try {
             const { pointNumber } = req.query
-            const { point, actions } = await services.back(req.user?.gameId, req.user?.team, pointNumber)
+            const { point, actions } = await services.back(req.user?.gameId, req.user?.team, Number(pointNumber))
             return res.json({ point, actions })
         } catch (error) {
             next(error)
