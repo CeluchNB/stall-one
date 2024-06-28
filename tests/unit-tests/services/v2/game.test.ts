@@ -400,6 +400,35 @@ describe('Game Services v2', () => {
             expect(pointRecord?.teamOneStatus).toBe(PointStatus.COMPLETE)
         })
 
+        it('finishes team two', async () => {
+            const game = await Game.create({ ...gameData, teamTwoStatus: GameStatus.ACTIVE })
+            const point = await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                pointNumber: 4,
+                teamTwoStatus: PointStatus.ACTIVE,
+                teamOneStatus: PointStatus.FUTURE,
+            })
+            await client.set(`${game._id.toHexString()}:${point._id.toHexString()}:two:actions`, 1)
+            await saveRedisAction(
+                client,
+                {
+                    actionNumber: 1,
+                    actionType: ActionType.TEAM_ONE_SCORE,
+                    teamNumber: 'two',
+                    comments: [],
+                    tags: [],
+                },
+                point._id.toHexString(),
+            )
+
+            const result = await finish(game._id.toHexString(), TeamNumber.TWO)
+            expect(result.teamTwoStatus).toBe(GameStatus.COMPLETE)
+
+            const pointRecord = await Point.findById(point._id)
+            expect(pointRecord?.teamTwoStatus).toBe(PointStatus.COMPLETE)
+        })
+
         it('errors with unfound point', async () => {
             const game = await Game.create({ ...gameData, teamOneStatus: GameStatus.ACTIVE })
 

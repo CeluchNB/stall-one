@@ -94,7 +94,9 @@ export default class GameServices {
     }
 
     finish = async (gameId: string, team: TeamNumber): Promise<IGame> => {
-        const lastPoint = await this.pointModel.findOne({ gameId }).sort('-pointNumber')
+        const statusFilter =
+            team === 'one' ? { teamOneStatus: GameStatus.ACTIVE } : { teamTwoStatus: GameStatus.ACTIVE }
+        const lastPoint = await this.pointModel.findOne({ gameId, ...statusFilter }).sort('-pointNumber')
         if (!lastPoint) throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
 
         await this.finishPoint.perform(gameId, team, lastPoint._id.toHexString())
