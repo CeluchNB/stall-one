@@ -51,7 +51,7 @@ export const createGuest = async (
 ): Promise<TeamResponse> => {
     try {
         const response = await axios.post(
-            `${ultmtUrl}/team/${teamId}/guest`,
+            `${ultmtUrl}/api/v1/team/${teamId}/guest`,
             {
                 guest,
             },

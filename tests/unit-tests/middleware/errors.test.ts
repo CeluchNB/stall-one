@@ -122,4 +122,10 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
+    it('with cannot create guest', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.UNABLE_TO_CREATE_GUEST}`)).toEqual({
+            message: Constants.UNABLE_TO_CREATE_GUEST,
+            code: 400,
+        })
+    })
 })
