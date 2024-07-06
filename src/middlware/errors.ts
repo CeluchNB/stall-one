@@ -40,6 +40,8 @@ export const userErrorResponse = (error: string): { message: string; code: numbe
         return { message: Constants.CANNOT_GO_BACK_POINT, code: 400 }
     } else if (error.includes(Constants.UNABLE_TO_CREATE_GUEST)) {
         return { message: Constants.UNABLE_TO_CREATE_GUEST, code: 400 }
+    } else if (error.includes(Constants.NO_PREVIOUS_POINT)) {
+        return { message: Constants.NO_PREVIOUS_POINT, code: 400 }
     } else {
         return { message: Constants.GENERIC_ERROR, code: 500 }
     }

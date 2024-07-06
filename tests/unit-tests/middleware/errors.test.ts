@@ -128,4 +128,10 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
+    it('with no previous point', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.NO_PREVIOUS_POINT}`)).toEqual({
+            message: Constants.NO_PREVIOUS_POINT,
+            code: 400,
+        })
+    })
 })

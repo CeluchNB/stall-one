@@ -35,7 +35,7 @@ export default class PointServices {
                 'PUT',
             )
         } else if (pointNumber > 0 && !currentPoint) {
-            throw new ApiError(Constants.UNABLE_TO_FIND_POINT, 404)
+            throw new ApiError(Constants.NO_PREVIOUS_POINT, 404)
         }
 
         const point = await this.startPoint.perform(gameId, team, pointNumber, pullingTeam)
