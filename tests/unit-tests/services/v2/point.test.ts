@@ -50,7 +50,7 @@ describe('Point Services V2', () => {
         it('errors when trying to create point too far in future', async () => {
             const game = await Game.create(gameData)
             await expect(next(game._id.toHexString(), TeamNumber.ONE, 1, TeamNumber.ONE)).rejects.toThrow(
-                Constants.UNABLE_TO_FIND_POINT,
+                Constants.NO_PREVIOUS_POINT,
             )
 
             const keys = await client.keys('*')

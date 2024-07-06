@@ -65,7 +65,7 @@ describe('V2 Point API', () => {
                 .send()
                 .expect(404)
 
-            expect(response.body.message).toBe(Constants.UNABLE_TO_FIND_POINT)
+            expect(response.body.message).toBe(Constants.NO_PREVIOUS_POINT)
         })
     })
 
