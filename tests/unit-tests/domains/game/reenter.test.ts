@@ -4,7 +4,7 @@ import { container } from '../../../../src/di'
 import Point from '../../../../src/models/point'
 import Dependencies from '../../../../src/types/di'
 import { PointStatus } from '../../../../src/types/point'
-import { Player, TeamNumber } from '../../../../src/types/ultmt'
+import { Player, Team, TeamNumber, TeamResponse } from '../../../../src/types/ultmt'
 import { client, getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import { setUpDatabase, tearDownDatabase, resetDatabase, createPointData, gameData } from '../../../fixtures/setup-db'
 import Game from '../../../../src/models/game'
@@ -30,7 +30,7 @@ afterAll(async () => {
 
 describe('Reenter Game', () => {
     let reenterGame: Dependencies['reenterGame']
-    beforeAll(() => {
+    beforeEach(() => {
         reenterGame = container.resolve('reenterGame')
         const user1: Player = {
             _id: new Types.ObjectId(),
@@ -38,7 +38,17 @@ describe('Reenter Game', () => {
             lastName: 'Furdella',
             username: 'kenny',
         }
+        const team: TeamResponse = {
+            _id: new Types.ObjectId(),
+            place: 'PGH',
+            name: 'Temper',
+            teamname: 'pghtemper',
+            seasonStart: new Date(),
+            seasonEnd: new Date(),
+            players: [],
+        }
         jest.spyOn(UltmtUtils, 'authenticateManager').mockReturnValue(Promise.resolve(user1))
+        jest.spyOn(UltmtUtils, 'getTeam').mockReturnValue(Promise.resolve(team))
     })
 
     describe('perform', () => {

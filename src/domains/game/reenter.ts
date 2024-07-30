@@ -9,7 +9,7 @@ import { Types } from 'mongoose'
 import { getRedisAction, saveRedisAction } from '../../utils/redis'
 import { sendCloudTask } from '../../utils/cloud-tasks'
 import { RedisAction } from '../../types/action'
-import { authenticateManager } from '../../utils/ultmt'
+import { authenticateManager, getTeam } from '../../utils/ultmt'
 
 export const reenterGame = ({ gameModel, pointModel, actionModel, redisClient, ultmtUrl, apiKey }: Dependencies) => {
     const perform = async (
@@ -18,6 +18,7 @@ export const reenterGame = ({ gameModel, pointModel, actionModel, redisClient, u
         teamId: string,
     ): Promise<{ actions?: RedisAction[]; game: IGame; token: string; point?: IPoint }> => {
         await authenticateManager(ultmtUrl, apiKey, userJwt, teamId)
+        const myTeam = await getTeam(ultmtUrl, apiKey, teamId)
         // get game
         const game = await findByIdOrThrow<IGame>(gameId, gameModel, Constants.UNABLE_TO_FIND_GAME)
         const team = idsAreEqual(game.teamOne._id, teamId) ? TeamNumber.ONE : TeamNumber.TWO
@@ -25,9 +26,11 @@ export const reenterGame = ({ gameModel, pointModel, actionModel, redisClient, u
         // get active point by team
         const point = await getReentryPoint(game._id, team)
         const teamStatus = isTeamOne(team, 'teamOneStatus', 'teamTwoStatus')
+        const teamPlayers = isTeamOne(team, 'teamOnePlayers', 'teamTwoPlayers')
         const token = game.getToken(team)
 
         game[teamStatus] = GameStatus.ACTIVE
+        game[teamPlayers] = myTeam.players
         await game.save()
 
         if (!point) {
