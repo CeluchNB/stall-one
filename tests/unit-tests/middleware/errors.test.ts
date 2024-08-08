@@ -116,4 +116,22 @@ describe('should return correct message for error', () => {
             code: 400,
         })
     })
+    it('with cannot go back point', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.CANNOT_GO_BACK_POINT}`)).toEqual({
+            message: Constants.CANNOT_GO_BACK_POINT,
+            code: 400,
+        })
+    })
+    it('with cannot create guest', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.UNABLE_TO_CREATE_GUEST}`)).toEqual({
+            message: Constants.UNABLE_TO_CREATE_GUEST,
+            code: 400,
+        })
+    })
+    it('with no previous point', () => {
+        expect(userErrorResponse(`Extra Error: ${Constants.NO_PREVIOUS_POINT}`)).toEqual({
+            message: Constants.NO_PREVIOUS_POINT,
+            code: 404,
+        })
+    })
 })

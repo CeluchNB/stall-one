@@ -107,7 +107,7 @@ export default class ActionServices {
         const foundAction = await actionExists(this.redisClient, pointId, Number(totalActions), team)
         if (foundAction) {
             const action = await getRedisAction(this.redisClient, pointId, Number(totalActions), team)
-            this.handleUndoSideEffects(action, pointId, team)
+            await this.handleUndoSideEffects(action, pointId, team)
             await deleteRedisAction(this.redisClient, pointId, Number(totalActions), team)
             await this.redisClient.decr(`${gameId}:${pointId}:${team}:actions`)
             return action

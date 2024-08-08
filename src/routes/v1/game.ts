@@ -219,21 +219,17 @@ gameRouter.get('/game/:id', param('id').escape(), async (req: Request, res: Resp
     }
 })
 
-gameRouter.get('/game/:id/points', param('id').escape(), async (req: Request, res: Response, next) => {
-    try {
-        const services = new GameServices(
-            Game,
-            Point,
-            Action,
-            Tournament,
-            process.env.ULTMT_API_URL || '',
-            process.env.API_KEY || '',
-        )
-        const points = await services.getPointsByGame(req.params.id)
-        return res.json({ points })
-    } catch (error) {
-        next(error)
-    }
+gameRouter.get('/game/:id/points', param('id').escape(), async (req: Request, res: Response) => {
+    const services = new GameServices(
+        Game,
+        Point,
+        Action,
+        Tournament,
+        process.env.ULTMT_API_URL || '',
+        process.env.API_KEY || '',
+    )
+    const points = await services.getPointsByGame(req.params.id)
+    return res.json({ points })
 })
 
 gameRouter.post('/game/full', body('gameData').isObject(), async (req: Request, res: Response, next) => {

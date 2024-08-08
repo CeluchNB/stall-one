@@ -1,6 +1,6 @@
 import { Types } from 'mongoose'
 import ITournament from './tournament'
-import { Player, Team } from './ultmt'
+import { FullGameUser, Player, Team } from './ultmt'
 import { ClientPoint } from './point'
 
 export interface UpdateGame {
@@ -31,6 +31,13 @@ export const updateGameKeys: UpdateGameKey[] = [
     'floaterTimeout',
 ]
 
+export enum GameStatus {
+    GUEST = 'guest',
+    DEFINED = 'defined',
+    ACTIVE = 'active',
+    COMPLETE = 'complete',
+}
+
 export interface CreateGame {
     creator: Player
     teamOne: Team
@@ -59,13 +66,15 @@ interface IGame extends CreateGame {
     resolveCode: string
     totalViews: number
     points: Types.ObjectId[]
+    teamOneStatus: GameStatus
+    teamTwoStatus: GameStatus
     getToken: (team: 'one' | 'two') => string
 }
 
 export interface CreateFullGame extends CreateGame {
     teamOneScore: number
     teamTwoScore: number
-    teamOnePlayers: Player[]
+    teamOnePlayers: FullGameUser[]
     points: ClientPoint[]
 }
 

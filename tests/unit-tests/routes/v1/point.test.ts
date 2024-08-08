@@ -19,6 +19,8 @@ import { ActionType, RedisAction } from '../../../../src/types/action'
 import { getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import Action from '../../../../src/models/action'
 import { Server } from 'http'
+import { PointStatus } from '../../../../src/types/point'
+import { GameStatus } from '../../../../src/types/game'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 jest.mock('../../../../src/background/v1/point', () => {
@@ -60,12 +62,8 @@ describe('test POST first point route', () => {
         const { point } = response.body
         expect(point.pullingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
 
-        const points = await Point.find({})
-        expect(points.length).toBe(1)
-        expect(points[0].pullingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
-        const gameRecord = await Game.findById(game._id)
-        expect(gameRecord?.points.length).toBe(1)
-        expect(gameRecord?.points[0].toString()).toBe(point._id.toString())
+        const pointRecord = await Point.findOne({ pointNumber: 1, gameId: game._id })
+        expect(pointRecord?.pullingTeam._id?.toString()).toBe(game.teamOne._id?.toString())
     })
 
     it('with bad game authentication', async () => {
@@ -79,6 +77,7 @@ describe('test POST first point route', () => {
     it('with invalid data', async () => {
         const game = await Game.create(gameData)
         const point = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -105,6 +104,7 @@ describe('test PUT pulling team', () => {
     it('with valid data for team one', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -135,6 +135,7 @@ describe('test PUT pulling team', () => {
     it('with valid data for team two', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -165,6 +166,7 @@ describe('test PUT pulling team', () => {
     it('with invalid team value', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -189,6 +191,7 @@ describe('test PUT pulling team', () => {
     it('with bad authentication', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -212,6 +215,7 @@ describe('test PUT set players', () => {
     it('with valid data', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -253,6 +257,7 @@ describe('test PUT set players', () => {
     it('with bad token', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -284,6 +289,7 @@ describe('test PUT set players', () => {
     it('with player error', async () => {
         const game = await Game.create(gameData)
         const initialPoint = await Point.create({
+            gameId: game._id,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -319,9 +325,8 @@ describe('test PUT set players', () => {
 describe('test PUT finish point', () => {
     it('with valid team one data', async () => {
         const game = await Game.create(createData)
-        const point = await Point.create(createPointData)
-        point.teamTwoActive = false
-        game.points.push(point._id)
+        const point = await Point.create({ ...createPointData, gameId: game._id })
+        point.teamTwoStatus = PointStatus.FUTURE
         await game.save()
         await point.save()
 
@@ -381,17 +386,16 @@ describe('test PUT finish point', () => {
 
         const { point: pointResponse } = response.body
         expect(pointResponse._id.toString()).toBe(point._id.toString())
-        expect(pointResponse.teamOneActions.length).toBe(0)
         expect(pointResponse.teamOneScore).toBe(1)
         expect(pointResponse.teamTwoScore).toBe(0)
-        expect(pointResponse.teamOneActive).toBe(false)
-        expect(pointResponse.teamTwoActive).toBe(false)
+        expect(pointResponse.teamOneStatus).toBe(PointStatus.COMPLETE)
+        expect(pointResponse.teamTwoStatus).toBe(PointStatus.FUTURE)
 
         const pointRecord = await Point.findById(pointResponse._id)
         expect(pointRecord?.teamOneScore).toBe(1)
         expect(pointRecord?.teamTwoScore).toBe(0)
-        expect(pointRecord?.teamOneActive).toBe(false)
-        expect(pointRecord?.teamTwoActive).toBe(false)
+        expect(pointRecord?.teamOneStatus).toBe(PointStatus.COMPLETE)
+        expect(pointRecord?.teamTwoStatus).toBe(PointStatus.FUTURE)
 
         const keys = await client.keys('*')
         expect(keys.length).toBe(11)
@@ -399,10 +403,8 @@ describe('test PUT finish point', () => {
 
     it('with service error', async () => {
         const game = await Game.create(createData)
-        const point = await Point.create(createPointData)
-        point.teamTwoActive = false
-        game.points.push(point._id)
-        await game.save()
+        const point = await Point.create({ ...createPointData, gameId: game._id })
+        point.teamTwoStatus = PointStatus.FUTURE
         await point.save()
 
         const token = game.getToken('one')
@@ -417,11 +419,7 @@ describe('test PUT finish point', () => {
 
     it('with bad authentication', async () => {
         const game = await Game.create(createData)
-        const point = await Point.create(createPointData)
-        point.teamTwoActive = false
-        game.points.push(point._id)
-        await game.save()
-        await point.save()
+        const point = await Point.create({ ...createPointData, gameId: game._id })
 
         await request(app)
             .put(`/api/v1/point/${point._id.toString()}/finish`)
@@ -432,33 +430,23 @@ describe('test PUT finish point', () => {
 })
 
 describe('test PUT reactivate point', () => {
+    const pointId = new Types.ObjectId()
     beforeEach(async () => {
-        const action1 = await Action.create({
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Place1',
-                name: 'Name1',
-                teamname: 'Place1Name1',
-                seasonStart: new Date(),
-                seasonEnd: new Date(),
-            },
+        await Action.create({
+            pointId,
+            team: gameData.teamOne,
             actionNumber: 1,
             actionType: 'Pull',
             playerOne: { firstName: 'Name1', lastName: 'Last1' },
         })
-        const action2 = await Action.create({
-            team: {
-                _id: new Types.ObjectId(),
-                place: 'Place1',
-                name: 'Name1',
-                teamname: 'Place1Name1',
-                seasonStart: new Date(),
-                seasonEnd: new Date(),
-            },
+        await Action.create({
+            pointId,
+            team: gameData.teamOne,
             actionNumber: 2,
             actionType: 'TeamTwoScore',
         })
-        const prevPoint = await Point.create({
+        await Point.create({
+            gameId: gameData._id,
             pointNumber: 1,
             teamOneActive: false,
             teamTwoActive: false,
@@ -474,7 +462,9 @@ describe('test PUT reactivate point', () => {
             teamOneScore: 1,
             teamTwoScore: 0,
         })
-        const initialPoint = await Point.create({
+        await Point.create({
+            _id: pointId,
+            gameId: gameData._id,
             pointNumber: 2,
             teamOneActive: false,
             teamTwoActive: false,
@@ -490,17 +480,13 @@ describe('test PUT reactivate point', () => {
             teamOneScore: 1,
             teamTwoScore: 1,
         })
-        initialPoint.teamOneActions = [action1._id, action2._id]
-        await initialPoint.save()
 
-        const game = await Game.create(gameData)
-        game.points = [prevPoint._id, initialPoint._id]
-        await game.save()
+        await Game.create(gameData)
     })
 
     it('with valid use case', async () => {
         const game = await Game.findOne({})
-        const initialPoint = await Point.findById(game!.points[1])
+        const initialPoint = await Point.findOne({ pointNumber: 2, gameId: game!._id })
 
         const token = game!.getToken('one')
         const response = await request(app)
@@ -513,12 +499,16 @@ describe('test PUT reactivate point', () => {
 
         expect(point.teamOneActive).toBe(true)
         expect(point.teamTwoActive).toBe(false)
-        expect(point.teamOneActions.length).toBe(0)
+        expect(point.teamOneStatus).toBe(PointStatus.ACTIVE)
+        expect(point.teamTwoStatus).toBe(PointStatus.FUTURE)
         expect(point.teamOneScore).toBe(1)
         expect(point.teamTwoScore).toBe(0)
         const gameRecord = await Game.findById(game!._id)
         expect(gameRecord?.teamOneScore).toBe(1)
         expect(gameRecord?.teamTwoScore).toBe(0)
+
+        const actions = await Action.find({})
+        expect(actions.length).toBe(0)
 
         const actionCount = await client.get(`${game!._id}:${initialPoint!._id}:one:actions`)
         expect(actionCount).toBe('2')
@@ -556,9 +546,7 @@ describe('test PUT reactivate point', () => {
 describe('test DELETE point', () => {
     it('with valid data', async () => {
         const game = await Game.create(createData)
-        const point = await Point.create(createPointData)
-        game.points.push(point._id)
-        await game.save()
+        const point = await Point.create({ ...createPointData, gameId: game._id })
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:one:actions`, 0)
         const token = game.getToken('one')
@@ -596,10 +584,6 @@ describe('test DELETE point', () => {
     it('with service error', async () => {
         const game = await Game.create(createData)
         const point = await Point.create(createPointData)
-        game.points.push(point._id)
-        await game.save()
-        point.teamOneActions.push(new Types.ObjectId())
-        await point.save()
 
         await client.set(`${game._id.toString()}:${point._id.toString()}:actions`, 5)
         const token = game.getToken('one')
@@ -610,7 +594,7 @@ describe('test DELETE point', () => {
             .send()
             .expect(400)
 
-        expect(response.body.message).toBe(Constants.MODIFY_LIVE_POINT_ERROR)
+        expect(response.body.message).toBe(Constants.INVALID_DATA)
     })
 })
 
@@ -623,27 +607,38 @@ describe('test GET actions by point', () => {
         name: 'Name 1',
         teamname: 'placename',
     }
+    const gameId = new Types.ObjectId()
+    const pointId = new Types.ObjectId()
     beforeEach(async () => {
+        const game = await Game.create({
+            ...gameData,
+            teamTwo: { _id: new Types.ObjectId(), name: 'Name2' },
+            _id: gameId,
+        })
         await Action.create({
-            team,
+            pointId,
+            team: game.teamOne,
             actionNumber: 1,
             actionType: 'TeamOneScore',
         })
         await Action.create({
-            team,
+            pointId,
+            team: game.teamOne,
             actionNumber: 1,
             actionType: 'Pull',
         })
         await Action.create({
-            team,
+            pointId,
+            team: game.teamTwo,
             actionNumber: 2,
             actionType: 'TeamOneScore',
         })
     })
 
     it('with team one actions', async () => {
-        const [action1, action2, action3] = await Action.find({})
         const point = await Point.create({
+            _id: pointId,
+            gameId,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -652,8 +647,6 @@ describe('test GET actions by point', () => {
             pullingTeam: team,
             receivingTeam: { name: 'Team 2' },
             teamTwoActive: false,
-            teamOneActions: [action1._id, action2._id],
-            teamTwoActions: [action3._id],
         })
 
         const response = await request(app)
@@ -670,8 +663,9 @@ describe('test GET actions by point', () => {
     })
 
     it('with team two actions', async () => {
-        const [action1, action2, action3] = await Action.find({})
         const point = await Point.create({
+            _id: pointId,
+            gameId,
             pointNumber: 1,
             teamOneScore: 0,
             teamTwoScore: 0,
@@ -680,8 +674,6 @@ describe('test GET actions by point', () => {
             pullingTeam: team,
             receivingTeam: { name: 'Team 2' },
             teamTwoActive: false,
-            teamOneActions: [action1._id, action2._id],
-            teamTwoActions: [action3._id],
         })
 
         const response = await request(app)
@@ -693,27 +685,6 @@ describe('test GET actions by point', () => {
         expect(actions.length).toBe(1)
         expect(actions[0].actionNumber).toBe(2)
         expect(actions[0].actionType).toBe('TeamOneScore')
-    })
-
-    it('with unfound actions', async () => {
-        const point = await Point.create({
-            pointNumber: 1,
-            teamOneScore: 0,
-            teamTwoScore: 0,
-            teamOnePlayers: [],
-            teamTwoPlayers: [],
-            pullingTeam: team,
-            receivingTeam: { name: 'Team 2' },
-            teamTwoActive: false,
-            teamOneActions: [],
-            teamTwoActions: [],
-        })
-        const response = await request(app)
-            .get(`/api/v1/point/${point._id.toString()}/actions?team=one`)
-            .send()
-            .expect(200)
-        const { actions } = response.body
-        expect(actions.length).toBe(0)
     })
 
     it('with service error', async () => {
@@ -793,9 +764,15 @@ describe('test GET live actions of a point', () => {
 describe('test PUT finish background point', () => {
     it('with successful call', async () => {
         const game = await Game.create(createData)
-        const point = await Point.create({ ...createPointData, teamTwoActive: false, teamOneActive: false })
+        const point = await Point.create({
+            ...createPointData,
+            gameId: game._id,
+            teamOneStatus: PointStatus.COMPLETE,
+            teamTwoStatus: PointStatus.COMPLETE,
+        })
         game.teamTwoActive = false
         game.teamTwoDefined = false
+        game.teamTwoStatus = GameStatus.GUEST
         game.points.push(point._id)
         await game.save()
 
@@ -830,11 +807,6 @@ describe('test PUT finish background point', () => {
                 },
             })
             .expect(200)
-
-        const pointRecord = await Point.findById(point._id)
-
-        expect(pointRecord?.teamOneActions.length).toBe(2)
-        expect(pointRecord?.teamTwoActions.length).toBe(0)
 
         const pullingKey = await client.get(`${game._id.toString()}:${point._id.toString()}:pulling`)
         expect(pullingKey).toBeNull()

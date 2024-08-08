@@ -1,5 +1,5 @@
 import { Schema, SchemaTypes, model } from 'mongoose'
-import IGame from '../types/game'
+import IGame, { GameStatus } from '../types/game'
 import jwt from 'jsonwebtoken'
 import { TeamNumber } from '../types/ultmt'
 
@@ -76,6 +76,8 @@ const schema = new Schema<IGame>({
             eventId: String,
         },
     },
+    teamOneStatus: { type: String, enum: Object.values(GameStatus), default: GameStatus.ACTIVE },
+    teamTwoStatus: { type: String, enum: Object.values(GameStatus), default: GameStatus.GUEST },
 })
 
 schema.methods.getToken = function (team: TeamNumber) {
