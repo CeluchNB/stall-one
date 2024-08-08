@@ -166,7 +166,7 @@ describe('test client undo action', () => {
         tags: ['IB'],
     }
     beforeAll(async () => {
-        game = await Game.findOne({})
+        game = await Game.findById(gameId)
         point = await Point.create({ ...createPointData })
 
         await client.set(`${game?._id.toString()}:${point._id.toString()}:one:actions`, '1')

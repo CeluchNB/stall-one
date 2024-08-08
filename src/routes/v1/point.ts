@@ -8,7 +8,7 @@ import { GameAuth } from '../../types/game'
 import { getMyTeamNumber } from '../../utils/utils'
 import { getClient } from '../../utils/redis'
 import Action from '../../models/action'
-import PointBackgroundServices from '../../services/v1/point-background'
+import { container } from '../../di'
 
 export const pointRouter = Router()
 
@@ -156,11 +156,11 @@ pointRouter.get(
 
 pointRouter.put('/point/:id/background-finish', param('id').escape(), async (req: Request, res: Response, next) => {
     try {
-        const services = new PointBackgroundServices(Point, Game, Action)
+        const pointBackgroundService = container.resolve('pointBackgroundService')
         const {
             finishPointData: { gameId, team },
         } = req.body
-        await services.finishPoint(req.params.id, gameId, team)
+        await pointBackgroundService.finishPoint(req.params.id, gameId, team)
         return res.send()
     } catch (error) {
         next(error)

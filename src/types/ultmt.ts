@@ -14,6 +14,10 @@ export interface UserResponse {
     username: string
 }
 
+export interface FullGameUser extends UserResponse {
+    localGuest: boolean
+}
+
 export interface Team {
     _id?: Types.ObjectId
     place?: string

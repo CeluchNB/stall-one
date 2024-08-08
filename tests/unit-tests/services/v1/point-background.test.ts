@@ -1,43 +1,43 @@
-import {
-    setUpDatabase,
-    tearDownDatabase,
-    resetDatabase,
-    client,
-    createData,
-    createPointData,
-} from '../../../fixtures/setup-db'
+import { setUpDatabase, tearDownDatabase, resetDatabase, createData, createPointData } from '../../../fixtures/setup-db'
 import Point from '../../../../src/models/point'
 import Game from '../../../../src/models/game'
 import { TeamNumber } from '../../../../src/types/ultmt'
-import Action from '../../../../src/models/action'
 import { saveRedisAction } from '../../../../src/utils/redis'
 import { ActionType, RedisAction } from '../../../../src/types/action'
-import PointBackgroundServices from '../../../../src/services/v1/point-background'
-import { getClient } from '../../../../src/utils/redis'
+import { client } from '../../../../src/utils/redis'
+import { container } from '../../../../src/di'
+import { PointStatus } from '../../../../src/types/point'
+import { GameStatus } from '../../../../src/types/game'
+import Action from '../../../../src/models/action'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
 beforeAll(async () => {
+    await client.connect()
     await setUpDatabase()
-})
-
-afterAll(async () => {
-    await tearDownDatabase()
-    const client = await getClient()
-    await client.quit()
 })
 
 afterEach(async () => {
     await resetDatabase()
 })
 
+afterAll(async () => {
+    await tearDownDatabase()
+    client.quit()
+})
+
 describe('handles finish point background service', () => {
-    const services = new PointBackgroundServices(Point, Game, Action)
     it('handles team one score', async () => {
+        const services = container.resolve('pointBackgroundService')
         const game = await Game.create(createData)
-        const point = await Point.create({ ...createPointData, teamTwoActive: false, teamOneActive: false })
+        const point = await Point.create({
+            ...createPointData,
+            teamOneStatus: PointStatus.COMPLETE,
+            teamTwoStatus: PointStatus.COMPLETE,
+        })
         game.teamTwoActive = false
         game.teamTwoDefined = false
+        game.teamTwoStatus = GameStatus.GUEST
         game.points.push(point._id)
         await game.save()
 
@@ -65,10 +65,11 @@ describe('handles finish point background service', () => {
         await saveRedisAction(client, secondAction, point._id.toString())
         await services.finishPoint(point._id.toHexString(), game._id.toHexString(), 'one')
 
-        const pointRecord = await Point.findById(point._id)
+        const teamOneActions = await Action.find({ pointId: point._id, 'team._id': game.teamOne._id })
+        expect(teamOneActions.length).toBe(2)
 
-        expect(pointRecord?.teamOneActions.length).toBe(2)
-        expect(pointRecord?.teamTwoActions.length).toBe(0)
+        const teamTwoActions = await Action.find({ pointId: point._id, 'team._id': game.teamTwo._id })
+        expect(teamTwoActions.length).toBe(0)
 
         const pullingKey = await client.get(`${game._id.toString()}:${point._id.toString()}:pulling`)
         expect(pullingKey).toBeNull()
@@ -84,8 +85,13 @@ describe('handles finish point background service', () => {
     })
 
     it('handles team two score', async () => {
-        const game = await Game.create(createData)
-        const point = await Point.create({ ...createPointData, teamTwoActive: false, teamOneActive: false })
+        const services = container.resolve('pointBackgroundService')
+        const game = await Game.create({ ...createData, teamTwoStatus: GameStatus.GUEST })
+        const point = await Point.create({
+            ...createPointData,
+            teamOneStatus: PointStatus.COMPLETE,
+            teamTwoStatus: PointStatus.FUTURE,
+        })
         game.teamTwoActive = true
         game.teamTwoDefined = true
         game.points.push(point._id)
@@ -115,10 +121,11 @@ describe('handles finish point background service', () => {
         await saveRedisAction(client, secondAction, point._id.toString())
         await services.finishPoint(point._id.toHexString(), game._id.toHexString(), 'two')
 
-        const pointRecord = await Point.findById(point._id)
+        const teamOneActions = await Action.find({ pointId: point._id, 'team._id': game.teamOne._id })
+        expect(teamOneActions.length).toBe(0)
 
-        expect(pointRecord?.teamOneActions.length).toBe(0)
-        expect(pointRecord?.teamTwoActions.length).toBe(2)
+        const teamTwoActions = await Action.find({ pointId: point._id, 'team._id': game.teamTwo._id })
+        expect(teamTwoActions.length).toBe(2)
 
         const pullingKey = await client.get(`${game._id.toString()}:${point._id.toString()}:pulling`)
         expect(pullingKey).toBeNull()

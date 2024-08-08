@@ -14,10 +14,12 @@ import { loadPassportMiddleware } from './loaders/passport'
 import dotenv from 'dotenv'
 import { Logger } from './logging'
 import { errorMiddleware } from './middlware/errors'
+import { registerDependencies } from './di'
 
 export const setupApp = async (): Promise<HttpServer> => {
     const pathToEnv = process.cwd() + '/src/config/.env'
     dotenv.config({ path: pathToEnv })
+    registerDependencies()
 
     const logger = Logger()
 

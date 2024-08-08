@@ -13,6 +13,12 @@ export interface ClientPoint {
     actions: ClientAction[]
 }
 
+export enum PointStatus {
+    FUTURE = 'future',
+    ACTIVE = 'active',
+    COMPLETE = 'complete',
+}
+
 interface IPoint {
     _id: Types.ObjectId
     pointNumber: number
@@ -26,9 +32,12 @@ interface IPoint {
     receivingTeam: Team
     scoringTeam?: Team
     teamOneActive: boolean
+    teamOneStatus: PointStatus
     teamTwoActive: boolean
+    teamTwoStatus: PointStatus
     teamOneActions: Types.ObjectId[]
     teamTwoActions: Types.ObjectId[]
+    gameId: Types.ObjectId
 }
 
 export default IPoint

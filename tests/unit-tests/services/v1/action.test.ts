@@ -46,6 +46,7 @@ const userData = {
     requests: [],
     openToRequests: false,
 }
+const pointId = new Types.ObjectId()
 
 const services = new ActionServices(client, '', '')
 describe('test create a live action', () => {
@@ -741,6 +742,7 @@ describe('test edit action', () => {
             username: 'firstlast2',
         }
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {
@@ -791,6 +793,7 @@ describe('test edit action', () => {
         })
 
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {
@@ -816,6 +819,7 @@ describe('test edit action', () => {
 describe('test add saved comment', () => {
     it('with valid data', async () => {
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {
@@ -854,6 +858,7 @@ describe('test add saved comment', () => {
 
     it('with pre-existing comment', async () => {
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {
@@ -905,6 +910,7 @@ describe('test add saved comment', () => {
         })
 
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {
@@ -926,6 +932,7 @@ describe('test add saved comment', () => {
         })
 
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {
@@ -943,6 +950,7 @@ describe('test add saved comment', () => {
 
     it('with profane comment', async () => {
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {
@@ -973,6 +981,7 @@ describe('test delete saved comment', () => {
     it('with existing comment', async () => {
         jest.spyOn(axios, 'get').mockReturnValueOnce(Promise.resolve({ data: { user: userData }, status: 200 }))
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             playerOne: {
@@ -1007,6 +1016,7 @@ describe('test delete saved comment', () => {
         jest.spyOn(axios, 'get').mockReturnValueOnce(Promise.resolve({ data: { user: userData }, status: 200 }))
 
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             playerOne: {
@@ -1060,6 +1070,7 @@ describe('test delete saved comment', () => {
         })
 
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {
@@ -1081,6 +1092,7 @@ describe('test delete saved comment', () => {
         })
 
         const initAction = await Action.create({
+            pointId,
             actionNumber: 1,
             actionType: 'Pull',
             team: {

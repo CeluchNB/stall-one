@@ -1,7 +1,14 @@
 import { Types } from 'mongoose'
 import Game from '../../../../src/models/game'
 import { close } from '../../../../src/app'
-import { setUpDatabase, resetDatabase, tearDownDatabase, createData, client } from '../../../fixtures/setup-db'
+import {
+    setUpDatabase,
+    resetDatabase,
+    tearDownDatabase,
+    createData,
+    client,
+    createPointData,
+} from '../../../fixtures/setup-db'
 import {
     reconcileGames,
     reconcileGuest,
@@ -14,6 +21,7 @@ import Point from '../../../../src/models/point'
 import Action from '../../../../src/models/action'
 import { getRedisAction, saveRedisAction, saveRedisComment } from '../../../../src/utils/redis'
 import { ActionType } from '../../../../src/types/action'
+import { PointStatus } from '../../../../src/types/point'
 
 beforeAll(async () => {
     await setUpDatabase()
@@ -60,14 +68,27 @@ describe('Reconcile guest pieces', () => {
             const game = await Game.create({
                 ...createData,
                 teamOnePlayers: [user1, guest, user2],
-                points: [new Types.ObjectId(), new Types.ObjectId()],
+            })
+            const point1Id = new Types.ObjectId()
+            const point2Id = new Types.ObjectId()
+            await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                pointNumber: 1,
+                _id: point1Id,
+            })
+            await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                pointNumber: 2,
+                _id: point2Id,
             })
             const result = await reconcileGames([game], guestId.toHexString(), realUser, 'one')
             expect(result).toMatchObject({
-                [game._id.toHexString()]: [...game.points],
+                [game._id.toHexString()]: [point1Id, point2Id],
             })
 
-            const gameResult = await Game.findOne()
+            const gameResult = await Game.findById(game._id)
             expect(gameResult?.teamOnePlayers.length).toBe(3)
             expect(gameResult?.teamOnePlayers[2]).toMatchObject(realUser)
         })
@@ -76,11 +97,25 @@ describe('Reconcile guest pieces', () => {
             const game = await Game.create({
                 ...createData,
                 teamTwoPlayers: [user1, guest, user2],
-                points: [new Types.ObjectId(), new Types.ObjectId()],
             })
+            const point1Id = new Types.ObjectId()
+            const point2Id = new Types.ObjectId()
+            await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                pointNumber: 1,
+                _id: point1Id,
+            })
+            await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                pointNumber: 2,
+                _id: point2Id,
+            })
+
             const result = await reconcileGames([game], guestId.toHexString(), realUser, 'two')
             expect(result).toMatchObject({
-                [game._id.toHexString()]: [...game.points],
+                [game._id.toHexString()]: [point1Id, point2Id],
             })
 
             const gameResult = await Game.findOne()
@@ -90,8 +125,10 @@ describe('Reconcile guest pieces', () => {
     })
 
     describe('reconcilePoints', () => {
+        const gameId = new Types.ObjectId()
         it('team one with saved actions', async () => {
             const point = await Point.create({
+                gameId,
                 pointNumber: 1,
                 pullingTeam: { name: 'Team 1' },
                 receivingTeam: { name: 'Team 2' },
@@ -115,6 +152,7 @@ describe('Reconcile guest pieces', () => {
 
         it('team two with saved actions', async () => {
             const point = await Point.create({
+                gameId,
                 pointNumber: 1,
                 pullingTeam: { name: 'Team 1' },
                 receivingTeam: { name: 'Team 2' },
@@ -138,12 +176,14 @@ describe('Reconcile guest pieces', () => {
 
         it('team one with live point', async () => {
             const point = await Point.create({
+                gameId,
                 pointNumber: 1,
                 pullingTeam: { name: 'Team 1' },
                 receivingTeam: { name: 'Team 2' },
                 teamOneScore: 0,
                 teamTwoScore: 1,
                 teamOneActive: true,
+                teamOneStatus: PointStatus.ACTIVE,
                 teamOneActions: [new Types.ObjectId(), new Types.ObjectId()],
                 teamOnePlayers: [user1, guest, user2],
                 teamOneActivePlayers: [user1, guest, user2],
@@ -164,8 +204,10 @@ describe('Reconcile guest pieces', () => {
     })
 
     describe('reconcileSavedActions', () => {
+        const pointId = new Types.ObjectId()
         it('replaces player one actions', async () => {
             const action1 = await Action.create({
+                pointId,
                 actionNumber: 1,
                 actionType: 'Pull',
                 team: {
@@ -177,6 +219,7 @@ describe('Reconcile guest pieces', () => {
                 playerOne: guest,
             })
             const action2 = await Action.create({
+                pointId,
                 actionNumber: 2,
                 actionType: 'Catch',
                 team: {
@@ -200,6 +243,7 @@ describe('Reconcile guest pieces', () => {
 
         it('replaces player two actions', async () => {
             const action1 = await Action.create({
+                pointId,
                 actionNumber: 1,
                 actionType: 'Pull',
                 team: {
@@ -212,6 +256,7 @@ describe('Reconcile guest pieces', () => {
                 playerTwo: guest,
             })
             const action2 = await Action.create({
+                pointId,
                 actionNumber: 2,
                 actionType: 'Catch',
                 team: {
@@ -393,6 +438,10 @@ describe('reconcileGuest', () => {
         seasonStart: new Date(),
         seasonEnd: new Date(),
     }
+    const gameOneId = new Types.ObjectId()
+    const gameTwoId = new Types.ObjectId()
+    const pointOneId = new Types.ObjectId()
+    const pointThreeId = new Types.ObjectId()
     beforeEach(async () => {
         const action1 = await Action.create({
             actionNumber: 1,
@@ -400,6 +449,7 @@ describe('reconcileGuest', () => {
             team: team,
             playerOne: user1,
             playerTwo: user2,
+            pointId: pointOneId,
         })
         const action2 = await Action.create({
             actionNumber: 2,
@@ -407,6 +457,7 @@ describe('reconcileGuest', () => {
             team: team,
             playerOne: guest,
             playerTwo: user2,
+            pointId: pointOneId,
         })
         const action3 = await Action.create({
             actionNumber: 3,
@@ -414,6 +465,7 @@ describe('reconcileGuest', () => {
             team: team,
             playerOne: user1,
             playerTwo: guest,
+            pointId: pointOneId,
         })
 
         const action4 = await Action.create({
@@ -422,6 +474,7 @@ describe('reconcileGuest', () => {
             team: team,
             playerOne: user1,
             playerTwo: user2,
+            pointId: pointThreeId,
         })
         const action5 = await Action.create({
             actionNumber: 2,
@@ -429,6 +482,7 @@ describe('reconcileGuest', () => {
             team: team,
             playerOne: guest,
             playerTwo: user2,
+            pointId: pointThreeId,
         })
         const action6 = await Action.create({
             actionNumber: 3,
@@ -436,48 +490,63 @@ describe('reconcileGuest', () => {
             team: team,
             playerOne: user1,
             playerTwo: guest,
+            pointId: pointThreeId,
         })
 
         const point1 = await Point.create({
+            _id: pointOneId,
+            gameId: gameOneId,
             pointNumber: 1,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
             teamOneScore: 0,
             teamTwoScore: 1,
             teamOneActive: false,
+            teamOneStatus: PointStatus.COMPLETE,
+            teamTwoStatus: PointStatus.COMPLETE,
             teamOneActions: [action1._id, action2._id, action3._id],
             teamOnePlayers: [guest, user1, user2],
             teamOneActivePlayers: [user1, guest, user2],
         })
         const point2 = await Point.create({
+            gameId: gameOneId,
             pointNumber: 2,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
             teamOneScore: 0,
             teamTwoScore: 1,
             teamOneActive: true,
+            teamOneStatus: PointStatus.ACTIVE,
+            teamTwoStatus: PointStatus.COMPLETE,
             teamOneActions: [],
             teamOnePlayers: [user1, guest, user2],
             teamOneActivePlayers: [guest, user1, user2],
         })
         const point3 = await Point.create({
+            _id: pointThreeId,
+            gameId: gameTwoId,
             pointNumber: 1,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
             teamOneScore: 0,
             teamTwoScore: 1,
             teamTwoActive: false,
+            teamOneStatus: PointStatus.FUTURE,
+            teamTwoStatus: PointStatus.COMPLETE,
             teamTwoActions: [action4._id, action5._id, action6._id],
             teamTwoPlayers: [user1, guest, user2],
             teamTwoActivePlayers: [guest, user1, user2],
         })
         const point4 = await Point.create({
+            gameId: gameTwoId,
             pointNumber: 2,
             pullingTeam: { name: 'Team 1' },
             receivingTeam: { name: 'Team 2' },
             teamOneScore: 0,
             teamTwoScore: 1,
             teamTwoActive: true,
+            teamOneStatus: PointStatus.FUTURE,
+            teamTwoStatus: PointStatus.ACTIVE,
             teamTwoActions: [],
             teamTwoPlayers: [user1, guest, user2],
             teamTwoActivePlayers: [guest, user1, user2],
@@ -485,12 +554,14 @@ describe('reconcileGuest', () => {
 
         const game1 = await Game.create({
             ...createData,
+            _id: gameOneId,
             teamOne: team,
             teamOnePlayers: [user1, guest, user2],
             points: [point1._id, point2._id],
         })
         const game2 = await Game.create({
             ...createData,
+            _id: gameTwoId,
             teamTwo: team,
             teamTwoPlayers: [user1, guest, user2],
             points: [point3._id, point4._id],

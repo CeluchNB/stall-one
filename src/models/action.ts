@@ -44,6 +44,7 @@ const schema = new Schema<IAction>({
         },
     },
     tags: [String],
+    pointId: { type: SchemaTypes.ObjectId, required: true },
 })
 
 const Action = model<IAction>('Action', schema)
