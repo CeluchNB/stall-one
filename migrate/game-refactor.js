@@ -18,7 +18,7 @@ async function run() {
                 { _id: { $in: actionList } },
                 { $set: { pointId: point._id } },
             )
-            console.log('aciton result', actionResult.modifiedCount)
+            console.log('action result', actionResult.modifiedCount)
         }
     }
 }
