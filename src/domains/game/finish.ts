@@ -3,8 +3,9 @@ import Dependencies from '../../types/di'
 import { findByIdOrThrow } from '../../utils/mongoose'
 import IGame, { GameStatus } from '../../types/game'
 import { TeamNumber } from '../../types/ultmt'
+import { PointStatus } from '../../types/point'
 
-export const finishGame = ({ gameModel }: Dependencies) => {
+export const finishGame = ({ gameModel, pointModel }: Dependencies) => {
     const perform = async (gameId: string, team: TeamNumber) => {
         const game = await findByIdOrThrow<IGame>(gameId, gameModel, Constants.UNABLE_TO_FIND_GAME)
 
@@ -13,6 +14,12 @@ export const finishGame = ({ gameModel }: Dependencies) => {
         } else if (team === TeamNumber.TWO) {
             game.teamTwoStatus = GameStatus.COMPLETE
         }
+
+        await pointModel.deleteMany({
+            gameId,
+            teamOneStatus: PointStatus.FUTURE,
+            teamTwoStatus: PointStatus.FUTURE,
+        })
 
         await game.save()
         return game

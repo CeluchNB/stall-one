@@ -1,10 +1,12 @@
 import { container } from '../../../../src/di'
 import Game from '../../../../src/models/game'
 import Dependencies from '../../../../src/types/di'
-import { setUpDatabase, tearDownDatabase, resetDatabase, gameData } from '../../../fixtures/setup-db'
+import Point from '../../../../src/models/point'
+import { setUpDatabase, tearDownDatabase, resetDatabase, gameData, createPointData } from '../../../fixtures/setup-db'
 import { client } from '../../../../src/utils/redis'
 import { TeamNumber } from '../../../../src/types/ultmt'
 import { GameStatus } from '../../../../src/types/game'
+import { PointStatus } from '../../../../src/types/point'
 
 beforeAll(async () => {
     client.connect()
@@ -20,7 +22,7 @@ afterAll(async () => {
     client.quit()
 })
 
-describe('Finsih Game', () => {
+describe('Finish Game', () => {
     describe('perform', () => {
         let finishGame: Dependencies['finishGame']
         beforeAll(() => {
@@ -29,12 +31,21 @@ describe('Finsih Game', () => {
 
         it('updates team one', async () => {
             const game = await Game.create({ ...gameData, teamTwoStatus: GameStatus.ACTIVE })
+            await Point.create({
+                ...createPointData,
+                gameId: game._id,
+                teamOneStatus: PointStatus.FUTURE,
+                teamTwoStatus: PointStatus.FUTURE,
+            })
             const result = await finishGame.perform(game._id.toHexString(), TeamNumber.ONE)
             expect(result.teamOneStatus).toBe(GameStatus.COMPLETE)
 
             const gameRecord = await Game.findById(game._id)
             expect(gameRecord?.teamOneStatus).toBe(GameStatus.COMPLETE)
             expect(gameRecord?.teamTwoStatus).toBe(GameStatus.ACTIVE)
+
+            const allPoints = await Point.find({})
+            expect(allPoints.length).toBe(0)
         })
 
         it('updates team two', async () => {
