@@ -15,6 +15,7 @@ import IAction from '../../types/action'
 import { ITournamentModel } from '../../models/tournament'
 import { getTeamTwoStatus } from '../../utils/game'
 import { pointIsActive } from '../../utils/point'
+import { getClient } from '../../utils/redis'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -286,6 +287,10 @@ export default class GameServices {
             await point.save()
         }
 
+        const livePointIds = points
+            .filter((p) => p.teamOneStatus === PointStatus.ACTIVE || p.teamTwoStatus === PointStatus.ACTIVE)
+            .map((p) => p._id.toHexString())
+
         const pointIds = points.map((p) => p._id)
         // if team one calling delete
         if (game.teamOne._id?.equals(teamId)) {
@@ -299,6 +304,7 @@ export default class GameServices {
                 await game.save()
             } else {
                 // fully delete game if team two is not defined
+                await this.deletePointRedisKeys(livePointIds)
                 await this.pointModel.deleteMany({ gameId })
                 await game.deleteOne()
             }
@@ -308,6 +314,7 @@ export default class GameServices {
 
             // undefined team one _id means team one has already deleted
             if (!game.teamOne._id) {
+                await this.deletePointRedisKeys(livePointIds)
                 await this.pointModel.deleteMany({ gameId })
                 await game.deleteOne()
             } else {
@@ -565,6 +572,18 @@ export default class GameServices {
                     creator: parseUser(user),
                 })
                 data.tournament = newTournament
+            }
+        }
+    }
+
+    private deletePointRedisKeys = async (pointIds: string[]) => {
+        const redisClient = await getClient() // TODO: DI this
+
+        for await (const key of redisClient.scanIterator()) {
+            for (const pointId of pointIds) {
+                if (key.includes(pointId)) {
+                    await redisClient.del(key)
+                }
             }
         }
     }
