@@ -287,6 +287,10 @@ export default class GameServices {
             await point.save()
         }
 
+        const livePointIds = points
+            .filter((p) => p.teamOneStatus === PointStatus.ACTIVE || p.teamTwoStatus === PointStatus.ACTIVE)
+            .map((p) => p._id.toHexString())
+
         const pointIds = points.map((p) => p._id)
         // if team one calling delete
         if (game.teamOne._id?.equals(teamId)) {
@@ -300,9 +304,9 @@ export default class GameServices {
                 await game.save()
             } else {
                 // fully delete game if team two is not defined
+                await this.deletePointRedisKeys(livePointIds)
                 await this.pointModel.deleteMany({ gameId })
                 await game.deleteOne()
-                await this.deleteGameRedisKeys(gameId)
             }
         } else if (game.teamTwo._id?.equals(teamId)) {
             // delete actions
@@ -310,9 +314,9 @@ export default class GameServices {
 
             // undefined team one _id means team one has already deleted
             if (!game.teamOne._id) {
+                await this.deletePointRedisKeys(livePointIds)
                 await this.pointModel.deleteMany({ gameId })
                 await game.deleteOne()
-                await this.deleteGameRedisKeys(gameId)
             } else {
                 game.teamTwo._id = undefined
                 game.teamTwo.teamname = undefined
@@ -572,11 +576,15 @@ export default class GameServices {
         }
     }
 
-    private deleteGameRedisKeys = async (gameId: string) => {
+    private deletePointRedisKeys = async (pointIds: string[]) => {
         const redisClient = await getClient() // TODO: DI this
-        const scanResult = await redisClient.scan(0, { MATCH: `${gameId}:*` })
-        if (scanResult.keys.length > 0) {
-            await redisClient.del(scanResult.keys)
+
+        for await (const key of redisClient.scanIterator()) {
+            for (const pointId of pointIds) {
+                if (key.includes(pointId)) {
+                    await redisClient.del(key)
+                }
+            }
         }
     }
 }

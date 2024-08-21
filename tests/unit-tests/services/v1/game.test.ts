@@ -763,9 +763,13 @@ describe('test delete game', () => {
                 username: 'first1last1',
             },
         })
-        await client.set(`${game._id}:pointId:one`, 1)
-        await client.set(`${game._id}:pointId:two`, 2)
-        await client.set(`${game._id}:pointId:three`, 3)
+        const [point] = await Point.find({})
+        point.gameId = game._id
+        point.teamTwoStatus = PointStatus.ACTIVE
+        await point.save()
+        await client.set(`${game._id}:${point._id}:one`, 1)
+        await client.set(`${game._id}:${point._id}:two`, 2)
+        await client.set(`${game._id}:${point._id}:three`, 3)
 
         await services.deleteGame(game._id.toString(), 'jwt', team._id?.toString() || '')
         const actions = await Action.find({ gameId: game._id })
@@ -955,6 +959,7 @@ describe('test delete game', () => {
         await point1.save()
         point2.teamTwoActions = [action4._id, action5._id]
         point2.receivingTeam = team2
+        point2.teamOneStatus = PointStatus.ACTIVE
         await point2.save()
         const game = await Game.create({
             _id: gameId,
@@ -977,9 +982,9 @@ describe('test delete game', () => {
             },
             points: [point1._id, point2._id],
         })
-        await client.set(`${game._id}:pointId:one`, 1)
-        await client.set(`${game._id}:pointId:two`, 2)
-        await client.set(`${game._id}:pointId:three`, 3)
+        await client.set(`${game._id}:${point2._id}:one`, 1)
+        await client.set(`${game._id}:${point2._id}:two`, 2)
+        await client.set(`${game._id}:${point2._id}:three`, 3)
 
         await services.deleteGame(game._id.toString(), 'jwt', team2._id?.toString() || '')
         const actions = await Action.find({})
