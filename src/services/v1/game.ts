@@ -15,6 +15,7 @@ import IAction from '../../types/action'
 import { ITournamentModel } from '../../models/tournament'
 import { getTeamTwoStatus } from '../../utils/game'
 import { pointIsActive } from '../../utils/point'
+import { getClient } from '../../utils/redis'
 
 export default class GameServices {
     gameModel: IGameModel
@@ -301,6 +302,7 @@ export default class GameServices {
                 // fully delete game if team two is not defined
                 await this.pointModel.deleteMany({ gameId })
                 await game.deleteOne()
+                await this.deleteGameRedisKeys(gameId)
             }
         } else if (game.teamTwo._id?.equals(teamId)) {
             // delete actions
@@ -310,6 +312,7 @@ export default class GameServices {
             if (!game.teamOne._id) {
                 await this.pointModel.deleteMany({ gameId })
                 await game.deleteOne()
+                await this.deleteGameRedisKeys(gameId)
             } else {
                 game.teamTwo._id = undefined
                 game.teamTwo.teamname = undefined
@@ -566,6 +569,14 @@ export default class GameServices {
                 })
                 data.tournament = newTournament
             }
+        }
+    }
+
+    private deleteGameRedisKeys = async (gameId: string) => {
+        const redisClient = await getClient() // TODO: DI this
+        const scanResult = await redisClient.scan(0, { MATCH: `${gameId}:*` })
+        if (scanResult.keys.length > 0) {
+            await redisClient.del(scanResult.keys)
         }
     }
 }

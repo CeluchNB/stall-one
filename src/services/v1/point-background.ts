@@ -39,7 +39,7 @@ export default class PointBackgroundServices {
     }
 
     getTeamActions = async (totalActions: number, pointId: string, team: TeamNumberString) => {
-        const redisClient = await getClient()
+        const redisClient = await getClient() // TODO: DI this
         const redisActionPromises = []
         for (let i = 1; i <= totalActions; i++) {
             redisActionPromises.push(getRedisAction(redisClient, pointId, i, team))
