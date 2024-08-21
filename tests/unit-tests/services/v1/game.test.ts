@@ -8,6 +8,7 @@ import {
     gameData,
     getMock,
     resetDatabase,
+    client,
 } from '../../../fixtures/setup-db'
 import GameServices from '../../../../src/services/v1/game'
 import Game from '../../../../src/models/game'
@@ -24,6 +25,7 @@ import Point from '../../../../src/models/point'
 import Action from '../../../../src/models/action'
 import { ActionType } from '../../../../src/types/action'
 import { PointStatus } from '../../../../src/types/point'
+import { close } from '../../../../src/app'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
 
@@ -32,6 +34,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+    await close()
     await tearDownDatabase()
 })
 
@@ -760,6 +763,14 @@ describe('test delete game', () => {
                 username: 'first1last1',
             },
         })
+        const [point] = await Point.find({})
+        point.gameId = game._id
+        point.teamTwoStatus = PointStatus.ACTIVE
+        await point.save()
+        await client.set(`${game._id}:${point._id}:one`, 1)
+        await client.set(`${game._id}:${point._id}:two`, 2)
+        await client.set(`${game._id}:${point._id}:three`, 3)
+
         await services.deleteGame(game._id.toString(), 'jwt', team._id?.toString() || '')
         const actions = await Action.find({ gameId: game._id })
         expect(actions.length).toBe(0)
@@ -769,6 +780,9 @@ describe('test delete game', () => {
 
         const games = await Game.find({})
         expect(games.length).toBe(0)
+
+        const keys = await client.keys('*')
+        expect(keys.length).toBe(0)
     })
 
     it('with team one and team two joined', async () => {
@@ -945,6 +959,7 @@ describe('test delete game', () => {
         await point1.save()
         point2.teamTwoActions = [action4._id, action5._id]
         point2.receivingTeam = team2
+        point2.teamOneStatus = PointStatus.ACTIVE
         await point2.save()
         const game = await Game.create({
             _id: gameId,
@@ -967,6 +982,9 @@ describe('test delete game', () => {
             },
             points: [point1._id, point2._id],
         })
+        await client.set(`${game._id}:${point2._id}:one`, 1)
+        await client.set(`${game._id}:${point2._id}:two`, 2)
+        await client.set(`${game._id}:${point2._id}:three`, 3)
 
         await services.deleteGame(game._id.toString(), 'jwt', team2._id?.toString() || '')
         const actions = await Action.find({})
@@ -977,6 +995,9 @@ describe('test delete game', () => {
 
         const games = await Game.find({})
         expect(games.length).toBe(0)
+
+        const keys = await client.keys('*')
+        expect(keys.length).toBe(0)
     })
 })
 
