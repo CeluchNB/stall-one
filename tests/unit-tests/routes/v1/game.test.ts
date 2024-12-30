@@ -15,7 +15,7 @@ import { CreateFullGame, GameStatus } from '../../../../src/types/game'
 import { ActionType } from '../../../../src/types/action'
 import { Server } from 'http'
 
-jest.mock('@google-cloud/tasks/build/src/v2')
+jest.mock('@google-cloud/tasks')
 
 let app: Server
 beforeAll(async () => {

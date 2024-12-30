@@ -23,7 +23,7 @@ import { Player, TeamNumber } from '../../../../src/types/ultmt'
 import { ClientPoint, PointStatus } from '../../../../src/types/point'
 import { CreateFullGame, GameStatus } from '../../../../src/types/game'
 
-jest.mock('@google-cloud/tasks/build/src/v2')
+jest.mock('@google-cloud/tasks')
 
 beforeEach(() => {
     jest.spyOn(axios, 'get').mockImplementation(getMock)

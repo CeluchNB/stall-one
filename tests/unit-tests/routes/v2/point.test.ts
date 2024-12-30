@@ -10,7 +10,7 @@ import Action from '../../../../src/models/action'
 import { ActionType } from '../../../../src/types/action'
 import Point from '../../../../src/models/point'
 
-jest.mock('@google-cloud/tasks/build/src/v2')
+jest.mock('@google-cloud/tasks')
 
 let app: Server
 beforeAll(async () => {

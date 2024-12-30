@@ -4,14 +4,14 @@ import { container } from '../../../../src/di'
 import Point from '../../../../src/models/point'
 import Dependencies from '../../../../src/types/di'
 import { PointStatus } from '../../../../src/types/point'
-import { Player, Team, TeamNumber, TeamResponse } from '../../../../src/types/ultmt'
+import { Player, TeamNumber, TeamResponse } from '../../../../src/types/ultmt'
 import { client, getRedisAction, saveRedisAction } from '../../../../src/utils/redis'
 import { setUpDatabase, tearDownDatabase, resetDatabase, createPointData, gameData } from '../../../fixtures/setup-db'
 import Game from '../../../../src/models/game'
 import { ActionType } from '../../../../src/types/action'
 import Action from '../../../../src/models/action'
 
-jest.mock('@google-cloud/tasks/build/src/v2')
+jest.mock('@google-cloud/tasks')
 
 beforeAll(async () => {
     client.connect()

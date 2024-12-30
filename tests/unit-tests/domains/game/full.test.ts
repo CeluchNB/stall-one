@@ -13,7 +13,7 @@ import { ClientPoint, PointStatus } from '../../../../src/types/point'
 import Point from '../../../../src/models/point'
 import Action from '../../../../src/models/action'
 
-jest.mock('@google-cloud/tasks/build/src/v2')
+jest.mock('@google-cloud/tasks')
 
 beforeAll(async () => {
     client.connect()
