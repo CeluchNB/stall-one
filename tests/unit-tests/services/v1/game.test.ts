@@ -1157,11 +1157,38 @@ describe('test search', () => {
             eventId: 'philly22',
         },
     }
+    const gameFourData = {
+        creator: {
+            _id: new Types.ObjectId(),
+            firstName: 'First1',
+            lastName: 'Last1',
+            username: 'first1last1',
+        },
+        teamOne: {
+            place: 'Portland',
+            name: 'Rhino',
+            teamname: 'rhino',
+        },
+        teamTwo: {
+            place: 'NY',
+            name: 'PoNY',
+            teamname: 'nypony',
+        },
+        teamOneStatus: GameStatus.COMPLETE,
+        teamTwoStatus: GameStatus.COMPLETE,
+        teamOneScore: 3,
+        startTime: new Date('2022-03-01'),
+        tournament: {
+            name: 'Philly Open',
+            eventId: 'philly22',
+        },
+    }
 
     beforeEach(async () => {
         await Game.create(gameOneData)
         await Game.create(gameTwoData)
         await Game.create(gameThreeData)
+        await Game.create(gameFourData)
     })
 
     it('with simple search by team name', async () => {
@@ -1189,14 +1216,14 @@ describe('test search', () => {
         const games = await services.searchGames('vau', true)
         expect(games.length).toBe(1)
         expect(games[0].teamOne.teamname).toBe('vault')
-        // expect(games[1].teamOne.teamname).toBe('pghtemper')
     })
 
     it('with after value', async () => {
         const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'))
-        expect(games.length).toBe(2)
+        expect(games.length).toBe(3)
         expect(games[0].teamOne.teamname).toBe('vault')
-        expect(games[1].teamOne.teamname).toBe('pghtemper')
+        expect(games[1].teamOne.teamname).toBe('rhino')
+        expect(games[2].teamOne.teamname).toBe('pghtemper')
     })
 
     it('with before value', async () => {
@@ -1220,15 +1247,16 @@ describe('test search', () => {
     it('with offset', async () => {
         const games = await services.searchGames(undefined, undefined, new Date('01-01-2021'), undefined, 1, 1)
         expect(games.length).toBe(1)
-        expect(games[0].teamOne.teamname).toBe('pghtemper')
+        expect(games[0].teamOne.teamname).toBe('vault')
     })
 
     it('with short value', async () => {
         const games = await services.searchGames('ts')
-        expect(games.length).toBe(3)
+        expect(games.length).toBe(4)
         expect(games[0].teamOne.teamname).toBe('vault')
-        expect(games[1].teamOne.teamname).toBe('pghtemper')
+        expect(games[1].teamOne.teamname).toBe('rhino')
         expect(games[2].teamOne.teamname).toBe('pghtemper')
+        expect(games[3].teamOne.teamname).toBe('pghtemper')
     })
 
     it('with partial text', async () => {
@@ -1244,6 +1272,12 @@ describe('test search', () => {
         expect(games[0].teamOne.teamname).toBe('vault')
         expect(games[1].teamOne.teamname).toBe('pghtemper')
         expect(games[2].teamOne.teamname).toBe('pghtemper')
+    })
+
+    it('with no parameters filters games without score', async () => {
+        const games = await services.searchGames()
+
+        expect(games.length).toBe(1)
     })
 })
 

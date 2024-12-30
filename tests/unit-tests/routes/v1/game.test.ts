@@ -598,6 +598,7 @@ describe('test /GET search games', () => {
             name: 'Mid-Atlantic Regionals 2020',
             eventId: 'mareg20',
         },
+        teamOneScore: 3,
     }
     const gameTwoData = {
         creator: {
