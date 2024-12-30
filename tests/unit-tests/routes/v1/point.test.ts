@@ -23,15 +23,6 @@ import { PointStatus } from '../../../../src/types/point'
 import { GameStatus } from '../../../../src/types/game'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
-jest.mock('../../../../src/background/v1/point', () => {
-    return {
-        finishPointQueue: {
-            initialize: jest.fn(),
-            close: jest.fn(),
-            addFinishPointJob: jest.fn(),
-        },
-    }
-})
 
 let app: Server
 beforeAll(async () => {

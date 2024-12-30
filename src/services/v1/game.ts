@@ -405,6 +405,11 @@ export default class GameServices {
             filter['startTime'] = { ...filter['startTime'], $lt: before }
         }
 
+        // search with no parameters (use case: home screen) should filter out low scoring games (which are usually test games)
+        if (!q && !before && !after && (live === undefined || live === null)) {
+            filter.$and = [...(filter.$and || []), { $or: [{ teamOneScore: { $gte: 2 } }, { teamTwoScore: { $gte: 2 } }] }]
+        }
+
         const games = await this.gameModel.find(filter).sort({ startTime: -1 }).skip(offset).limit(pageSize)
 
         return games

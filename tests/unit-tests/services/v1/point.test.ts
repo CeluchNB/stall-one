@@ -23,15 +23,6 @@ import IGame, { GameStatus } from '../../../../src/types/game'
 import IPoint, { PointStatus } from '../../../../src/types/point'
 
 jest.mock('@google-cloud/tasks/build/src/v2')
-jest.mock('../../../../src/background/v1/point', () => {
-    return {
-        finishPointQueue: {
-            initialize: jest.fn(),
-            close: jest.fn(),
-            addFinishPointJob: jest.fn(),
-        },
-    }
-})
 
 beforeAll(async () => {
     await setUpDatabase()

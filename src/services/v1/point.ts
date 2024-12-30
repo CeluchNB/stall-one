@@ -11,7 +11,6 @@ import { findByIdOrThrow, idsAreEqual } from '../../utils/mongoose'
 import IGame, { GameStatus } from '../../types/game'
 import { sendCloudTask } from '../../utils/cloud-tasks'
 import { isTeamOne } from '../../utils/team'
-// import { finishPointQueue } from '../../background/v1'
 
 export default class PointServices {
     pointModel: IPointModel
