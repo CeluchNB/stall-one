@@ -22,7 +22,7 @@ import { Server } from 'http'
 import { PointStatus } from '../../../../src/types/point'
 import { GameStatus } from '../../../../src/types/game'
 
-jest.mock('@google-cloud/tasks/build/src/v2')
+jest.mock('@google-cloud/tasks')
 
 let app: Server
 beforeAll(async () => {

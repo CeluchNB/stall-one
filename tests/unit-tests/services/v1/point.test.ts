@@ -22,7 +22,7 @@ import { getActionBaseKey } from '../../../../src/utils/utils'
 import IGame, { GameStatus } from '../../../../src/types/game'
 import IPoint, { PointStatus } from '../../../../src/types/point'
 
-jest.mock('@google-cloud/tasks/build/src/v2')
+jest.mock('@google-cloud/tasks')
 
 beforeAll(async () => {
     await setUpDatabase()

@@ -25,7 +25,7 @@ import { CreateFullGame, GameStatus } from '../../../../src/types/game'
 import { ClientPoint, PointStatus } from '../../../../src/types/point'
 import { Player } from '../../../../src/types/ultmt'
 
-jest.mock('@google-cloud/tasks/build/src/v2')
+jest.mock('@google-cloud/tasks')
 
 let app: Server
 beforeAll(async () => {

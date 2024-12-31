@@ -1,4 +1,4 @@
-import { CloudTasksClient } from '@google-cloud/tasks/build/src/v2'
+import { CloudTasksClient } from '@google-cloud/tasks'
 
 const client = new CloudTasksClient()
 

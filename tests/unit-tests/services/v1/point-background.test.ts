@@ -10,7 +10,7 @@ import { PointStatus } from '../../../../src/types/point'
 import { GameStatus } from '../../../../src/types/game'
 import Action from '../../../../src/models/action'
 
-jest.mock('@google-cloud/tasks/build/src/v2')
+jest.mock('@google-cloud/tasks')
 
 beforeAll(async () => {
     await client.connect()
